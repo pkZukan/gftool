@@ -6,18 +6,18 @@ namespace GFTool.Flatbuffers.Utils
     [FlatBufferStruct]
     public class Vector3
     {
-        [FlatBufferItem(00)] public float X { get; set; } = 0.0f;
-        [FlatBufferItem(01)] public float Y { get; set; } = 0.0f;
-        [FlatBufferItem(02)] public float Z { get; set; } = 0.0f;
+        [FlatBufferItem(0)] public float X { get; set; } = 0.0f;
+        [FlatBufferItem(1)] public float Y { get; set; } = 0.0f;
+        [FlatBufferItem(2)] public float Z { get; set; } = 0.0f;
     }
 
     [FlatBufferStruct]
     public class Vector4
     {
-        [FlatBufferItem(00)] public float W { get; set; } = 0.0f;
-        [FlatBufferItem(01)] public float X { get; set; } = 0.0f;
-        [FlatBufferItem(02)] public float Y { get; set; } = 0.0f;
-        [FlatBufferItem(03)] public float Z { get; set; } = 0.0f;
+        [FlatBufferItem(0)] public float W { get; set; } = 0.0f;
+        [FlatBufferItem(1)] public float X { get; set; } = 0.0f;
+        [FlatBufferItem(2)] public float Y { get; set; } = 0.0f;
+        [FlatBufferItem(3)] public float Z { get; set; } = 0.0f;
     }
 
     [FlatBufferStruct]
@@ -32,8 +32,8 @@ namespace GFTool.Flatbuffers.Utils
     [FlatBufferTable]
     public class BoundingBox
     {
-        [FlatBufferItem(00)] public Vector3 MinBound { get; set; } = new Vector3();
-        [FlatBufferItem(01)] public Vector3 MaxBound { get; set; } = new Vector3();
+        [FlatBufferItem(0)] public Vector3 MinBound { get; set; } = new Vector3();
+        [FlatBufferItem(1)] public Vector3 MaxBound { get; set; } = new Vector3();
     }
 
 

@@ -1,10 +1,6 @@
-﻿using GFTool.Flatbuffers.TR.ResourceDictionary;
-using GFTool.Utils;
-using Newtonsoft.Json;
-using GFTool.Serializers.GFLX;
-using GFTool.Structures.GFLX;
-using GFTool.Models;
-using GFTool.Cache;
+﻿using GFTool.Serializers.GFLX;
+using System.Text.Json;
+using GFTool.Models.GFLX;
 
 ////GFPak exporting
 //GFPakHashCache.Init();
@@ -26,6 +22,9 @@ using GFTool.Cache;
 //File.WriteAllText("poke_resource_table.trpmcatalogj", jsonflatbuffer);
 
 //BSEQ conversion
-var bseq = BSEQSerializer.Deserialize(new BinaryReader(File.Open("d020.bseq", FileMode.Open, FileAccess.Read)));
-var jsonbseq = JsonConvert.SerializeObject(bseq, Formatting.Indented);
-File.WriteAllText("d020.bseq.json", jsonbseq);
+static void Main(string[] args)
+{
+    var bseq = BSEQSerializer.Deserialize(new BinaryReader(File.Open("d020.bseq", FileMode.Open, FileAccess.Read)));
+    var jsonbseq = JsonSerializer.Serialize<Sequence>(bseq, new JsonSerializerOptions() { WriteIndented = true }); ;
+    File.WriteAllText("d020.bseq.json", jsonbseq);
+}

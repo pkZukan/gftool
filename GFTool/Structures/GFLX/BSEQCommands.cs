@@ -1,6 +1,5 @@
 ﻿
 using System.Runtime.InteropServices;
-using Newtonsoft.Json;
 using GFTool.Utils;
 
 namespace GFTool.Structures.GFLX

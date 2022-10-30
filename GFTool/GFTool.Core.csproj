@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -9,13 +9,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Flatbuffers\GFB\" />
-    <Folder Include="Flatbuffers\TR\DressUp\" />
+    <Compile Remove="Flatbuffers\GFB\**" />
+    <Compile Remove="Flatbuffers\TR\DressUp\**" />
+    <EmbeddedResource Remove="Flatbuffers\GFB\**" />
+    <EmbeddedResource Remove="Flatbuffers\TR\DressUp\**" />
+    <None Remove="Flatbuffers\GFB\**" />
+    <None Remove="Flatbuffers\TR\DressUp\**" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="FlatSharp" Version="6.3.3" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
 
 </Project>

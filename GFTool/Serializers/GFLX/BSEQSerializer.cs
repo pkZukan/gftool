@@ -4,7 +4,7 @@ using GFTool.Utils;
 
 namespace GFTool.Serializers.GFLX
 {
-    static class BSEQSerializer
+    public static class BSEQSerializer
     {
         public static Sequence Deserialize(BinaryReader br)
         {
