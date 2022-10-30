@@ -1,6 +1,6 @@
-﻿using GFTool.Serializers.GFLX;
-using System.Text.Json;
-using GFTool.Models.GFLX;
+﻿using System.Text.Json;
+using GFToolCore.Models.GFLX;
+using GFToolCore.Serializers.GFLX;
 
 ////GFPak exporting
 //GFPakHashCache.Init();
