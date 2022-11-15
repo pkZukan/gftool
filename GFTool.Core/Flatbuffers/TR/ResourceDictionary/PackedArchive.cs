@@ -14,7 +14,7 @@ namespace GFTool.Core.Flatbuffers.TR.ResourceDictionary
         [FlatBufferItem(1)] Byte EncryptionType { get; set; }
         [FlatBufferItem(2)] Byte Level { get; set; }
         [FlatBufferItem(3)] UInt64 FileSize { get; set; }
-        [FlatBufferItem(4)] Byte[] FileBuffer { get; set } = Array.Empty<Byte>();
+        [FlatBufferItem(4)] Byte[] FileBuffer { get; set; } = Array.Empty<Byte>();
 
     }
     [FlatBufferTable]
