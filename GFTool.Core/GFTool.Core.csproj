@@ -21,4 +21,8 @@
     <PackageReference Include="FlatSharp" Version="6.3.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Math\Vector\" />
+  </ItemGroup>
+
 </Project>

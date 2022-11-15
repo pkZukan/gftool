@@ -3,7 +3,7 @@ using System.Numerics;
 
 namespace GFToolCore.Utils
 {
-    public static class PackedQuaternionExtensions
+    public static class QuaternionExtensions
     {
         public const float PI_DIVISOR = (float)(System.Math.PI / UInt16.MaxValue);
         public const float PI_ADDEND = (float)(System.Math.PI / 4.0);
@@ -21,9 +21,10 @@ namespace GFToolCore.Utils
 
         public static Quaternion Unpack(this PackedQuaternion pq)
         {
-            UInt64 pack = (ulong)((pq.Z << 32) & (pq.Y << 16) & (pq.X));
-            int missingComponent = (int)(pack & 3);
+            ulong pack = (ulong)((pq.Z << 32) | (pq.Y << 16) | (pq.X));
+            uint missingComponent = (uint)(pack & 3);
             bool isNegative = (pack & 4) == 0;
+            Console.WriteLine(pack);
 
             float tx = ExpandFloat((pack >> 3) & 0x7FFF);
             float ty = ExpandFloat((pack >> (15 + 3)) & 0x7FFF);
@@ -36,25 +37,14 @@ namespace GFToolCore.Utils
             }
 
             tw = (float)System.Math.Sqrt(tw);
-
-            Quaternion result;
-
-            switch (missingComponent)
+            var result = missingComponent switch
             {
-                case 0:
-                    result = new Quaternion(tw, ty, tz, tx);
-                    break;
-                case 1:
-                    result = new Quaternion(ty, tw, tz, tx);
-                    break;
-                case 2:
-                    result = new Quaternion(ty, tz, tw, tx);
-                    break;
-                case 3:
-                default:
-                    result = new Quaternion(tx, ty, tz, tw);
-                    break;
-            }
+                0 => new Quaternion(tw, ty, tz, tx),
+                1 => new Quaternion(ty, tw, tz, tx),
+                2 => new Quaternion(ty, tz, tw, tx),
+                _ => new Quaternion(tx, ty, tz, tw),
+            };
+
             if (isNegative)
             {
                 result *= -1.0f;
@@ -132,6 +122,17 @@ namespace GFToolCore.Utils
             return packed;
         }
 
+
+        public static Dictionary<string, float> ToDictionary(this Quaternion quaternion)
+        {
+            return new Dictionary<string, float>
+            {
+                { "W", quaternion.X },
+                { "X", quaternion.Y },
+                { "Y", quaternion.Z },
+                { "Z", quaternion.W },
+            };
+        }
     }
 
 }

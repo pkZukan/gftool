@@ -1,5 +1,6 @@
 ﻿using FlatSharp.Attributes;
-using System.Numerics;
+using GFToolCore.Flatbuffers.Converters;
+using System.Text.Json.Serialization;
 
 namespace GFToolCore.Flatbuffers.Utils
 {
@@ -36,7 +37,7 @@ namespace GFToolCore.Flatbuffers.Utils
         [FlatBufferItem(1)] public Vector3 MaxBound { get; set; } = new Vector3();
     }
 
-
+    [JsonConverter(typeof(QuaternionConverter))]
     [FlatBufferStruct]
     public class PackedQuaternion
     {

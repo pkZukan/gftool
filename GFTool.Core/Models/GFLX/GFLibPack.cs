@@ -13,7 +13,7 @@ namespace GFToolCore.Models.GFLX
 
         public void AddFile(GFLibFile file)
         {
-            this.files.Add(file);
+            files.Add(file);
         }
     }
 

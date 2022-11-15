@@ -1,6 +1,8 @@
 ﻿using FlatSharp;
 using FlatSharp.Attributes;
+using GFToolCore.Flatbuffers.Converters;
 using GFToolCore.Flatbuffers.Utils;
+using System.Text.Json.Serialization;
 
 namespace GFToolCore.Flatbuffers.TR.Animation
 {
@@ -46,7 +48,7 @@ namespace GFToolCore.Flatbuffers.TR.Animation
     public class FramedRotationTrack
     {
         [FlatBufferItem(0)]
-        public IList<PackedQuaternion> pValues { get; set; }
+        public IList<PackedQuaternion> Values { get; set; }
 
     }
 
@@ -72,10 +74,16 @@ namespace GFToolCore.Flatbuffers.TR.Animation
     {
         [FlatBufferItem(0)]
         public string BoneName { get; set; }
+        
+        [JsonConverter(typeof(VectorTrackUnionConverter))]
         [FlatBufferItem(1)]
         public FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack> ScaleChannel { get; set; }
+
+        [JsonConverter(typeof(RotationTrackUnionConverter))]
         [FlatBufferItem(3)]
         public FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack> RotationChannel { get; set; }
+
+        [JsonConverter(typeof(VectorTrackUnionConverter))]
         [FlatBufferItem(5)]
         public FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack> TranslateChannel { get; set; }
 
