@@ -1,6 +1,6 @@
 ﻿using FlatSharp.Attributes;
 
-namespace GFToolCore.Flatbuffers.TR.Animation
+namespace GFTool.Core.Flatbuffers.TR.Animation
 {
     [FlatBufferTable]
     public class AnimationEntry

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GFToolCore.Utils
+namespace GFTool.Core.Utils
 {
     static class PeekExtensions
     {

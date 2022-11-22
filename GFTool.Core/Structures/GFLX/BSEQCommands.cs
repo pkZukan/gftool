@@ -1,8 +1,8 @@
 ﻿
 using System.Runtime.InteropServices;
-using GFToolCore.Utils;
+using GFTool.Core.Utils;
 
-namespace GFToolCore.Structures.GFLX
+namespace GFTool.Core.Structures.GFLX
 {
     public static class BSEQCommands
     {

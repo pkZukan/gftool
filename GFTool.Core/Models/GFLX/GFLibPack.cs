@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GFToolCore.Models.GFLX
+namespace GFTool.Core.Models.GFLX
 {
     public class GFLibFolder
     {

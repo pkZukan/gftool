@@ -1,7 +1,7 @@
 ﻿using FlatSharp.Attributes;
-using GFToolCore.Flatbuffers.Utils;
+using GFTool.Core.Flatbuffers.Utils;
 
-namespace GFToolCore.Flatbuffers.TR.Model
+namespace GFTool.Core.Flatbuffers.TR.Model
 {
     [FlatBufferEnum(typeof(int))]
     public enum NodeType

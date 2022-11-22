@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "GFTool.CLI": {
+      "commandName": "Project",
+      "commandLineArgs": "pm0025_00_00_00000_defaultwait01_loop.tranm pm0025_00_00_00000_defaultwait01_loop.tranmj "
+    }
+  }
+}

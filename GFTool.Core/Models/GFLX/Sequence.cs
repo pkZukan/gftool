@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
-using static GFToolCore.Structures.GFLX.BSEQCommands;
+using static GFTool.Core.Structures.GFLX.BSEQCommands;
 
-namespace GFToolCore.Models.GFLX
+namespace GFTool.Core.Models.GFLX
 {
     public class SequenceCommandOptions
     {

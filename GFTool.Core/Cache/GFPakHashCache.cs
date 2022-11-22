@@ -1,11 +1,11 @@
-﻿using GFToolCore.Math.Hash;
+﻿using GFTool.Core.Math.Hash;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GFToolCore.Cache
+namespace GFTool.Core.Cache
 {
     public class GFPakHashCache
     {
@@ -22,8 +22,10 @@ namespace GFToolCore.Cache
                 for (int i = 0; i < count; i++)
                 {
                     var hash = br.ReadUInt64();
-                    var name = br.ReadString();
-                    Cache.Add(hash, name);
+                    var length = br.ReadByte();
+                    var name = new String(br.ReadChars(length));
+                    Cache.TryAdd(hash, name);
+                    //Cache.Add(hash, name);
                 }
             }
         }

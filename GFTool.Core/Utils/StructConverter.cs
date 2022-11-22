@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace GFToolCore.Utils
+namespace GFTool.Core.Utils
 {
     public static class StructConverter
     {

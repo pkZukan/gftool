@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GFToolCore.Structures.GFLX
+namespace GFTool.Core.Structures.GFLX
 {
     public enum GFPakCompressionType : UInt16
     {

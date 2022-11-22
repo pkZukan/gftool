@@ -1,6 +1,6 @@
 ﻿using FlatSharp.Attributes;
 
-namespace GFToolCore.Flatbuffers.TR.Model
+namespace GFTool.Core.Flatbuffers.TR.Model
 {
     [FlatBufferTable]
     public class MaterialSwitch

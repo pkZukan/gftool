@@ -1,10 +1,10 @@
 ﻿using FlatSharp;
 using FlatSharp.Attributes;
-using GFToolCore.Flatbuffers.Converters;
-using GFToolCore.Flatbuffers.Utils;
+using GFTool.Core.Flatbuffers.Converters;
+using GFTool.Core.Flatbuffers.Utils;
 using System.Text.Json.Serialization;
 
-namespace GFToolCore.Flatbuffers.TR.Animation
+namespace GFTool.Core.Flatbuffers.TR.Animation
 {
     [FlatBufferTable]
     public class FixedVectorTrack

@@ -1,8 +1,8 @@
-﻿using GFToolCore.Models.GFLX;
-using GFToolCore.Structures.GFLX;
-using GFToolCore.Utils;
+﻿using GFTool.Core.Models.GFLX;
+using GFTool.Core.Structures.GFLX;
+using GFTool.Core.Utils;
 
-namespace GFToolCore.Serializers.GFLX
+namespace GFTool.Core.Serializers.GFLX
 {
     public static class BSEQSerializer
     {

@@ -1,6 +1,6 @@
 ﻿using FlatSharp.Attributes;
 
-namespace GFToolCore.Flatbuffers.TR.ResourceDictionary
+namespace GFTool.Core.Flatbuffers.TR.ResourceDictionary
 {
     public class ArchiveContents
     {

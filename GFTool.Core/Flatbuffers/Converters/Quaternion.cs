@@ -6,10 +6,10 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using GFToolCore.Flatbuffers.Utils;
-using GFToolCore.Utils;
+using GFTool.Core.Flatbuffers.Utils;
+using GFTool.Core.Utils;
 
-namespace GFToolCore.Flatbuffers.Converters
+namespace GFTool.Core.Flatbuffers.Converters
 {
     public class QuaternionConverter : JsonConverter<PackedQuaternion>
     {

@@ -10,7 +10,8 @@ namespace GFTool.Core.Structures.TR
     [StructLayout(LayoutKind.Sequential)]
     public struct OneFileHeader
     {
+        public const int SIZE = 16;
         public UInt64 magic;
-        public UInt64 offset;
+        public Int64 offset;
     }
 }

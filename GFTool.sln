@@ -5,7 +5,9 @@ VisualStudioVersion = 17.1.32319.34
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GFTool.Core", "GFTool.Core\GFTool.Core.csproj", "{437549E1-0E98-4543-AD15-45B1B29D977A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GFTool.CLI", "GFTool.CLI\GFTool.CLI.csproj", "{7E3CA913-029F-42D4-8F14-5D8CAD0A7E28}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GFTool.CLI", "GFTool.CLI\GFTool.CLI.csproj", "{7E3CA913-029F-42D4-8F14-5D8CAD0A7E28}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GFTool.TrinityExplorer", "GFTool.TrinityExplorer\GFTool.TrinityExplorer.csproj", "{A11397F1-52FA-412C-B404-27E41AE10DEA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{7E3CA913-029F-42D4-8F14-5D8CAD0A7E28}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7E3CA913-029F-42D4-8F14-5D8CAD0A7E28}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7E3CA913-029F-42D4-8F14-5D8CAD0A7E28}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A11397F1-52FA-412C-B404-27E41AE10DEA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A11397F1-52FA-412C-B404-27E41AE10DEA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A11397F1-52FA-412C-B404-27E41AE10DEA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A11397F1-52FA-412C-B404-27E41AE10DEA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

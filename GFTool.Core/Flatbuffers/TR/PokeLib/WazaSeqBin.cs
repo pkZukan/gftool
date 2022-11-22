@@ -1,6 +1,6 @@
 ﻿using FlatSharp.Attributes;
 
-namespace GFToolCore.Flatbuffers.TR.PokeLib
+namespace GFTool.Core.Flatbuffers.TR.PokeLib
 {
     [FlatBufferTable]
     public class WazaSeqGroup

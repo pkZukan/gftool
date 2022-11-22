@@ -1,7 +1,7 @@
-﻿using GFToolCore.Structures;
-using GFToolCore.Utils;
+﻿using GFTool.Core.Structures;
+using GFTool.Core.Utils;
 
-namespace GFToolCore.Serializers
+namespace GFTool.Core.Serializers
 {
     static class AHTBSerializer
     {

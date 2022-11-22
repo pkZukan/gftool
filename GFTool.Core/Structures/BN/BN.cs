@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GFToolCore.Structures.BN
+namespace GFTool.Core.Structures.BN
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct BNHeader

@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GFTool.Core.Flatbuffers.TR.Animation
+namespace GFTool.Core.Models.TR
 {
-    internal class MaterialAnimation
+    public class TRFileSystem
     {
+
     }
 }

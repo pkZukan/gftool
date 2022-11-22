@@ -1,4 +1,4 @@
-﻿namespace GFToolCore.Compression
+﻿namespace GFTool.Core.Compression
 {
     static class LZ4
     {
