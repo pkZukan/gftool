@@ -10,13 +10,14 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using GFTool.Core.Cache;
 using System.Security.Policy;
 using System.Xml.Linq;
+using System.Collections.Generic;
 
 namespace GFTool.TrinityExplorer
 {
     public partial class FileSystemForm : Form
     {
-        private FileDescriptor? fileDescriptor;
-        private FileSystem? fileSystem;
+        private FileDescriptor? fileDescriptor = null;
+        private FileSystem? fileSystem = null;
         private string? fs_name;
         private string? fd_name;
 
@@ -25,37 +26,51 @@ namespace GFTool.TrinityExplorer
             InitializeComponent();
         }
 
-        public TreeNode MakeTreeFromPaths(List<string> paths, string rootNodeName = "", char separator = '/')
+        public TreeNode MakeTreeFromPaths(List<string> paths, TreeNode rootNode, bool used = true)
         {
-            var rootNode = new TreeNode(rootNodeName);
             foreach (var path in paths)
             {
                 var currentNode = rootNode;
-                var pathItems = path.Split(separator);
+                var pathItems = path.Split('/');
                 foreach (var item in pathItems)
                 {
                     var tmp = currentNode.Nodes.Cast<TreeNode>().Where(x => x.Text.Equals(item));
-                    currentNode = tmp.Count() > 0 ? tmp.Single() : currentNode.Nodes.Add(item);
-                    
+                    TreeNode tn = new TreeNode();
+                    if (tmp.Count() == 0)
+                    {
+                        tn.Text = item;
+                        if (!used) tn.BackColor = Color.Red;
+                        currentNode.Nodes.Add(tn);
+                        currentNode = tn;
+                    }
+                    else 
+                        currentNode = tmp.Single();
                 }
                 ThreadSafe(() => progressBar1.Increment(1));
             }
             return rootNode;
         }
 
-        private void LoadTree(ulong[] hashes) {
-            var paths = hashes.Select(x => GFPakHashCache.GetName(x)).Where(x => !string.IsNullOrEmpty(x)).ToList();
+        private TreeNode LoadTree(ulong[] hashes, ulong[] unused = null) {
+            List<string> paths = hashes.Select(x => GFPakHashCache.GetName(x)).Where(x => !string.IsNullOrEmpty(x)).ToList();
+            List<string> unusedPaths = null;
+            if (unused != null) {
+                unusedPaths = unused.Select(x => GFPakHashCache.GetName(x)).Where(x => !string.IsNullOrEmpty(x)).ToList();
+            }
 
             ThreadSafe(() => {
                 statusLbl.Text = "Loading...";
                 progressBar1.Maximum = paths.Count;
                 progressBar1.Value = 0;
             });
-            var nodes = MakeTreeFromPaths(paths);
+            var rootNode = new TreeNode("TRPFS");
+            var nodes = MakeTreeFromPaths(paths, rootNode);
+            nodes = MakeTreeFromPaths(unusedPaths, nodes, false);
             ThreadSafe(() => {
-                fileView.Nodes.Add(nodes);
                 statusLbl.Text = "Done";
             });
+
+            return nodes;
         }
 
         public void OpenFileDescriptor() {
@@ -64,16 +79,21 @@ namespace GFTool.TrinityExplorer
                 Filter = "Trinity File Descriptor (*.trpfd) |*.trpfd",
             };
             if (openFileDialog.ShowDialog() != DialogResult.OK) return;
+            fileView.Nodes.Clear();
 
             fileDescriptor = FlatBufferConverter.DeserializeFrom<FileDescriptor>(openFileDialog.FileName);
-            //fileSystem = ONEFILESerializer.DeserializeFileSystem(openFileDialog.FileName.Replace("trpfd", "trpfs"));
+            string trpfs = openFileDialog.FileName.Replace("trpfd", "trpfs");
+            if(File.Exists(trpfs))
+                fileSystem = ONEFILESerializer.DeserializeFileSystem(trpfs);
 
             if (fileDescriptor != null)
             {
-                
-                fileView.Nodes.Add("TRPFS");
                 Task.Run(() => {
-                    LoadTree(fileDescriptor.FileHashes);
+                    ThreadSafe(() =>
+                    {
+                        TreeNode nodes = LoadTree(fileDescriptor.FileHashes, fileDescriptor.UnusedHashes);
+                        fileView.Nodes.Add(nodes);
+                    });
                 });
                 
             }
@@ -81,12 +101,42 @@ namespace GFTool.TrinityExplorer
 
         void SaveFile(string file)
         {
-            MessageBox.Show("Saving " + file);
+            var fileHash = GFFNV.Hash(file);
+            var packHash = GFFNV.Hash(fileDescriptor.GetPackName(fileHash));
+            var packInfo = fileDescriptor.GetPackInfo(fileHash);
+
+            var fileIndex = Array.IndexOf(fileSystem.FileHashes, packHash);
+            var fileBytes = ONEFILESerializer.SplitTRPAK(fs_name, (long)fileSystem.FileOffsets[fileIndex], (long)packInfo.FileSize);
+            PackedArchive pack = FlatBufferConverter.DeserializeFrom<PackedArchive>(fileBytes);
+            MessageBox.Show("Saved " + file);
         }
 
         void MarkFile(string file)
         {
-            MessageBox.Show("Marking " + file);
+            var hash = GFFNV.Hash(file);
+            fileDescriptor?.RemoveFile(hash);
+            MessageBox.Show("Marked file " + file);
+            fileView.SelectedNode.BackColor = Color.Red;
+        }
+
+        void UnmarkFile(string file)
+        {
+            var hash = GFFNV.Hash(file);
+            fileDescriptor?.AddFile(hash);
+            MessageBox.Show("Unmark file " + file);
+            fileView.SelectedNode.BackColor= Color.White;
+        }
+
+        void SerializeTrpfd() 
+        {
+            var sfd = new SaveFileDialog()
+            {
+                Filter = "Trinity File Descriptor (*.trpfd) |*.trpfd",
+            };
+            if (sfd.ShowDialog() != DialogResult.OK) return;
+            var trpfd = FlatBufferConverter.SerializeFrom<FileDescriptor>(fileDescriptor);
+            File.WriteAllBytes(sfd.FileName, trpfd);
+            MessageBox.Show("Data saved!");
         }
 
         #region UTIL
@@ -103,6 +153,11 @@ namespace GFTool.TrinityExplorer
         private void openFileDescriptorToolStripMenuItem_Click(object sender, EventArgs e)
         {
             OpenFileDescriptor();
+        }
+
+        private void saveFileDescriptorAsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SerializeTrpfd();
         }
 
         /*private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
@@ -209,11 +264,13 @@ namespace GFTool.TrinityExplorer
             {
                 Point ClickPoint = new Point(e.X, e.Y);
                 TreeNode ClickNode = fileView.GetNodeAt(ClickPoint);
+                fileView.SelectedNode = ClickNode;
                 if (ClickNode == null) return;
                 
                 Point ScreenPoint = fileView.PointToScreen(ClickPoint);  
                 Point FormPoint = this.PointToClient(ScreenPoint);
-
+                if(ClickNode.BackColor == Color.Red)
+                    treeContext.Items[1].Text = "Unmark for LayeredFS";
                 treeContext.Show(this, FormPoint);
             }
         }
@@ -228,9 +285,15 @@ namespace GFTool.TrinityExplorer
         private void markForLayeredFSToolStripMenuItem_Click(object sender, EventArgs e)
         {
             TreeNode node = fileView.SelectedNode;
-            string file = node.FullPath.Replace("\\", "/").Substring(1);
-            MarkFile(file);
+            string file = node.FullPath.Replace("\\", "/");
+            file = file.Substring(file.IndexOf('/') + 1);
+            if (node.BackColor != Color.Red)
+                MarkFile(file);
+            else
+                UnmarkFile(file);
         }
         #endregion
+
+        
     }
 }

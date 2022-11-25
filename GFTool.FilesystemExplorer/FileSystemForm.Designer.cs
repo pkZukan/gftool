@@ -32,6 +32,7 @@
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openFileDescriptorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.saveFileDescriptorAsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exportPackFileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exportPackContentsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.editToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -63,6 +64,7 @@
             // 
             this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.openFileDescriptorToolStripMenuItem,
+            this.saveFileDescriptorAsToolStripMenuItem,
             this.exportPackFileToolStripMenuItem,
             this.exportPackContentsToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
@@ -72,21 +74,28 @@
             // openFileDescriptorToolStripMenuItem
             // 
             this.openFileDescriptorToolStripMenuItem.Name = "openFileDescriptorToolStripMenuItem";
-            this.openFileDescriptorToolStripMenuItem.Size = new System.Drawing.Size(187, 22);
+            this.openFileDescriptorToolStripMenuItem.Size = new System.Drawing.Size(192, 22);
             this.openFileDescriptorToolStripMenuItem.Text = "Open File Descriptor";
             this.openFileDescriptorToolStripMenuItem.Click += new System.EventHandler(this.openFileDescriptorToolStripMenuItem_Click);
+            // 
+            // saveFileDescriptorAsToolStripMenuItem
+            // 
+            this.saveFileDescriptorAsToolStripMenuItem.Name = "saveFileDescriptorAsToolStripMenuItem";
+            this.saveFileDescriptorAsToolStripMenuItem.Size = new System.Drawing.Size(192, 22);
+            this.saveFileDescriptorAsToolStripMenuItem.Text = "Save File Descriptor As";
+            this.saveFileDescriptorAsToolStripMenuItem.Click += new System.EventHandler(this.saveFileDescriptorAsToolStripMenuItem_Click);
             // 
             // exportPackFileToolStripMenuItem
             // 
             this.exportPackFileToolStripMenuItem.Name = "exportPackFileToolStripMenuItem";
-            this.exportPackFileToolStripMenuItem.Size = new System.Drawing.Size(187, 22);
+            this.exportPackFileToolStripMenuItem.Size = new System.Drawing.Size(192, 22);
             this.exportPackFileToolStripMenuItem.Text = "Export Pack File";
             this.exportPackFileToolStripMenuItem.Click += new System.EventHandler(this.exportPackFileToolStripMenuItem_Click);
             // 
             // exportPackContentsToolStripMenuItem
             // 
             this.exportPackContentsToolStripMenuItem.Name = "exportPackContentsToolStripMenuItem";
-            this.exportPackContentsToolStripMenuItem.Size = new System.Drawing.Size(187, 22);
+            this.exportPackContentsToolStripMenuItem.Size = new System.Drawing.Size(192, 22);
             this.exportPackContentsToolStripMenuItem.Text = "Export Pack Contents";
             this.exportPackContentsToolStripMenuItem.Click += new System.EventHandler(this.exportPackContentsToolStripMenuItem_Click);
             // 
@@ -132,19 +141,19 @@
             this.saveFileToolStripMenuItem,
             this.markForLayeredFSToolStripMenuItem});
             this.treeContext.Name = "treeContext";
-            this.treeContext.Size = new System.Drawing.Size(181, 70);
+            this.treeContext.Size = new System.Drawing.Size(176, 48);
             // 
             // saveFileToolStripMenuItem
             // 
             this.saveFileToolStripMenuItem.Name = "saveFileToolStripMenuItem";
-            this.saveFileToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.saveFileToolStripMenuItem.Size = new System.Drawing.Size(175, 22);
             this.saveFileToolStripMenuItem.Text = "Save File";
             this.saveFileToolStripMenuItem.Click += new System.EventHandler(this.saveFileToolStripMenuItem_Click);
             // 
             // markForLayeredFSToolStripMenuItem
             // 
             this.markForLayeredFSToolStripMenuItem.Name = "markForLayeredFSToolStripMenuItem";
-            this.markForLayeredFSToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.markForLayeredFSToolStripMenuItem.Size = new System.Drawing.Size(175, 22);
             this.markForLayeredFSToolStripMenuItem.Text = "Mark for LayeredFS";
             this.markForLayeredFSToolStripMenuItem.Click += new System.EventHandler(this.markForLayeredFSToolStripMenuItem_Click);
             // 
@@ -159,7 +168,7 @@
             this.Controls.Add(this.menuStrip1);
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "FileSystemForm";
-            this.Text = "Form1";
+            this.Text = "Filesystem Explorer";
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
             this.treeContext.ResumeLayout(false);
@@ -183,5 +192,6 @@
         private ContextMenuStrip treeContext;
         private ToolStripMenuItem saveFileToolStripMenuItem;
         private ToolStripMenuItem markForLayeredFSToolStripMenuItem;
+        private ToolStripMenuItem saveFileDescriptorAsToolStripMenuItem;
     }
 }
