@@ -28,7 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.comboBox1 = new System.Windows.Forms.ComboBox();
+            this.components = new System.ComponentModel.Container();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openFileDescriptorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -36,21 +36,16 @@
             this.exportPackContentsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.editToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.listBox1 = new System.Windows.Forms.ListBox();
+            this.fileView = new System.Windows.Forms.TreeView();
+            this.helpProvider1 = new System.Windows.Forms.HelpProvider();
+            this.progressBar1 = new System.Windows.Forms.ProgressBar();
+            this.statusLbl = new System.Windows.Forms.Label();
+            this.treeContext = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.saveFileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.markForLayeredFSToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
+            this.treeContext.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // comboBox1
-            // 
-            this.comboBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.comboBox1.FormattingEnabled = true;
-            this.comboBox1.Location = new System.Drawing.Point(12, 27);
-            this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(776, 23);
-            this.comboBox1.TabIndex = 0;
-            this.comboBox1.Text = "No FileDescriptor Loaded";
-            this.comboBox1.SelectedIndexChanged += new System.EventHandler(this.comboBox1_SelectedIndexChanged);
             // 
             // menuStrip1
             // 
@@ -60,7 +55,7 @@
             this.helpToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(800, 24);
+            this.menuStrip1.Size = new System.Drawing.Size(581, 24);
             this.menuStrip1.TabIndex = 2;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -107,46 +102,86 @@
             this.helpToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
             this.helpToolStripMenuItem.Text = "Help";
             // 
-            // listBox1
+            // fileView
             // 
-            this.listBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.listBox1.FormattingEnabled = true;
-            this.listBox1.ItemHeight = 15;
-            this.listBox1.Location = new System.Drawing.Point(12, 56);
-            this.listBox1.Name = "listBox1";
-            this.listBox1.Size = new System.Drawing.Size(776, 379);
-            this.listBox1.TabIndex = 3;
+            this.fileView.Location = new System.Drawing.Point(12, 27);
+            this.fileView.Name = "fileView";
+            this.fileView.Size = new System.Drawing.Size(557, 412);
+            this.fileView.TabIndex = 3;
+            this.fileView.MouseUp += new System.Windows.Forms.MouseEventHandler(this.fileView_MouseUp);
+            // 
+            // progressBar1
+            // 
+            this.progressBar1.Location = new System.Drawing.Point(312, 445);
+            this.progressBar1.Name = "progressBar1";
+            this.progressBar1.Size = new System.Drawing.Size(257, 15);
+            this.progressBar1.TabIndex = 4;
+            // 
+            // statusLbl
+            // 
+            this.statusLbl.AutoSize = true;
+            this.statusLbl.Location = new System.Drawing.Point(12, 445);
+            this.statusLbl.Name = "statusLbl";
+            this.statusLbl.Size = new System.Drawing.Size(39, 15);
+            this.statusLbl.TabIndex = 5;
+            this.statusLbl.Text = "Ready";
+            // 
+            // treeContext
+            // 
+            this.treeContext.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.saveFileToolStripMenuItem,
+            this.markForLayeredFSToolStripMenuItem});
+            this.treeContext.Name = "treeContext";
+            this.treeContext.Size = new System.Drawing.Size(181, 70);
+            // 
+            // saveFileToolStripMenuItem
+            // 
+            this.saveFileToolStripMenuItem.Name = "saveFileToolStripMenuItem";
+            this.saveFileToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.saveFileToolStripMenuItem.Text = "Save File";
+            this.saveFileToolStripMenuItem.Click += new System.EventHandler(this.saveFileToolStripMenuItem_Click);
+            // 
+            // markForLayeredFSToolStripMenuItem
+            // 
+            this.markForLayeredFSToolStripMenuItem.Name = "markForLayeredFSToolStripMenuItem";
+            this.markForLayeredFSToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.markForLayeredFSToolStripMenuItem.Text = "Mark for LayeredFS";
+            this.markForLayeredFSToolStripMenuItem.Click += new System.EventHandler(this.markForLayeredFSToolStripMenuItem_Click);
             // 
             // FileSystemForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
-            this.Controls.Add(this.listBox1);
-            this.Controls.Add(this.comboBox1);
+            this.ClientSize = new System.Drawing.Size(581, 471);
+            this.Controls.Add(this.statusLbl);
+            this.Controls.Add(this.progressBar1);
+            this.Controls.Add(this.fileView);
             this.Controls.Add(this.menuStrip1);
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "FileSystemForm";
             this.Text = "Form1";
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
+            this.treeContext.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
         }
 
         #endregion
-
-        private ComboBox comboBox1;
         private MenuStrip menuStrip1;
         private ToolStripMenuItem fileToolStripMenuItem;
         private ToolStripMenuItem editToolStripMenuItem;
         private ToolStripMenuItem helpToolStripMenuItem;
-        private ListBox listBox1;
         private ToolStripMenuItem openFileDescriptorToolStripMenuItem;
         private ToolStripMenuItem exportPackFileToolStripMenuItem;
         private ToolStripMenuItem exportPackContentsToolStripMenuItem;
+        private TreeView fileView;
+        private HelpProvider helpProvider1;
+        private ProgressBar progressBar1;
+        private Label statusLbl;
+        private ContextMenuStrip treeContext;
+        private ToolStripMenuItem saveFileToolStripMenuItem;
+        private ToolStripMenuItem markForLayeredFSToolStripMenuItem;
     }
 }

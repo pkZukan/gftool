@@ -59,11 +59,9 @@ namespace GFTool.Core.Cache
 
         public static string? GetName(UInt64 hash)
         {
-            if (Cache.ContainsKey(hash))
-            {
-                return Cache[hash];
-            }
-            return null;
+            string? str = null;
+            Cache.TryGetValue(hash, out str);
+            return str;
         }
 
     }
