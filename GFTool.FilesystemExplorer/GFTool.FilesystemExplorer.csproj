@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="SharpCompress" Version="0.32.2" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\GFTool.Core\GFTool.Core.csproj" />
   </ItemGroup>
 

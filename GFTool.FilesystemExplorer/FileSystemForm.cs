@@ -11,6 +11,10 @@ using GFTool.Core.Cache;
 using System.Security.Policy;
 using System.Xml.Linq;
 using System.Collections.Generic;
+using System.IO.Compression;
+using SharpCompress.Readers;
+using SharpCompress.Common;
+using System.Diagnostics;
 
 namespace GFTool.TrinityExplorer
 {
@@ -24,6 +28,20 @@ namespace GFTool.TrinityExplorer
         public FileSystemForm()
         {
             InitializeComponent();
+            LoadMods();
+        }
+
+        public void LoadMods()
+        {
+            if (!Directory.Exists("mods"))
+                Directory.CreateDirectory("mods");
+
+            var files = Directory.EnumerateFiles("mods").Where(x => x.EndsWith(".zip") || x.EndsWith(".rar"));
+            foreach ( var file in files)
+            {
+                var name = Path.GetFileName(file);
+                modList.Items.Add(name);
+            }
         }
 
         public TreeNode MakeTreeFromPaths(List<string> paths, TreeNode rootNode, bool used = true)
@@ -65,7 +83,8 @@ namespace GFTool.TrinityExplorer
             });
             var rootNode = new TreeNode("TRPFS");
             var nodes = MakeTreeFromPaths(paths, rootNode);
-            nodes = MakeTreeFromPaths(unusedPaths, nodes, false);
+            if(unused != null) 
+                nodes = MakeTreeFromPaths(unusedPaths, nodes, false);
             ThreadSafe(() => {
                 statusLbl.Text = "Done";
             });
@@ -95,7 +114,6 @@ namespace GFTool.TrinityExplorer
                         fileView.Nodes.Add(nodes);
                     });
                 });
-                
             }
         }
 
@@ -127,16 +145,37 @@ namespace GFTool.TrinityExplorer
             fileView.SelectedNode.BackColor= Color.White;
         }
 
-        void SerializeTrpfd() 
+        void ApplyModPack(string modFile, string lfsDir) 
         {
-            var sfd = new SaveFileDialog()
+            List<string> files = new List<string>();
+            using (Stream stream = File.OpenRead("mods/" + modFile))
+            using (var reader = ReaderFactory.Open(stream))
             {
-                Filter = "Trinity File Descriptor (*.trpfd) |*.trpfd",
-            };
-            if (sfd.ShowDialog() != DialogResult.OK) return;
+                while (reader.MoveToNextEntry())
+                {
+                    if (!reader.Entry.IsDirectory)
+                    {
+                        string entry = reader.Entry.Key;
+                        reader.WriteEntryToDirectory(lfsDir, new ExtractionOptions() { ExtractFullPath = true });
+                        files.Add(entry.Replace('\\', '/'));
+                    }
+                }
+            }
+
+            foreach (var f in files) 
+            {
+                var fhash = GFFNV.Hash(f);
+                fileDescriptor?.RemoveFile(fhash);
+            }
+        }
+
+        void SerializeTrpfd(string fileOut) 
+        {
+            var file = new System.IO.FileInfo(fileOut);
+            if(!file.Directory.Exists) file.Directory.Create();
+
             var trpfd = FlatBufferConverter.SerializeFrom<FileDescriptor>(fileDescriptor);
-            File.WriteAllBytes(sfd.FileName, trpfd);
-            MessageBox.Show("Data saved!");
+            File.WriteAllBytes(fileOut, trpfd);
         }
 
         #region UTIL
@@ -153,11 +192,18 @@ namespace GFTool.TrinityExplorer
         private void openFileDescriptorToolStripMenuItem_Click(object sender, EventArgs e)
         {
             OpenFileDescriptor();
+            applyModsBut.Enabled= true;
         }
 
         private void saveFileDescriptorAsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            SerializeTrpfd();
+            var sfd = new SaveFileDialog()
+            {
+                Filter = "Trinity File Descriptor (*.trpfd) |*.trpfd",
+            };
+            if (sfd.ShowDialog() != DialogResult.OK) return;
+            SerializeTrpfd(sfd.FileName);
+            MessageBox.Show("Data saved");
         }
 
         /*private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
@@ -292,8 +338,77 @@ namespace GFTool.TrinityExplorer
             else
                 UnmarkFile(file);
         }
+
+        private void advancedViewToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            advancedPanel.Enabled = advancedToggle.Checked;
+            advancedPanel.Visible = advancedToggle.Checked;
+            basicPanel.Enabled = !advancedToggle.Checked;
+            basicPanel.Visible = !advancedToggle.Checked;
+        }
+
+        private void addMod_Click(object sender, EventArgs e)
+        {
+            var openFileDialog = new OpenFileDialog()
+            {
+                Filter = "Zip Files (*.zip)|*.zip|Rar Files (*.rar)|*.rar|All (*.*)|*.*"
+            };
+            if (openFileDialog.ShowDialog() != DialogResult.OK) return;
+            var fn = Path.GetFileName(openFileDialog.FileName);
+
+            bool overwriting = false;
+            if (modList.Items.Contains(fn))
+            {
+                var ow = MessageBox.Show("File already exists, do you want to overwrite?", "Mod exists", MessageBoxButtons.YesNo);
+                if (ow == DialogResult.No) return;
+                overwriting = true;
+            }
+
+            File.Copy(openFileDialog.FileName, "mods/" + fn, overwriting);
+
+            if (!overwriting)
+                modList.Items.Add(fn);
+        }
+
+        private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void applyModsBut_Click(object sender, EventArgs e)
+        {
+            string lfsDir = "layeredFS/";
+            if (Directory.Exists(lfsDir))
+                Directory.Delete(lfsDir, true);
+            Directory.CreateDirectory(lfsDir);
+            foreach (var item in modList.CheckedItems)
+            {
+                ApplyModPack(item.ToString(), lfsDir);
+            }
+            SerializeTrpfd(lfsDir + "arc/data.trpfd");
+        }
+
+
         #endregion
 
-        
+        private void modOrderUp_Click(object sender, EventArgs e)
+        {
+            if(modList.SelectedIndex < 0 || modList.SelectedIndex == 0) return;
+
+            var selected = modList.SelectedIndex;
+            var item = modList.Items[selected];
+            modList.Items.RemoveAt(selected);
+            modList.Items.Insert(selected - 1, item);
+        }
+
+        private void modOrderDown_Click(object sender, EventArgs e)
+        {
+            if (modList.SelectedIndex < 0 || modList.SelectedIndex >= modList.Items.Count - 1) return;
+
+            var selected = modList.SelectedIndex;
+            var item = modList.Items[selected];
+            modList.Items.RemoveAt(selected);
+            modList.Items.Insert(selected + 1, item);
+        }
     }
 }

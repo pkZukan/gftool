@@ -63,26 +63,25 @@ namespace GFTool.Core.Flatbuffers.TR.ResourceDictionary
         public void RemoveFile(UInt64 fileHash)
         {
             int ind = Array.IndexOf(FileHashes, fileHash);
-            if (ind > 0)
-            {
-                var hashList = FileHashes.ToList();
-                var fileInfoList = FileInfo.ToList();
+            if (ind < 0) return;
 
-                List<UInt64> unusedHashesList = (UnusedHashes == null) ? new List<UInt64>() : UnusedHashes.ToList();
-                List<FileInfo> unusedFileInfoList = (UnusedFileInfo == null) ? new List<FileInfo>() : UnusedFileInfo.ToList();
+            var hashList = FileHashes.ToList();
+            var fileInfoList = FileInfo.ToList();
 
-                unusedHashesList.Add(hashList[ind]);
-                unusedFileInfoList.Add(fileInfoList[ind]);
+            List<UInt64> unusedHashesList = (UnusedHashes == null) ? new List<UInt64>() : UnusedHashes.ToList();
+            List<FileInfo> unusedFileInfoList = (UnusedFileInfo == null) ? new List<FileInfo>() : UnusedFileInfo.ToList();
 
-                hashList.RemoveAt(ind);
-                fileInfoList.RemoveAt(ind);
+            unusedHashesList.Add(hashList[ind]);
+            unusedFileInfoList.Add(fileInfoList[ind]);
 
-                UnusedHashes = unusedHashesList.ToArray();
-                UnusedFileInfo = unusedFileInfoList.ToArray();
+            hashList.RemoveAt(ind);
+            fileInfoList.RemoveAt(ind);
 
-                FileHashes = hashList.ToArray();
-                FileInfo = fileInfoList.ToArray();
-            }
+            UnusedHashes = unusedHashesList.ToArray();
+            UnusedFileInfo = unusedFileInfoList.ToArray();
+
+            FileHashes = hashList.ToArray();
+            FileInfo = fileInfoList.ToArray();
         }
 
         private long GetPackIndex(UInt64 hash)
