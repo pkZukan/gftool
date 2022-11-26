@@ -48,6 +48,13 @@
             this.markForLayeredFSToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.advancedPanel = new System.Windows.Forms.Panel();
             this.basicPanel = new System.Windows.Forms.Panel();
+            this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.authorLbl = new System.Windows.Forms.Label();
+            this.label4 = new System.Windows.Forms.Label();
+            this.textBox1 = new System.Windows.Forms.TextBox();
+            this.label2 = new System.Windows.Forms.Label();
+            this.modNameLbl = new System.Windows.Forms.Label();
+            this.label1 = new System.Windows.Forms.Label();
             this.applyModsBut = new System.Windows.Forms.Button();
             this.modList = new System.Windows.Forms.CheckedListBox();
             this.modOrderDown = new System.Windows.Forms.Button();
@@ -57,6 +64,7 @@
             this.treeContext.SuspendLayout();
             this.advancedPanel.SuspendLayout();
             this.basicPanel.SuspendLayout();
+            this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
             // menuStrip1
@@ -197,6 +205,7 @@
             // 
             // basicPanel
             // 
+            this.basicPanel.Controls.Add(this.groupBox1);
             this.basicPanel.Controls.Add(this.applyModsBut);
             this.basicPanel.Controls.Add(this.modList);
             this.basicPanel.Controls.Add(this.modOrderDown);
@@ -207,12 +216,82 @@
             this.basicPanel.Size = new System.Drawing.Size(557, 412);
             this.basicPanel.TabIndex = 7;
             // 
+            // groupBox1
+            // 
+            this.groupBox1.Controls.Add(this.authorLbl);
+            this.groupBox1.Controls.Add(this.label4);
+            this.groupBox1.Controls.Add(this.textBox1);
+            this.groupBox1.Controls.Add(this.label2);
+            this.groupBox1.Controls.Add(this.modNameLbl);
+            this.groupBox1.Controls.Add(this.label1);
+            this.groupBox1.Location = new System.Drawing.Point(228, 3);
+            this.groupBox1.Name = "groupBox1";
+            this.groupBox1.Size = new System.Drawing.Size(326, 402);
+            this.groupBox1.TabIndex = 6;
+            this.groupBox1.TabStop = false;
+            this.groupBox1.Text = "Mod Info";
+            // 
+            // authorLbl
+            // 
+            this.authorLbl.AutoSize = true;
+            this.authorLbl.Location = new System.Drawing.Point(64, 50);
+            this.authorLbl.Name = "authorLbl";
+            this.authorLbl.Size = new System.Drawing.Size(0, 15);
+            this.authorLbl.TabIndex = 5;
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(16, 50);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(47, 15);
+            this.label4.TabIndex = 4;
+            this.label4.Text = "Author:";
+            // 
+            // textBox1
+            // 
+            this.textBox1.AcceptsReturn = true;
+            this.textBox1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.textBox1.Location = new System.Drawing.Point(16, 108);
+            this.textBox1.Multiline = true;
+            this.textBox1.Name = "textBox1";
+            this.textBox1.ReadOnly = true;
+            this.textBox1.Size = new System.Drawing.Size(304, 150);
+            this.textBox1.TabIndex = 3;
+            this.textBox1.Text = "None";
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(16, 90);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(70, 15);
+            this.label2.TabIndex = 2;
+            this.label2.Text = "Description:";
+            // 
+            // modNameLbl
+            // 
+            this.modNameLbl.AutoSize = true;
+            this.modNameLbl.Location = new System.Drawing.Point(64, 30);
+            this.modNameLbl.Name = "modNameLbl";
+            this.modNameLbl.Size = new System.Drawing.Size(0, 15);
+            this.modNameLbl.TabIndex = 1;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(16, 30);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(42, 15);
+            this.label1.TabIndex = 0;
+            this.label1.Text = "Name:";
+            // 
             // applyModsBut
             // 
             this.applyModsBut.Enabled = false;
-            this.applyModsBut.Location = new System.Drawing.Point(413, 373);
+            this.applyModsBut.Location = new System.Drawing.Point(3, 365);
             this.applyModsBut.Name = "applyModsBut";
-            this.applyModsBut.Size = new System.Drawing.Size(141, 36);
+            this.applyModsBut.Size = new System.Drawing.Size(184, 40);
             this.applyModsBut.TabIndex = 5;
             this.applyModsBut.Text = "Apply mods";
             this.applyModsBut.UseVisualStyleBackColor = true;
@@ -221,17 +300,18 @@
             // modList
             // 
             this.modList.FormattingEnabled = true;
-            this.modList.Location = new System.Drawing.Point(3, 4);
+            this.modList.Location = new System.Drawing.Point(3, 3);
             this.modList.Name = "modList";
-            this.modList.Size = new System.Drawing.Size(184, 364);
+            this.modList.Size = new System.Drawing.Size(184, 310);
             this.modList.TabIndex = 4;
+            this.modList.SelectedIndexChanged += new System.EventHandler(this.modList_SelectedIndexChanged);
             // 
             // modOrderDown
             // 
             this.modOrderDown.Font = new System.Drawing.Font("Segoe UI", 20F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this.modOrderDown.Location = new System.Drawing.Point(193, 53);
             this.modOrderDown.Name = "modOrderDown";
-            this.modOrderDown.Size = new System.Drawing.Size(45, 45);
+            this.modOrderDown.Size = new System.Drawing.Size(29, 45);
             this.modOrderDown.TabIndex = 3;
             this.modOrderDown.Text = "↓";
             this.modOrderDown.UseVisualStyleBackColor = true;
@@ -242,7 +322,7 @@
             this.modOrderUp.Font = new System.Drawing.Font("Segoe UI", 20F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this.modOrderUp.Location = new System.Drawing.Point(193, 3);
             this.modOrderUp.Name = "modOrderUp";
-            this.modOrderUp.Size = new System.Drawing.Size(45, 45);
+            this.modOrderUp.Size = new System.Drawing.Size(29, 45);
             this.modOrderUp.TabIndex = 2;
             this.modOrderUp.Text = "↑";
             this.modOrderUp.UseVisualStyleBackColor = true;
@@ -250,9 +330,9 @@
             // 
             // addMod
             // 
-            this.addMod.Location = new System.Drawing.Point(3, 373);
+            this.addMod.Location = new System.Drawing.Point(3, 319);
             this.addMod.Name = "addMod";
-            this.addMod.Size = new System.Drawing.Size(184, 36);
+            this.addMod.Size = new System.Drawing.Size(184, 40);
             this.addMod.TabIndex = 1;
             this.addMod.Text = "Add mod";
             this.addMod.UseVisualStyleBackColor = true;
@@ -276,6 +356,8 @@
             this.treeContext.ResumeLayout(false);
             this.advancedPanel.ResumeLayout(false);
             this.basicPanel.ResumeLayout(false);
+            this.groupBox1.ResumeLayout(false);
+            this.groupBox1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -306,5 +388,12 @@
         private Button modOrderUp;
         private CheckedListBox modList;
         private Button applyModsBut;
+        private GroupBox groupBox1;
+        private Label modNameLbl;
+        private Label label1;
+        private Label label2;
+        private TextBox textBox1;
+        private Label authorLbl;
+        private Label label4;
     }
 }

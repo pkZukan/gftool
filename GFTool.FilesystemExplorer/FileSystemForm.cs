@@ -221,7 +221,6 @@ namespace GFTool.TrinityExplorer
                         if (!reader.Entry.IsDirectory)
                         {
                             string entry = reader.Entry.Key.Replace('\\', '/');
-                            Trace.WriteLine(entry);
                             var hash = GFFNV.Hash(entry);
                             if (fileDescriptor.IsFileUnused(hash)) { //gonna assume if at least one of the files is marked, that the mod is installed since not all files will be in trpfs
                                 modList.SetItemCheckState(i, CheckState.Checked);
@@ -409,9 +408,12 @@ namespace GFTool.TrinityExplorer
                 modList.Items.Add(fn);
         }
 
-        private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
+        private void modList_SelectedIndexChanged(object sender, EventArgs e)
         {
-
+            var mod = modList.Items[modList.SelectedIndex].ToString();
+            modNameLbl.Text = mod;
+            authorLbl.Text = "Unknown";
+            //TODO: Check for info file in zip
         }
 
         private void applyModsBut_Click(object sender, EventArgs e)
@@ -428,12 +430,9 @@ namespace GFTool.TrinityExplorer
             MessageBox.Show("Done!");
         }
 
-
-        #endregion
-
         private void modOrderUp_Click(object sender, EventArgs e)
         {
-            if(modList.SelectedIndex < 0 || modList.SelectedIndex == 0) return;
+            if (modList.SelectedIndex < 0 || modList.SelectedIndex == 0) return;
 
             var selected = modList.SelectedIndex;
             var item = modList.Items[selected];
@@ -450,5 +449,6 @@ namespace GFTool.TrinityExplorer
             modList.Items.RemoveAt(selected);
             modList.Items.Insert(selected + 1, item);
         }
+        #endregion
     }
 }
