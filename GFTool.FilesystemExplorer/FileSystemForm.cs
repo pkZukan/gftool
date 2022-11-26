@@ -205,8 +205,6 @@ namespace GFTool.TrinityExplorer
                 var fhash = GFFNV.Hash(f);
                 fileDescriptor?.RemoveFile(fhash);
             }
-
-            MessageBox.Show("Done!");
         }
 
         void GuessModsInstalled() 
@@ -427,6 +425,7 @@ namespace GFTool.TrinityExplorer
                 ApplyModPack(item.ToString(), lfsDir);
             }
             SerializeTrpfd(lfsDir + "arc/data.trpfd");
+            MessageBox.Show("Done!");
         }
 
 
