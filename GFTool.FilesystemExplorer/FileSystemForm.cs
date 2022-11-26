@@ -83,7 +83,6 @@ namespace GFTool.TrinityExplorer
             }
 
             ThreadSafe(() => {
-                statusLbl.Text = "Loading...";
                 progressBar1.Maximum = paths.Count;
                 progressBar1.Value = 0;
             });
@@ -91,9 +90,6 @@ namespace GFTool.TrinityExplorer
             var nodes = MakeTreeFromPaths(paths, rootNode);
             if(unused != null) 
                 nodes = MakeTreeFromPaths(unusedPaths, nodes, false);
-            ThreadSafe(() => {
-                statusLbl.Text = "Done";
-            });
 
             return nodes;
         }
@@ -116,10 +112,12 @@ namespace GFTool.TrinityExplorer
             if (fileDescriptor != null)
             {
                 Task.Run(() => {
+                    ThreadSafe(() => statusLbl.Text = "Loading...");
+                    TreeNode nodes = LoadTree(fileDescriptor.FileHashes, fileDescriptor.UnusedHashes);
                     ThreadSafe(() =>
                     {
-                        TreeNode nodes = LoadTree(fileDescriptor.FileHashes, fileDescriptor.UnusedHashes);
                         fileView.Nodes.Add(nodes);
+                        statusLbl.Text = "Done";
                     });
                 });
             }
@@ -132,6 +130,7 @@ namespace GFTool.TrinityExplorer
             var sfd = new FolderBrowserDialog();
             if (sfd.ShowDialog() != DialogResult.OK) return;
 
+            statusLbl.Text = "Saving file...";
             var fileHash = GFFNV.Hash(file);
             var packHash = GFFNV.Hash(fileDescriptor.GetPackName(fileHash));
             var packInfo = fileDescriptor.GetPackInfo(fileHash);
@@ -164,6 +163,7 @@ namespace GFTool.TrinityExplorer
                     break;
                 }
             }
+            statusLbl.Text = "Done";
             MessageBox.Show("Saved " + file);
         }
 
@@ -418,6 +418,7 @@ namespace GFTool.TrinityExplorer
 
         private void applyModsBut_Click(object sender, EventArgs e)
         {
+            statusLbl.Text = "Applying mods...";
             string lfsDir = "layeredFS/";
             if (Directory.Exists(lfsDir))
                 Directory.Delete(lfsDir, true);
@@ -427,6 +428,7 @@ namespace GFTool.TrinityExplorer
                 ApplyModPack(item.ToString(), lfsDir);
             }
             SerializeTrpfd(lfsDir + "arc/data.trpfd");
+            statusLbl.Text = "Done";
             MessageBox.Show("Done!");
         }
 
