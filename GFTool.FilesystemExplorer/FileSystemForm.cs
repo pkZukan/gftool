@@ -33,14 +33,17 @@ namespace GFTool.TrinityExplorer
             InitializeComponent();
             hasOodleDll = File.Exists("oo2core_8_win64.dll");
             if (!hasOodleDll)
-                MessageBox.Show("Oodle dll missing, saving from TRPFS is disabled");
+                MessageBox.Show("Liboodle dll missing. Exporting from TRPFS is disabled.");
+            MessageBox.Show("Please select the TRPFD from your base RomFS.");
+            OpenFileDescriptor();
             LoadMods();
         }
 
         public void LoadMods()
         {
-            if (!Directory.Exists("mods"))
+            if (!Directory.Exists("mods")) {
                 Directory.CreateDirectory("mods");
+            }
 
             var files = Directory.EnumerateFiles("mods").Where(x => x.EndsWith(".zip") || x.EndsWith(".rar"));
             foreach ( var file in files)
@@ -86,8 +89,10 @@ namespace GFTool.TrinityExplorer
                 progressBar1.Maximum = paths.Count;
                 progressBar1.Value = 0;
             });
-            var rootNode = new TreeNode("TRPFS");
+
+            var rootNode = new TreeNode("romfs");
             var nodes = MakeTreeFromPaths(paths, rootNode);
+            
             if(unused != null) 
                 nodes = MakeTreeFromPaths(unusedPaths, nodes, false);
 
@@ -212,7 +217,6 @@ namespace GFTool.TrinityExplorer
             List<string> files = new List<string>();
             for (int i = 0; i < modList.Items.Count; i++)
             {
-                
                 using (Stream stream = File.OpenRead("mods/" + modList.Items[i].ToString()))
                 using (var reader = ReaderFactory.Open(stream))
                 {
@@ -267,78 +271,6 @@ namespace GFTool.TrinityExplorer
             if (sfd.ShowDialog() != DialogResult.OK) return;
             SerializeTrpfd(sfd.FileName);
             MessageBox.Show("Data saved");
-        }
-
-        private void exportPackContentsToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            /*var index = comboBox1.SelectedIndex;
-            var packName = fileDescriptor.PackNames[index];
-            var packInfo = fileDescriptor.PackInfo[index];
-            var packHash = GFFNV.Hash(packName);
-
-            var fileDialog = new FolderBrowserDialog()
-            {
-
-            };
-
-            if (fileDialog.ShowDialog() == DialogResult.OK)
-            {
-                var fileIndex = Array.IndexOf(fileSystem.FileHashes, packHash);
-                var fileBytes = ONEFILESerializer.SplitTRPAK(fs_name, (long)fileSystem.FileOffsets[fileIndex], (long)packInfo.FileSize);
-                PackedArchive pack = FlatBufferConverter.DeserializeFrom<PackedArchive>(fileBytes);
-                //TODO: Make a TRPAK Serializer class and use the model for it
-                for (int i = 0; i < pack.FileEntry.Length; i++)
-                {
-                    var hash = pack.FileHashes[i];
-                    var name = GFTool.Core.Cache.GFPakHashCache.GetName(hash);
-
-                    if (name == null)
-                    {
-                        name = hash.ToString("X16");
-                    }
-
-                    var entry = pack.FileEntry[i];
-                    var buffer = entry.FileBuffer;
-
-                    if (entry.EncryptionType != -1)
-                    {
-                        buffer = Oodle.Decompress(buffer, (long)entry.FileSize);
-                    }
-                    var filepath = Path.Combine(fileDialog.SelectedPath, name);
-
-                    if (!System.IO.Directory.Exists(Path.GetDirectoryName(filepath)))
-                    {
-                        System.IO.Directory.CreateDirectory(Path.GetDirectoryName(filepath));
-                    }
-
-                    BinaryWriter bw = new BinaryWriter(File.OpenWrite(Path.Combine(fileDialog.SelectedPath, name)));
-                    bw.Write(buffer);
-                    bw.Close();
-
-                }
-            }*/
-        }
-
-        private void exportPackFileToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            /*var index = comboBox1.SelectedIndex;
-            var packName = fileDescriptor.PackNames[index];
-            var packInfo = fileDescriptor.PackInfo[index];
-            var fileDialog = new SaveFileDialog()
-            {
-                Filter = "Trinity FilePack (*.trpak) |*.trpak",
-                FileName = packName.Replace("arc/", ""),
-            };
-            if (fileDialog.ShowDialog() == DialogResult.OK)
-            {
-                var fileHash = GFFNV.Hash(packName);
-                var fileIndex = Array.IndexOf(fileSystem.FileHashes, fileHash);
-                var fileBytes = ONEFILESerializer.SplitTRPAK(fs_name, (long)fileSystem.FileOffsets[fileIndex], (long)packInfo.FileSize);
-                BinaryWriter bw = new BinaryWriter(File.OpenWrite(fileDialog.FileName));
-                bw.Write(fileBytes);
-                bw.Close();
-            }
-            */
         }
 
         private void fileView_MouseUp(object sender, MouseEventArgs e)
@@ -452,5 +384,10 @@ namespace GFTool.TrinityExplorer
             modList.Items.Insert(selected + 1, item);
         }
         #endregion
+
+        private void showUnhashedFilesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }

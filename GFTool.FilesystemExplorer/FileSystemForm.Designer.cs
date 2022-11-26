@@ -33,12 +33,9 @@
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openFileDescriptorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveFileDescriptorAsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.exportPackFileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.exportPackContentsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.viewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.advancedToggle = new System.Windows.Forms.ToolStripMenuItem();
-            this.editToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.showUnhashedFilesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.fileView = new System.Windows.Forms.TreeView();
             this.helpProvider1 = new System.Windows.Forms.HelpProvider();
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
@@ -49,10 +46,10 @@
             this.advancedPanel = new System.Windows.Forms.Panel();
             this.basicPanel = new System.Windows.Forms.Panel();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.authorLbl = new System.Windows.Forms.Label();
-            this.label4 = new System.Windows.Forms.Label();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
+            this.authorLbl = new System.Windows.Forms.Label();
+            this.label4 = new System.Windows.Forms.Label();
             this.modNameLbl = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
             this.applyModsBut = new System.Windows.Forms.Button();
@@ -71,9 +68,7 @@
             // 
             this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.fileToolStripMenuItem,
-            this.viewToolStripMenuItem,
-            this.editToolStripMenuItem,
-            this.helpToolStripMenuItem});
+            this.viewToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
             this.menuStrip1.Size = new System.Drawing.Size(581, 24);
@@ -84,9 +79,7 @@
             // 
             this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.openFileDescriptorToolStripMenuItem,
-            this.saveFileDescriptorAsToolStripMenuItem,
-            this.exportPackFileToolStripMenuItem,
-            this.exportPackContentsToolStripMenuItem});
+            this.saveFileDescriptorAsToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
             this.fileToolStripMenuItem.Size = new System.Drawing.Size(37, 20);
             this.fileToolStripMenuItem.Text = "File";
@@ -94,35 +87,22 @@
             // openFileDescriptorToolStripMenuItem
             // 
             this.openFileDescriptorToolStripMenuItem.Name = "openFileDescriptorToolStripMenuItem";
-            this.openFileDescriptorToolStripMenuItem.Size = new System.Drawing.Size(192, 22);
+            this.openFileDescriptorToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
             this.openFileDescriptorToolStripMenuItem.Text = "Open File Descriptor";
             this.openFileDescriptorToolStripMenuItem.Click += new System.EventHandler(this.openFileDescriptorToolStripMenuItem_Click);
             // 
             // saveFileDescriptorAsToolStripMenuItem
             // 
             this.saveFileDescriptorAsToolStripMenuItem.Name = "saveFileDescriptorAsToolStripMenuItem";
-            this.saveFileDescriptorAsToolStripMenuItem.Size = new System.Drawing.Size(192, 22);
-            this.saveFileDescriptorAsToolStripMenuItem.Text = "Save File Descriptor As";
+            this.saveFileDescriptorAsToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
+            this.saveFileDescriptorAsToolStripMenuItem.Text = "Save File Descriptor";
             this.saveFileDescriptorAsToolStripMenuItem.Click += new System.EventHandler(this.saveFileDescriptorAsToolStripMenuItem_Click);
-            // 
-            // exportPackFileToolStripMenuItem
-            // 
-            this.exportPackFileToolStripMenuItem.Name = "exportPackFileToolStripMenuItem";
-            this.exportPackFileToolStripMenuItem.Size = new System.Drawing.Size(192, 22);
-            this.exportPackFileToolStripMenuItem.Text = "Export Pack File";
-            this.exportPackFileToolStripMenuItem.Click += new System.EventHandler(this.exportPackFileToolStripMenuItem_Click);
-            // 
-            // exportPackContentsToolStripMenuItem
-            // 
-            this.exportPackContentsToolStripMenuItem.Name = "exportPackContentsToolStripMenuItem";
-            this.exportPackContentsToolStripMenuItem.Size = new System.Drawing.Size(192, 22);
-            this.exportPackContentsToolStripMenuItem.Text = "Export Pack Contents";
-            this.exportPackContentsToolStripMenuItem.Click += new System.EventHandler(this.exportPackContentsToolStripMenuItem_Click);
             // 
             // viewToolStripMenuItem
             // 
             this.viewToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.advancedToggle});
+            this.advancedToggle,
+            this.showUnhashedFilesToolStripMenuItem});
             this.viewToolStripMenuItem.Name = "viewToolStripMenuItem";
             this.viewToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
             this.viewToolStripMenuItem.Text = "View";
@@ -131,24 +111,23 @@
             // 
             this.advancedToggle.CheckOnClick = true;
             this.advancedToggle.Name = "advancedToggle";
-            this.advancedToggle.Size = new System.Drawing.Size(155, 22);
+            this.advancedToggle.Size = new System.Drawing.Size(185, 22);
             this.advancedToggle.Text = "Advanced View";
             this.advancedToggle.CheckedChanged += new System.EventHandler(this.advancedViewToolStripMenuItem_CheckedChanged);
             // 
-            // editToolStripMenuItem
+            // showUnhashedFilesToolStripMenuItem
             // 
-            this.editToolStripMenuItem.Name = "editToolStripMenuItem";
-            this.editToolStripMenuItem.Size = new System.Drawing.Size(39, 20);
-            this.editToolStripMenuItem.Text = "Edit";
-            // 
-            // helpToolStripMenuItem
-            // 
-            this.helpToolStripMenuItem.Name = "helpToolStripMenuItem";
-            this.helpToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
-            this.helpToolStripMenuItem.Text = "Help";
+            this.showUnhashedFilesToolStripMenuItem.Enabled = false;
+            this.showUnhashedFilesToolStripMenuItem.Name = "showUnhashedFilesToolStripMenuItem";
+            this.showUnhashedFilesToolStripMenuItem.Size = new System.Drawing.Size(185, 22);
+            this.showUnhashedFilesToolStripMenuItem.Text = "Show Unhashed Files";
+            this.showUnhashedFilesToolStripMenuItem.Click += new System.EventHandler(this.showUnhashedFilesToolStripMenuItem_Click);
             // 
             // fileView
             // 
+            this.fileView.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.fileView.Location = new System.Drawing.Point(3, 3);
             this.fileView.Name = "fileView";
             this.fileView.Size = new System.Drawing.Size(551, 406);
@@ -157,6 +136,7 @@
             // 
             // progressBar1
             // 
+            this.progressBar1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.progressBar1.Location = new System.Drawing.Point(312, 445);
             this.progressBar1.Name = "progressBar1";
             this.progressBar1.Size = new System.Drawing.Size(257, 15);
@@ -164,6 +144,7 @@
             // 
             // statusLbl
             // 
+            this.statusLbl.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.statusLbl.AutoSize = true;
             this.statusLbl.Location = new System.Drawing.Point(12, 445);
             this.statusLbl.Name = "statusLbl";
@@ -195,6 +176,9 @@
             // 
             // advancedPanel
             // 
+            this.advancedPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.advancedPanel.Controls.Add(this.fileView);
             this.advancedPanel.Enabled = false;
             this.advancedPanel.Location = new System.Drawing.Point(12, 27);
@@ -205,6 +189,9 @@
             // 
             // basicPanel
             // 
+            this.basicPanel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.basicPanel.Controls.Add(this.groupBox1);
             this.basicPanel.Controls.Add(this.applyModsBut);
             this.basicPanel.Controls.Add(this.modList);
@@ -218,23 +205,50 @@
             // 
             // groupBox1
             // 
-            this.groupBox1.Controls.Add(this.authorLbl);
-            this.groupBox1.Controls.Add(this.label4);
+            this.groupBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.groupBox1.Controls.Add(this.textBox1);
             this.groupBox1.Controls.Add(this.label2);
+            this.groupBox1.Controls.Add(this.authorLbl);
+            this.groupBox1.Controls.Add(this.label4);
             this.groupBox1.Controls.Add(this.modNameLbl);
             this.groupBox1.Controls.Add(this.label1);
-            this.groupBox1.Location = new System.Drawing.Point(228, 3);
+            this.groupBox1.Location = new System.Drawing.Point(229, 0);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(326, 402);
+            this.groupBox1.Size = new System.Drawing.Size(328, 412);
             this.groupBox1.TabIndex = 6;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Mod Info";
             // 
+            // textBox1
+            // 
+            this.textBox1.AcceptsReturn = true;
+            this.textBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.textBox1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.textBox1.Location = new System.Drawing.Point(16, 82);
+            this.textBox1.Multiline = true;
+            this.textBox1.Name = "textBox1";
+            this.textBox1.ReadOnly = true;
+            this.textBox1.Size = new System.Drawing.Size(304, 322);
+            this.textBox1.TabIndex = 3;
+            this.textBox1.Text = "None";
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(16, 64);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(70, 15);
+            this.label2.TabIndex = 2;
+            this.label2.Text = "Description:";
+            // 
             // authorLbl
             // 
             this.authorLbl.AutoSize = true;
-            this.authorLbl.Location = new System.Drawing.Point(64, 50);
+            this.authorLbl.Location = new System.Drawing.Point(64, 44);
             this.authorLbl.Name = "authorLbl";
             this.authorLbl.Size = new System.Drawing.Size(0, 15);
             this.authorLbl.TabIndex = 5;
@@ -242,37 +256,16 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(16, 50);
+            this.label4.Location = new System.Drawing.Point(16, 44);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(47, 15);
             this.label4.TabIndex = 4;
             this.label4.Text = "Author:";
             // 
-            // textBox1
-            // 
-            this.textBox1.AcceptsReturn = true;
-            this.textBox1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.textBox1.Location = new System.Drawing.Point(16, 108);
-            this.textBox1.Multiline = true;
-            this.textBox1.Name = "textBox1";
-            this.textBox1.ReadOnly = true;
-            this.textBox1.Size = new System.Drawing.Size(304, 150);
-            this.textBox1.TabIndex = 3;
-            this.textBox1.Text = "None";
-            // 
-            // label2
-            // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(16, 90);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(70, 15);
-            this.label2.TabIndex = 2;
-            this.label2.Text = "Description:";
-            // 
             // modNameLbl
             // 
             this.modNameLbl.AutoSize = true;
-            this.modNameLbl.Location = new System.Drawing.Point(64, 30);
+            this.modNameLbl.Location = new System.Drawing.Point(64, 24);
             this.modNameLbl.Name = "modNameLbl";
             this.modNameLbl.Size = new System.Drawing.Size(0, 15);
             this.modNameLbl.TabIndex = 1;
@@ -280,7 +273,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(16, 30);
+            this.label1.Location = new System.Drawing.Point(16, 24);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(42, 15);
             this.label1.TabIndex = 0;
@@ -288,8 +281,9 @@
             // 
             // applyModsBut
             // 
+            this.applyModsBut.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.applyModsBut.Enabled = false;
-            this.applyModsBut.Location = new System.Drawing.Point(3, 365);
+            this.applyModsBut.Location = new System.Drawing.Point(3, 364);
             this.applyModsBut.Name = "applyModsBut";
             this.applyModsBut.Size = new System.Drawing.Size(184, 40);
             this.applyModsBut.TabIndex = 5;
@@ -299,8 +293,10 @@
             // 
             // modList
             // 
+            this.modList.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
             this.modList.FormattingEnabled = true;
-            this.modList.Location = new System.Drawing.Point(3, 3);
+            this.modList.Location = new System.Drawing.Point(3, 0);
             this.modList.Name = "modList";
             this.modList.Size = new System.Drawing.Size(184, 310);
             this.modList.TabIndex = 4;
@@ -308,10 +304,10 @@
             // 
             // modOrderDown
             // 
-            this.modOrderDown.Font = new System.Drawing.Font("Segoe UI", 20F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.modOrderDown.Location = new System.Drawing.Point(193, 53);
+            this.modOrderDown.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.modOrderDown.Location = new System.Drawing.Point(192, 32);
             this.modOrderDown.Name = "modOrderDown";
-            this.modOrderDown.Size = new System.Drawing.Size(29, 45);
+            this.modOrderDown.Size = new System.Drawing.Size(32, 32);
             this.modOrderDown.TabIndex = 3;
             this.modOrderDown.Text = "↓";
             this.modOrderDown.UseVisualStyleBackColor = true;
@@ -319,10 +315,10 @@
             // 
             // modOrderUp
             // 
-            this.modOrderUp.Font = new System.Drawing.Font("Segoe UI", 20F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.modOrderUp.Location = new System.Drawing.Point(193, 3);
+            this.modOrderUp.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.modOrderUp.Location = new System.Drawing.Point(192, 0);
             this.modOrderUp.Name = "modOrderUp";
-            this.modOrderUp.Size = new System.Drawing.Size(29, 45);
+            this.modOrderUp.Size = new System.Drawing.Size(32, 32);
             this.modOrderUp.TabIndex = 2;
             this.modOrderUp.Text = "↑";
             this.modOrderUp.UseVisualStyleBackColor = true;
@@ -330,7 +326,8 @@
             // 
             // addMod
             // 
-            this.addMod.Location = new System.Drawing.Point(3, 319);
+            this.addMod.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.addMod.Location = new System.Drawing.Point(3, 317);
             this.addMod.Name = "addMod";
             this.addMod.Size = new System.Drawing.Size(184, 40);
             this.addMod.TabIndex = 1;
@@ -366,11 +363,7 @@
         #endregion
         private MenuStrip menuStrip1;
         private ToolStripMenuItem fileToolStripMenuItem;
-        private ToolStripMenuItem editToolStripMenuItem;
-        private ToolStripMenuItem helpToolStripMenuItem;
         private ToolStripMenuItem openFileDescriptorToolStripMenuItem;
-        private ToolStripMenuItem exportPackFileToolStripMenuItem;
-        private ToolStripMenuItem exportPackContentsToolStripMenuItem;
         private TreeView fileView;
         private HelpProvider helpProvider1;
         private ProgressBar progressBar1;
@@ -395,5 +388,6 @@
         private TextBox textBox1;
         private Label authorLbl;
         private Label label4;
+        private ToolStripMenuItem showUnhashedFilesToolStripMenuItem;
     }
 }
