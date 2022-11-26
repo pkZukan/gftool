@@ -15,6 +15,7 @@ using System.IO.Compression;
 using SharpCompress.Readers;
 using SharpCompress.Common;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace GFTool.TrinityExplorer
 {
@@ -156,7 +157,7 @@ namespace GFTool.TrinityExplorer
                     if (!reader.Entry.IsDirectory)
                     {
                         string entry = reader.Entry.Key;
-                        reader.WriteEntryToDirectory(lfsDir, new ExtractionOptions() { ExtractFullPath = true });
+                        reader.WriteEntryToDirectory(lfsDir, new ExtractionOptions() { ExtractFullPath = true, Overwrite = true });
                         files.Add(entry.Replace('\\', '/'));
                     }
                 }
@@ -166,6 +167,31 @@ namespace GFTool.TrinityExplorer
             {
                 var fhash = GFFNV.Hash(f);
                 fileDescriptor?.RemoveFile(fhash);
+            }
+        }
+
+        void GuessModsInstalled() 
+        {
+            List<string> files = new List<string>();
+            for (int i = 0; i < modList.Items.Count; i++)
+            {
+                
+                using (Stream stream = File.OpenRead("mods/" + modList.Items[i].ToString()))
+                using (var reader = ReaderFactory.Open(stream))
+                {
+                    while (reader.MoveToNextEntry())
+                    {
+                        if (!reader.Entry.IsDirectory)
+                        {
+                            string entry = reader.Entry.Key.Replace('\\', '/');
+                            Trace.WriteLine(entry);
+                            var hash = GFFNV.Hash(entry);
+                            if (fileDescriptor.IsFileUnused(hash)) { //gonna assume if at least one of the files is marked, that the mod is installed since not all files will be in trpfs
+                                modList.SetItemCheckState(i, CheckState.Checked);
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -192,6 +218,7 @@ namespace GFTool.TrinityExplorer
         private void openFileDescriptorToolStripMenuItem_Click(object sender, EventArgs e)
         {
             OpenFileDescriptor();
+            GuessModsInstalled();
             applyModsBut.Enabled= true;
         }
 
@@ -205,32 +232,6 @@ namespace GFTool.TrinityExplorer
             SerializeTrpfd(sfd.FileName);
             MessageBox.Show("Data saved");
         }
-
-        /*private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (fileDescriptor== null)
-            {
-                return;
-            }
-            var index = comboBox1.SelectedIndex;
-
-            listBox1.Items.Clear();
-            for (int i = 0; i < fileDescriptor.FileInfo.Length; i++)
-            {
-                var FileInfo = fileDescriptor.FileInfo[i];
-                var FileHash = fileDescriptor.FileHashes[i];
-
-                if ((int)FileInfo.FileIndex == index)
-                {
-                    var name = GFTool.Core.Cache.GFPakHashCache.GetName(FileHash);
-                    if (name == null)
-                    {
-                        name = FileHash.ToString("X16");
-                    }
-                    listBox1.Items.Add(name);
-                }
-            }
-        }*/
 
         private void exportPackContentsToolStripMenuItem_Click(object sender, EventArgs e)
         {
