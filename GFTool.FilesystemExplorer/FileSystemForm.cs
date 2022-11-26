@@ -23,12 +23,17 @@ namespace GFTool.TrinityExplorer
     {
         private FileDescriptor? fileDescriptor = null;
         private FileSystem? fileSystem = null;
-        private string? fs_name;
-        private string? fd_name;
+        private string trpfdFile;
+        private string trpfsFile;
+
+        private bool hasOodleDll = false;
 
         public FileSystemForm()
         {
             InitializeComponent();
+            hasOodleDll = File.Exists("oo2core_8_win64.dll");
+            if (!hasOodleDll)
+                MessageBox.Show("Oodle dll missing, saving from TRPFS is disabled");
             LoadMods();
         }
 
@@ -94,17 +99,19 @@ namespace GFTool.TrinityExplorer
         }
 
         public void OpenFileDescriptor() {
-            var openFileDialog = new OpenFileDialog()
+            var ofd = new OpenFileDialog()
             {
                 Filter = "Trinity File Descriptor (*.trpfd) |*.trpfd",
             };
-            if (openFileDialog.ShowDialog() != DialogResult.OK) return;
+            if (ofd.ShowDialog() != DialogResult.OK) return;
             fileView.Nodes.Clear();
 
-            fileDescriptor = FlatBufferConverter.DeserializeFrom<FileDescriptor>(openFileDialog.FileName);
-            string trpfs = openFileDialog.FileName.Replace("trpfd", "trpfs");
-            if(File.Exists(trpfs))
-                fileSystem = ONEFILESerializer.DeserializeFileSystem(trpfs);
+            fileDescriptor = FlatBufferConverter.DeserializeFrom<FileDescriptor>(ofd.FileName);
+            trpfsFile = ofd.FileName.Replace("trpfd", "trpfs");
+            if (File.Exists(trpfsFile))
+            {
+                fileSystem = ONEFILESerializer.DeserializeFileSystem(trpfsFile);
+            }
 
             if (fileDescriptor != null)
             {
@@ -120,13 +127,43 @@ namespace GFTool.TrinityExplorer
 
         void SaveFile(string file)
         {
+            if (!hasOodleDll) return;
+
+            var sfd = new FolderBrowserDialog();
+            if (sfd.ShowDialog() != DialogResult.OK) return;
+
             var fileHash = GFFNV.Hash(file);
             var packHash = GFFNV.Hash(fileDescriptor.GetPackName(fileHash));
             var packInfo = fileDescriptor.GetPackInfo(fileHash);
 
             var fileIndex = Array.IndexOf(fileSystem.FileHashes, packHash);
-            var fileBytes = ONEFILESerializer.SplitTRPAK(fs_name, (long)fileSystem.FileOffsets[fileIndex], (long)packInfo.FileSize);
+            var fileBytes = ONEFILESerializer.SplitTRPAK(trpfsFile, (long)fileSystem.FileOffsets[fileIndex], (long)packInfo.FileSize);
             PackedArchive pack = FlatBufferConverter.DeserializeFrom<PackedArchive>(fileBytes);
+            for (int i = 0; i < pack.FileEntry.Length; i++)
+            {
+                var hash = pack.FileHashes[i];
+                var name = GFPakHashCache.GetName(hash);
+
+                if (hash == fileHash) {
+                    if (name == null)
+                        name = hash.ToString("X16");
+
+                    var entry = pack.FileEntry[i];
+                    var buffer = entry.FileBuffer;
+
+                    if (entry.EncryptionType != -1)
+                        buffer = Oodle.Decompress(buffer, (long)entry.FileSize);
+
+                    var filepath = string.Format("{0}/{1}", sfd.SelectedPath, name);
+
+                    if (!Directory.Exists(Path.GetDirectoryName(filepath)))
+                        Directory.CreateDirectory(Path.GetDirectoryName(filepath));
+
+                    File.WriteAllBytes(filepath, buffer);
+
+                    break;
+                }
+            }
             MessageBox.Show("Saved " + file);
         }
 
@@ -168,6 +205,8 @@ namespace GFTool.TrinityExplorer
                 var fhash = GFFNV.Hash(f);
                 fileDescriptor?.RemoveFile(fhash);
             }
+
+            MessageBox.Show("Done!");
         }
 
         void GuessModsInstalled() 
@@ -325,7 +364,8 @@ namespace GFTool.TrinityExplorer
         private void saveFileToolStripMenuItem_Click(object sender, EventArgs e)
         {
             TreeNode node = fileView.SelectedNode;
-            string file = node.FullPath.Replace("\\", "/").Substring(1);
+            string file = node.FullPath.Replace("\\", "/");
+            file = file.Substring(file.IndexOf('/') + 1);
             SaveFile(file);
         }
 
