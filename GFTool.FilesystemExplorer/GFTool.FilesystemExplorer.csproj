@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="SharpCompress" Version="0.32.2" />
+    <PackageReference Include="Tomlyn.Signed" Version="0.16.1" />
   </ItemGroup>
 
   <ItemGroup>

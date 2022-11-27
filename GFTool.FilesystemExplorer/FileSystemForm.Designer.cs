@@ -52,10 +52,8 @@
             this.advancedPanel = new System.Windows.Forms.Panel();
             this.basicPanel = new System.Windows.Forms.Panel();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.textBox1 = new System.Windows.Forms.TextBox();
+            this.modDescriptionBox = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
-            this.authorLbl = new System.Windows.Forms.Label();
-            this.label4 = new System.Windows.Forms.Label();
             this.modNameLbl = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
             this.applyModsBut = new System.Windows.Forms.Button();
@@ -65,6 +63,8 @@
             this.addMod = new System.Windows.Forms.Button();
             this.basicContext = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.deleteModBut = new System.Windows.Forms.ToolStripMenuItem();
+            this.versionLbl = new System.Windows.Forms.Label();
+            this.label4 = new System.Windows.Forms.Label();
             this.menuStrip1.SuspendLayout();
             this.treeContext.SuspendLayout();
             this.advancedPanel.SuspendLayout();
@@ -266,10 +266,10 @@
             this.groupBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.groupBox1.Controls.Add(this.textBox1);
-            this.groupBox1.Controls.Add(this.label2);
-            this.groupBox1.Controls.Add(this.authorLbl);
+            this.groupBox1.Controls.Add(this.versionLbl);
             this.groupBox1.Controls.Add(this.label4);
+            this.groupBox1.Controls.Add(this.modDescriptionBox);
+            this.groupBox1.Controls.Add(this.label2);
             this.groupBox1.Controls.Add(this.modNameLbl);
             this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Location = new System.Drawing.Point(229, 0);
@@ -279,20 +279,20 @@
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Mod Info";
             // 
-            // textBox1
+            // modDescriptionBox
             // 
-            this.textBox1.AcceptsReturn = true;
-            this.textBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this.modDescriptionBox.AcceptsReturn = true;
+            this.modDescriptionBox.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.textBox1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.textBox1.Location = new System.Drawing.Point(16, 82);
-            this.textBox1.Multiline = true;
-            this.textBox1.Name = "textBox1";
-            this.textBox1.ReadOnly = true;
-            this.textBox1.Size = new System.Drawing.Size(304, 322);
-            this.textBox1.TabIndex = 3;
-            this.textBox1.Text = "None";
+            this.modDescriptionBox.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.modDescriptionBox.Location = new System.Drawing.Point(16, 82);
+            this.modDescriptionBox.Multiline = true;
+            this.modDescriptionBox.Name = "modDescriptionBox";
+            this.modDescriptionBox.ReadOnly = true;
+            this.modDescriptionBox.Size = new System.Drawing.Size(304, 322);
+            this.modDescriptionBox.TabIndex = 3;
+            this.modDescriptionBox.Text = "None";
             // 
             // label2
             // 
@@ -303,27 +303,10 @@
             this.label2.TabIndex = 2;
             this.label2.Text = "Description:";
             // 
-            // authorLbl
-            // 
-            this.authorLbl.AutoSize = true;
-            this.authorLbl.Location = new System.Drawing.Point(64, 44);
-            this.authorLbl.Name = "authorLbl";
-            this.authorLbl.Size = new System.Drawing.Size(0, 15);
-            this.authorLbl.TabIndex = 5;
-            // 
-            // label4
-            // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(16, 44);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(47, 15);
-            this.label4.TabIndex = 4;
-            this.label4.Text = "Author:";
-            // 
             // modNameLbl
             // 
             this.modNameLbl.AutoSize = true;
-            this.modNameLbl.Location = new System.Drawing.Point(64, 24);
+            this.modNameLbl.Location = new System.Drawing.Point(64, 19);
             this.modNameLbl.Name = "modNameLbl";
             this.modNameLbl.Size = new System.Drawing.Size(0, 15);
             this.modNameLbl.TabIndex = 1;
@@ -331,7 +314,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(16, 24);
+            this.label1.Location = new System.Drawing.Point(16, 19);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(42, 15);
             this.label1.TabIndex = 0;
@@ -408,6 +391,23 @@
             this.deleteModBut.Text = "Delete";
             this.deleteModBut.Click += new System.EventHandler(this.deleteModBut_Click);
             // 
+            // versionLbl
+            // 
+            this.versionLbl.AutoSize = true;
+            this.versionLbl.Location = new System.Drawing.Point(70, 43);
+            this.versionLbl.Name = "versionLbl";
+            this.versionLbl.Size = new System.Drawing.Size(0, 15);
+            this.versionLbl.TabIndex = 5;
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(16, 43);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(48, 15);
+            this.label4.TabIndex = 4;
+            this.label4.Text = "Version:";
+            // 
             // FileSystemForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -460,9 +460,7 @@
         private Label modNameLbl;
         private Label label1;
         private Label label2;
-        private TextBox textBox1;
-        private Label authorLbl;
-        private Label label4;
+        private TextBox modDescriptionBox;
         private ToolStripMenuItem showUnhashedFilesToolStripMenuItem;
         private ToolStripMenuItem helpToolStripMenuItem;
         private ToolStripMenuItem aboutToolStripMenuItem;
@@ -472,5 +470,7 @@
         private ContextMenuStrip basicContext;
         private ToolStripMenuItem deleteModBut;
         private ToolStripMenuItem setOutputFolderToolStripMenuItem;
+        private Label versionLbl;
+        private Label label4;
     }
 }

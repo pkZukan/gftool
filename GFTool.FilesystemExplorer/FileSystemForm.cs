@@ -16,6 +16,9 @@ using System.Text.Json;
 using System.Security.Cryptography;
 using System.Xml.Linq;
 using System.Windows.Forms;
+using Tomlyn;
+using Tomlyn.Model;
+using System.IO;
 
 namespace GFTool.TrinityExplorer
 {
@@ -335,12 +338,49 @@ namespace GFTool.TrinityExplorer
             File.WriteAllBytes(fileOut, trpfd);
         }
 
+        private TomlTable FetchToml(string file)
+        {
+            var toml = "";
+            using (Stream stream = File.OpenRead(file))
+            using (var reader = ReaderFactory.Open(stream))
+            {
+                while (reader.MoveToNextEntry())
+                {
+                    if (!reader.Entry.IsDirectory)
+                    {
+                        string entry = reader.Entry.Key.Replace('\\', '/');
+                        if (entry.EndsWith("info.toml")) {
+                            using (var entryStream = reader.OpenEntryStream())
+                            {
+                                using (var r = new StreamReader(entryStream))
+                                {
+                                    toml = r.ReadToEnd();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return Toml.ToModel(toml);
+        }
+
         private void PopulateMetaData()
         {
             var mod = modList.Items[modList.SelectedIndex].ToString();
-            modNameLbl.Text = mod;
-            authorLbl.Text = "Unknown";
-            //TODO: Check for info file in zip
+            var toml = FetchToml("mods/" + mod);
+            if (toml.Count >= 3)
+            {
+                modNameLbl.Text = toml["display_name"].ToString();
+                modDescriptionBox.Text = toml["description"].ToString();
+                versionLbl.Text = toml["version"].ToString();
+            }
+            else 
+            {
+                modNameLbl.Text = mod;
+                modDescriptionBox.Text = "None";
+                versionLbl.Text = "Unknown";
+            }
+            
         }
 
         private void SaveTrpfsFiles()
