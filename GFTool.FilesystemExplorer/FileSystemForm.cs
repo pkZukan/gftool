@@ -527,9 +527,9 @@ namespace GFTool.TrinityExplorer
         private void deleteModBut_Click(object sender, EventArgs e)
         {
             var file = "mods/" + modList.Items[modList.SelectedIndex].ToString();
-            Trace.WriteLine(file);
             if (File.Exists(file)) {
                 File.Delete(file);
+                modList.Items.Remove(modList.Items[modList.SelectedIndex]);
             }
         }
 
