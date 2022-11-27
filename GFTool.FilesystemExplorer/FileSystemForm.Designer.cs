@@ -34,6 +34,8 @@
             this.openFileDescriptorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveFileDescriptorAsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openRomFSFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.disableAutoLoad = new System.Windows.Forms.ToolStripMenuItem();
             this.viewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.advancedToggle = new System.Windows.Forms.ToolStripMenuItem();
             this.showUnhashedFilesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -60,17 +62,22 @@
             this.modOrderDown = new System.Windows.Forms.Button();
             this.modOrderUp = new System.Windows.Forms.Button();
             this.addMod = new System.Windows.Forms.Button();
+            this.basicContext = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.deleteModBut = new System.Windows.Forms.ToolStripMenuItem();
+            this.setOutputFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.treeContext.SuspendLayout();
             this.advancedPanel.SuspendLayout();
             this.basicPanel.SuspendLayout();
             this.groupBox1.SuspendLayout();
+            this.basicContext.SuspendLayout();
             this.SuspendLayout();
             // 
             // menuStrip1
             // 
             this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.fileToolStripMenuItem,
+            this.optionsToolStripMenuItem,
             this.viewToolStripMenuItem,
             this.helpToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
@@ -84,7 +91,8 @@
             this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.openFileDescriptorToolStripMenuItem,
             this.saveFileDescriptorAsToolStripMenuItem,
-            this.openRomFSFolderToolStripMenuItem});
+            this.openRomFSFolderToolStripMenuItem,
+            this.setOutputFolderToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
             this.fileToolStripMenuItem.Size = new System.Drawing.Size(37, 20);
             this.fileToolStripMenuItem.Text = "File";
@@ -109,6 +117,22 @@
             this.openRomFSFolderToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
             this.openRomFSFolderToolStripMenuItem.Text = "Open RomFS Folder";
             this.openRomFSFolderToolStripMenuItem.Click += new System.EventHandler(this.openRomFSFolderToolStripMenuItem_Click);
+            // 
+            // optionsToolStripMenuItem
+            // 
+            this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.disableAutoLoad});
+            this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
+            this.optionsToolStripMenuItem.Size = new System.Drawing.Size(61, 20);
+            this.optionsToolStripMenuItem.Text = "Options";
+            // 
+            // disableAutoLoad
+            // 
+            this.disableAutoLoad.CheckOnClick = true;
+            this.disableAutoLoad.Name = "disableAutoLoad";
+            this.disableAutoLoad.Size = new System.Drawing.Size(201, 22);
+            this.disableAutoLoad.Text = "Disable TRPFD Autoload";
+            this.disableAutoLoad.CheckedChanged += new System.EventHandler(this.disableTRPFDAutoloadToolStripMenuItem_CheckedChanged);
             // 
             // viewToolStripMenuItem
             // 
@@ -328,6 +352,7 @@
             this.modList.Size = new System.Drawing.Size(184, 310);
             this.modList.TabIndex = 4;
             this.modList.SelectedIndexChanged += new System.EventHandler(this.modList_SelectedIndexChanged);
+            this.modList.MouseUp += new System.Windows.Forms.MouseEventHandler(this.modList_MouseUp);
             // 
             // modOrderDown
             // 
@@ -362,6 +387,27 @@
             this.addMod.UseVisualStyleBackColor = true;
             this.addMod.Click += new System.EventHandler(this.addMod_Click);
             // 
+            // basicContext
+            // 
+            this.basicContext.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.deleteModBut});
+            this.basicContext.Name = "basicContext";
+            this.basicContext.Size = new System.Drawing.Size(108, 26);
+            // 
+            // deleteModBut
+            // 
+            this.deleteModBut.Name = "deleteModBut";
+            this.deleteModBut.Size = new System.Drawing.Size(107, 22);
+            this.deleteModBut.Text = "Delete";
+            this.deleteModBut.Click += new System.EventHandler(this.deleteModBut_Click);
+            // 
+            // setOutputFolderToolStripMenuItem
+            // 
+            this.setOutputFolderToolStripMenuItem.Name = "setOutputFolderToolStripMenuItem";
+            this.setOutputFolderToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
+            this.setOutputFolderToolStripMenuItem.Text = "Set Output Folder";
+            this.setOutputFolderToolStripMenuItem.Click += new System.EventHandler(this.setOutputFolderToolStripMenuItem_Click);
+            // 
             // FileSystemForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -375,6 +421,7 @@
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "FileSystemForm";
             this.Text = "Trinity Mod Loader";
+            this.Load += new System.EventHandler(this.FileSystemForm_Load);
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
             this.treeContext.ResumeLayout(false);
@@ -382,6 +429,7 @@
             this.basicPanel.ResumeLayout(false);
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
+            this.basicContext.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -419,5 +467,10 @@
         private ToolStripMenuItem helpToolStripMenuItem;
         private ToolStripMenuItem aboutToolStripMenuItem;
         private ToolStripMenuItem openRomFSFolderToolStripMenuItem;
+        private ToolStripMenuItem optionsToolStripMenuItem;
+        private ToolStripMenuItem disableAutoLoad;
+        private ContextMenuStrip basicContext;
+        private ToolStripMenuItem deleteModBut;
+        private ToolStripMenuItem setOutputFolderToolStripMenuItem;
     }
 }

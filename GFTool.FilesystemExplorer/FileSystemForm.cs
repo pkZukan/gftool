@@ -48,6 +48,8 @@ namespace GFTool.TrinityExplorer
             {
                 var settings = new Settings();
                 settings.archiveDir = "";
+                settings.autoloadTrpfd = true;
+                settings.outputDir = "LayeredFS/";
 
                 var romfs = new FolderBrowserDialog();
                 if (romfs.ShowDialog() != DialogResult.OK) return;
@@ -58,7 +60,14 @@ namespace GFTool.TrinityExplorer
             }
             else {
                 settings = JsonSerializer.Deserialize<Settings>(File.ReadAllText(file));
+                disableAutoLoad.Checked = !settings.autoloadTrpfd;
             }
+        }
+
+        void SaveSettings()
+        {
+            var json = JsonSerializer.Serialize<Settings>(settings, new JsonSerializerOptions() { WriteIndented = true });
+            File.WriteAllText("settings.json", json);
         }
 
         public void LoadMods()
@@ -156,6 +165,7 @@ namespace GFTool.TrinityExplorer
                         {
                             fileView.Nodes.Add(nodes);
                             statusLbl.Text = "Done";
+                            applyModsBut.Enabled = true;
                         });
                     });
                 }
@@ -325,7 +335,6 @@ namespace GFTool.TrinityExplorer
         {
             OpenFileDescriptor();
             GuessModsInstalled();
-            applyModsBut.Enabled= true;
         }
 
         private void saveFileDescriptorAsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -424,7 +433,7 @@ namespace GFTool.TrinityExplorer
         private void applyModsBut_Click(object sender, EventArgs e)
         {
             statusLbl.Text = "Applying mods...";
-            string lfsDir = "LayeredFS/romfs/";
+            string lfsDir = settings.outputDir;
             if (Directory.Exists(lfsDir))
                 Directory.Delete(lfsDir, true);
             Directory.CreateDirectory(lfsDir);
@@ -438,6 +447,14 @@ namespace GFTool.TrinityExplorer
             SerializeTrpfd(lfsDir + "arc/data.trpfd");
             statusLbl.Text = "Done";
             MessageBox.Show("Done!");
+
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                Arguments = lfsDir,
+                FileName = "explorer.exe"
+            };
+
+            Process.Start(startInfo);
         }
 
         private void modOrderUp_Click(object sender, EventArgs e)
@@ -459,7 +476,7 @@ namespace GFTool.TrinityExplorer
             modList.Items.RemoveAt(selected);
             modList.Items.Insert(selected + 1, item);
         }
-        #endregion
+        
 
         private void showUnhashedFilesToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -478,10 +495,40 @@ namespace GFTool.TrinityExplorer
 
             settings = new Settings();
             settings.archiveDir = romfs.SelectedPath + "/arc";
-            var json = JsonSerializer.Serialize<Settings>(settings, new JsonSerializerOptions() { WriteIndented = true });
-            File.WriteAllText("settings.json", json);
+            SaveSettings();
 
             ParseFileDescriptor();
+        }
+
+        private void FileSystemForm_Load(object sender, EventArgs e)
+        {
+            if(settings.archiveDir != string.Empty && File.Exists(settings.archiveDir + "/data.trpfs") && File.Exists(settings.archiveDir + "/data.trpfd") && settings.autoloadTrpfd)
+                ParseFileDescriptor();
+        }
+
+        private void disableTRPFDAutoloadToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            settings.autoloadTrpfd = !disableAutoLoad.Checked;
+            SaveSettings();
+        }
+
+        private void deleteModBut_Click(object sender, EventArgs e)
+        {
+            //TODO: delete button in modlist
+        }
+
+        private void modList_MouseUp(object sender, MouseEventArgs e)
+        {
+            //TODO impl context menu in modlist
+        }
+        #endregion
+
+        private void setOutputFolderToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var fold = new FolderBrowserDialog();
+            if (fold.ShowDialog() != DialogResult.OK) return;
+            settings.outputDir = fold.SelectedPath + "/";
+            SaveSettings();
         }
     }
 }

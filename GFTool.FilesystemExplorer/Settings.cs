@@ -10,5 +10,7 @@ namespace GFTool.FilesystemExplorer
     public class Settings
     {
         public string archiveDir { get; set; }
+        public bool autoloadTrpfd { get; set; }
+        public string outputDir { get; set; }
     }
 }
