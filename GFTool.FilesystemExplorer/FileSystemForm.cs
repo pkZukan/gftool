@@ -183,7 +183,8 @@ namespace GFTool.TrinityExplorer
             }
 
             var fileHash = GFFNV.Hash(file);
-            var packHash = GFFNV.Hash(fileDescriptor.GetPackName(fileHash));
+            var packName = fileDescriptor.GetPackName(fileHash);
+            var packHash = GFFNV.Hash(packName);
             var packInfo = fileDescriptor.GetPackInfo(fileHash);
 
             var fileIndex = Array.IndexOf(fileSystem.FileHashes, packHash);

@@ -87,8 +87,8 @@ namespace GFTool.Core.Flatbuffers.TR.ResourceDictionary
         private long GetPackIndex(UInt64 hash)
         {
             long ret = -1;
-            int ind = Array.IndexOf(FileHashes, hash);
-            if (ind > 0)
+            long ind = Array.IndexOf(FileHashes, hash);
+            if (ind >= 0)
             {
                 var finfo = FileInfo[ind];
                 ret = (long)finfo.PackIndex;
