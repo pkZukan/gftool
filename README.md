@@ -2,7 +2,7 @@
 Trinity Mod Loader is a small utility to make and manage mods, while also providing file extraction utilities.
 
 ## Initial Usage
-Trinity Mod Loader requires the oo2core_8_win64.dll and an up-to-date TRPAKHashCache.bin.
+Trinity Mod Loader requires the oo2core_8_win64.dll and an up-to-date GFPAKHashCache.bin.
 On initial boot it will ask for your clean romfs path, once specified the tool will load.
 
 ## Adding a Mod
