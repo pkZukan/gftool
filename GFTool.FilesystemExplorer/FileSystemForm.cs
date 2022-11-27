@@ -450,7 +450,7 @@ namespace GFTool.TrinityExplorer
 
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
-                Arguments = lfsDir,
+                Arguments = settings.outputDir,
                 FileName = "explorer.exe"
             };
 
@@ -521,7 +521,7 @@ namespace GFTool.TrinityExplorer
         {
             //TODO impl context menu in modlist
         }
-        #endregion
+        
 
         private void setOutputFolderToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -530,5 +530,6 @@ namespace GFTool.TrinityExplorer
             settings.outputDir = fold.SelectedPath + "/";
             SaveSettings();
         }
+        #endregion
     }
 }
