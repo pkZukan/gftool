@@ -16,6 +16,7 @@ using SharpCompress.Readers;
 using SharpCompress.Common;
 using System.Diagnostics;
 using System.Reflection;
+using GFTool.FilesystemExplorer;
 
 namespace GFTool.TrinityExplorer
 {
@@ -428,6 +429,11 @@ namespace GFTool.TrinityExplorer
         private void showUnhashedFilesToolStripMenuItem_Click(object sender, EventArgs e)
         {
 
+        }
+
+        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            new About().ShowDialog();
         }
     }
 }
