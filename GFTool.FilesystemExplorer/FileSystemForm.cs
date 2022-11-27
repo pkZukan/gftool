@@ -128,14 +128,18 @@ namespace GFTool.TrinityExplorer
             }
         }
 
-        void SaveFile(string file)
+        void SaveFiles(TreeNode node, string outFolder)
         {
-            if (!hasOodleDll) return;
+            string file = node.FullPath.Replace("\\", "/");
+            file = file.Substring(file.IndexOf('/') + 1);
 
-            var sfd = new FolderBrowserDialog();
-            if (sfd.ShowDialog() != DialogResult.OK) return;
+            var currNode = node.Nodes.Cast<TreeNode>();
+            if (currNode.Count() > 0)
+            {
+                foreach (var n in currNode) SaveFiles(n, outFolder);
+                return;
+            }
 
-            statusLbl.Text = "Saving file...";
             var fileHash = GFFNV.Hash(file);
             var packHash = GFFNV.Hash(fileDescriptor.GetPackName(fileHash));
             var packInfo = fileDescriptor.GetPackInfo(fileHash);
@@ -158,7 +162,7 @@ namespace GFTool.TrinityExplorer
                     if (entry.EncryptionType != -1)
                         buffer = Oodle.Decompress(buffer, (long)entry.FileSize);
 
-                    var filepath = string.Format("{0}/{1}", sfd.SelectedPath, name);
+                    var filepath = string.Format("{0}/{1}", outFolder, name);
 
                     if (!Directory.Exists(Path.GetDirectoryName(filepath)))
                         Directory.CreateDirectory(Path.GetDirectoryName(filepath));
@@ -168,8 +172,6 @@ namespace GFTool.TrinityExplorer
                     break;
                 }
             }
-            statusLbl.Text = "Done";
-            MessageBox.Show("Saved " + file);
         }
 
         void MarkFile(string file)
@@ -186,6 +188,25 @@ namespace GFTool.TrinityExplorer
             fileDescriptor?.AddFile(hash);
             MessageBox.Show("Unmark file " + file);
             fileView.SelectedNode.BackColor= Color.White;
+        }
+
+        List<string> EnumerateArchiveFiles(string file)
+        {
+            List<string> files = new List<string>();
+            using (Stream stream = File.OpenRead(file))
+            using (var reader = ReaderFactory.Open(stream))
+            {
+                while (reader.MoveToNextEntry())
+                {
+                    if (!reader.Entry.IsDirectory)
+                    {
+                        string entry = reader.Entry.Key;
+                        files.Add(entry.Replace('\\', '/'));
+                    }
+                }
+            }
+
+            return files;
         }
 
         void ApplyModPack(string modFile, string lfsDir) 
@@ -209,6 +230,15 @@ namespace GFTool.TrinityExplorer
             {
                 var fhash = GFFNV.Hash(f);
                 fileDescriptor?.RemoveFile(fhash);
+            }
+        }
+
+        void RemoveModPack(string modFile) 
+        {
+            var files = EnumerateArchiveFiles("mods/" + modFile);
+            foreach (var f in files)
+            {
+                fileDescriptor.RemoveFile(GFFNV.Hash(f));
             }
         }
 
@@ -293,9 +323,16 @@ namespace GFTool.TrinityExplorer
         private void saveFileToolStripMenuItem_Click(object sender, EventArgs e)
         {
             TreeNode node = fileView.SelectedNode;
-            string file = node.FullPath.Replace("\\", "/");
-            file = file.Substring(file.IndexOf('/') + 1);
-            SaveFile(file);
+
+            if (!hasOodleDll) return;
+
+            var sfd = new FolderBrowserDialog();
+            if (sfd.ShowDialog() != DialogResult.OK) return;
+
+            statusLbl.Text = "Saving file...";
+            SaveFiles(node, sfd.SelectedPath);
+            statusLbl.Text = "Done";
+            MessageBox.Show("Done");
         }
 
         private void markForLayeredFSToolStripMenuItem_Click(object sender, EventArgs e)
@@ -355,9 +392,12 @@ namespace GFTool.TrinityExplorer
             if (Directory.Exists(lfsDir))
                 Directory.Delete(lfsDir, true);
             Directory.CreateDirectory(lfsDir);
-            foreach (var item in modList.CheckedItems)
+            for (int i = 0; i < modList.Items.Count; i++)
             {
-                ApplyModPack(item.ToString(), lfsDir);
+                if (modList.GetItemChecked(i))
+                    ApplyModPack(modList.Items[i].ToString(), lfsDir);
+                else
+                    RemoveModPack(modList.Items[i].ToString());
             }
             SerializeTrpfd(lfsDir + "arc/data.trpfd");
             statusLbl.Text = "Done";
