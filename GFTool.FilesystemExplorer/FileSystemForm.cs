@@ -30,6 +30,9 @@ namespace GFTool.TrinityExplorer
         private bool hasOodleDll = false;
         private Settings settings;
 
+        private string trpfdRel = @"\arc\data.trpfd";
+        private string trpfsRel = @"\arc\data.trpfs";
+
         public FileSystemForm()
         {
             InitializeComponent();
@@ -132,8 +135,8 @@ namespace GFTool.TrinityExplorer
         }
 
         public void ParseFileDescriptor(string file = "") {
-            var trpfs = settings.archiveDir + "/arc/data.trpfs";
-            var trpfd = settings.archiveDir + "/arc/data.trpfd";
+            var trpfs = settings.archiveDir + trpfsRel;
+            var trpfd = settings.archiveDir + trpfdRel;
 
             try
             {
@@ -191,7 +194,7 @@ namespace GFTool.TrinityExplorer
             var packInfo = fileDescriptor.GetPackInfo(fileHash);
 
             var fileIndex = Array.IndexOf(fileSystem.FileHashes, packHash);
-            var fileBytes = ONEFILESerializer.SplitTRPAK(settings.archiveDir + "/arc/data.trpfs", (long)fileSystem.FileOffsets[fileIndex], (long)packInfo.FileSize);
+            var fileBytes = ONEFILESerializer.SplitTRPAK(settings.archiveDir + trpfsRel, (long)fileSystem.FileOffsets[fileIndex], (long)packInfo.FileSize);
             PackedArchive pack = FlatBufferConverter.DeserializeFrom<PackedArchive>(fileBytes);
             for (int i = 0; i < pack.FileEntry.Length; i++)
             {
@@ -208,7 +211,7 @@ namespace GFTool.TrinityExplorer
                     if (entry.EncryptionType != -1)
                         buffer = Oodle.Decompress(buffer, (long)entry.FileSize);
 
-                    var filepath = string.Format("{0}/{1}", outFolder, name);
+                    var filepath = string.Format("{0}\\{1}", outFolder, name);
 
                     if (!Directory.Exists(Path.GetDirectoryName(filepath)))
                         Directory.CreateDirectory(Path.GetDirectoryName(filepath));
@@ -258,7 +261,7 @@ namespace GFTool.TrinityExplorer
         void ApplyModPack(string modFile, string lfsDir) 
         {
             List<string> files = new List<string>();
-            using (Stream stream = File.OpenRead("mods/" + modFile))
+            using (Stream stream = File.OpenRead(@"mods\" + modFile))
             using (var reader = ReaderFactory.Open(stream))
             {
                 while (reader.MoveToNextEntry())
@@ -281,7 +284,7 @@ namespace GFTool.TrinityExplorer
 
         void RemoveModPack(string modFile) 
         {
-            var files = EnumerateArchiveFiles("mods/" + modFile);
+            var files = EnumerateArchiveFiles(@"mods\" + modFile);
             foreach (var f in files)
             {
                 fileDescriptor.RemoveFile(GFFNV.Hash(f));
@@ -293,7 +296,7 @@ namespace GFTool.TrinityExplorer
             List<string> files = new List<string>();
             for (int i = 0; i < modList.Items.Count; i++)
             {
-                using (Stream stream = File.OpenRead("mods/" + modList.Items[i].ToString()))
+                using (Stream stream = File.OpenRead(@"mods\" + modList.Items[i].ToString()))
                 using (var reader = ReaderFactory.Open(stream))
                 {
                     while (reader.MoveToNextEntry())
@@ -323,7 +326,7 @@ namespace GFTool.TrinityExplorer
                 overwriting = true;
             }
 
-            File.Copy(file, "mods/" + fn, overwriting);
+            File.Copy(file, @"mods\" + fn, overwriting);
 
             if (!overwriting)
                 modList.Items.Add(fn);
@@ -367,7 +370,7 @@ namespace GFTool.TrinityExplorer
         private void PopulateMetaData()
         {
             var mod = modList.Items[modList.SelectedIndex].ToString();
-            var toml = FetchToml("mods/" + mod);
+            var toml = FetchToml(@"mods\" + mod);
             if (toml.Count >= 3)
             {
                 modNameLbl.Text = toml["display_name"].ToString();
@@ -407,7 +410,7 @@ namespace GFTool.TrinityExplorer
         #region UI_HANDLERS
         private void FileSystemForm_Load(object sender, EventArgs e)
         {
-            if (File.Exists(settings.archiveDir + "/arc/data.trpfs") && File.Exists(settings.archiveDir + "/arc/data.trpfd") && settings.autoloadTrpfd)
+            if (File.Exists(settings.archiveDir + trpfsRel) && File.Exists(settings.archiveDir + trpfdRel) && settings.autoloadTrpfd)
                 ParseFileDescriptor();
             else
                 MessageBox.Show("Couldnt find trpfs/trpfd");
@@ -505,17 +508,12 @@ namespace GFTool.TrinityExplorer
                 else
                     RemoveModPack(modList.Items[i].ToString());
             }
-            SerializeTrpfd(lfsDir + "arc/data.trpfd");
+            SerializeTrpfd(lfsDir + trpfdRel);
             statusLbl.Text = "Done";
             MessageBox.Show("Done!");
 
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
-                Arguments = settings.outputDir,
-                FileName = "explorer.exe"
-            };
-
-            Process.Start(startInfo);
+            var filePath = Path.GetFullPath(settings.outputDir);
+            Process.Start("explorer.exe", string.Format("\"{0}\"", filePath));
         }
 
         private void modOrderUp_Click(object sender, EventArgs e)
@@ -569,7 +567,7 @@ namespace GFTool.TrinityExplorer
 
         private void deleteModBut_Click(object sender, EventArgs e)
         {
-            var file = "mods/" + modList.Items[modList.SelectedIndex].ToString();
+            var file = @"mods\" + modList.Items[modList.SelectedIndex].ToString();
             if (File.Exists(file)) {
                 File.Delete(file);
                 modList.Items.Remove(modList.Items[modList.SelectedIndex]);
@@ -592,7 +590,7 @@ namespace GFTool.TrinityExplorer
         {
             var fold = new FolderBrowserDialog();
             if (fold.ShowDialog() != DialogResult.OK) return;
-            settings.outputDir = fold.SelectedPath + "/";
+            settings.outputDir = fold.SelectedPath + "\\";
             settings.Save();
         }
         #endregion
