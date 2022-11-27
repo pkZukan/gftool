@@ -47,7 +47,7 @@ namespace GFTool.TrinityExplorer
                 var romfs = new FolderBrowserDialog();
                 if (romfs.ShowDialog() != DialogResult.OK) return;
 
-                settings.archiveDir = romfs.SelectedPath + "/arc";
+                settings.archiveDir = romfs.SelectedPath;
                 settings.Save();
             }
             else {
@@ -129,8 +129,8 @@ namespace GFTool.TrinityExplorer
         }
 
         public void ParseFileDescriptor(string file = "") {
-            var trpfs = settings.archiveDir + "/data.trpfs";
-            var trpfd = settings.archiveDir + "/data.trpfd";
+            var trpfs = settings.archiveDir + "/arc/data.trpfs";
+            var trpfd = settings.archiveDir + "/arc/data.trpfd";
 
             try
             {
@@ -187,7 +187,7 @@ namespace GFTool.TrinityExplorer
             var packInfo = fileDescriptor.GetPackInfo(fileHash);
 
             var fileIndex = Array.IndexOf(fileSystem.FileHashes, packHash);
-            var fileBytes = ONEFILESerializer.SplitTRPAK(settings.archiveDir + "/data.trpfs", (long)fileSystem.FileOffsets[fileIndex], (long)packInfo.FileSize);
+            var fileBytes = ONEFILESerializer.SplitTRPAK(settings.archiveDir + "/arc/data.trpfs", (long)fileSystem.FileOffsets[fileIndex], (long)packInfo.FileSize);
             PackedArchive pack = FlatBufferConverter.DeserializeFrom<PackedArchive>(fileBytes);
             for (int i = 0; i < pack.FileEntry.Length; i++)
             {
@@ -364,6 +364,14 @@ namespace GFTool.TrinityExplorer
         #endregion
 
         #region UI_HANDLERS
+        private void FileSystemForm_Load(object sender, EventArgs e)
+        {
+            if (File.Exists(settings.archiveDir + "/arc/data.trpfs") && File.Exists(settings.archiveDir + "/arc/data.trpfd") && settings.autoloadTrpfd)
+                ParseFileDescriptor();
+            else
+                MessageBox.Show("Couldnt find trpfs/trpfd");
+        }
+
         private void openFileDescriptorToolStripMenuItem_Click(object sender, EventArgs e)
         {
             OpenFileDescriptor();
@@ -506,16 +514,10 @@ namespace GFTool.TrinityExplorer
             if (romfs.ShowDialog() != DialogResult.OK) return;
 
             settings = new Settings();
-            settings.archiveDir = romfs.SelectedPath + "/arc";
+            settings.archiveDir = romfs.SelectedPath;
             settings.Save();
 
             ParseFileDescriptor();
-        }
-
-        private void FileSystemForm_Load(object sender, EventArgs e)
-        {
-            if(settings.archiveDir != string.Empty && File.Exists(settings.archiveDir + "/data.trpfs") && File.Exists(settings.archiveDir + "/data.trpfd") && settings.autoloadTrpfd)
-                ParseFileDescriptor();
         }
 
         private void disableTRPFDAutoloadToolStripMenuItem_CheckedChanged(object sender, EventArgs e)

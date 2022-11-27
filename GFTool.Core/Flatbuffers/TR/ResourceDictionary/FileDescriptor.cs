@@ -101,7 +101,7 @@ namespace GFTool.Core.Flatbuffers.TR.ResourceDictionary
         {
             string ret = "";
             long ind = GetPackIndex(hash);
-            if (ind > 0) {
+            if (ind >= 0) {
                 ret = PackNames[ind];
             }
 
@@ -112,7 +112,7 @@ namespace GFTool.Core.Flatbuffers.TR.ResourceDictionary
         {
             PackInfo ret = null;
             long ind = GetPackIndex(hash);
-            if (ind > 0)
+            if (ind >= 0)
             {
                 ret = PackInfo[ind];
             }
