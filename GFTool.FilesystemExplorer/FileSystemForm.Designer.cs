@@ -33,6 +33,7 @@
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openFileDescriptorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveFileDescriptorAsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.openRomFSFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.viewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.advancedToggle = new System.Windows.Forms.ToolStripMenuItem();
             this.showUnhashedFilesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -59,7 +60,6 @@
             this.modOrderDown = new System.Windows.Forms.Button();
             this.modOrderUp = new System.Windows.Forms.Button();
             this.addMod = new System.Windows.Forms.Button();
-            this.openRomFSFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.treeContext.SuspendLayout();
             this.advancedPanel.SuspendLayout();
@@ -103,6 +103,13 @@
             this.saveFileDescriptorAsToolStripMenuItem.Text = "Save File Descriptor";
             this.saveFileDescriptorAsToolStripMenuItem.Click += new System.EventHandler(this.saveFileDescriptorAsToolStripMenuItem_Click);
             // 
+            // openRomFSFolderToolStripMenuItem
+            // 
+            this.openRomFSFolderToolStripMenuItem.Name = "openRomFSFolderToolStripMenuItem";
+            this.openRomFSFolderToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
+            this.openRomFSFolderToolStripMenuItem.Text = "Open RomFS Folder";
+            this.openRomFSFolderToolStripMenuItem.Click += new System.EventHandler(this.openRomFSFolderToolStripMenuItem_Click);
+            // 
             // viewToolStripMenuItem
             // 
             this.viewToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -139,7 +146,7 @@
             // aboutToolStripMenuItem
             // 
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(107, 22);
             this.aboutToolStripMenuItem.Text = "About";
             this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
             // 
@@ -355,13 +362,6 @@
             this.addMod.UseVisualStyleBackColor = true;
             this.addMod.Click += new System.EventHandler(this.addMod_Click);
             // 
-            // openRomFSFolderToolStripMenuItem
-            // 
-            this.openRomFSFolderToolStripMenuItem.Name = "openRomFSFolderToolStripMenuItem";
-            this.openRomFSFolderToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
-            this.openRomFSFolderToolStripMenuItem.Text = "Open RomFS Folder";
-            this.openRomFSFolderToolStripMenuItem.Click += new System.EventHandler(this.openRomFSFolderToolStripMenuItem_Click);
-            // 
             // FileSystemForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -374,7 +374,7 @@
             this.Controls.Add(this.advancedPanel);
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "FileSystemForm";
-            this.Text = "Filesystem Explorer";
+            this.Text = "Trinity Mod Loader";
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
             this.treeContext.ResumeLayout(false);

@@ -424,7 +424,7 @@ namespace GFTool.TrinityExplorer
         private void applyModsBut_Click(object sender, EventArgs e)
         {
             statusLbl.Text = "Applying mods...";
-            string lfsDir = "layeredFS/";
+            string lfsDir = "LayeredFS/romfs/";
             if (Directory.Exists(lfsDir))
                 Directory.Delete(lfsDir, true);
             Directory.CreateDirectory(lfsDir);
