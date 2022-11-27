@@ -36,6 +36,8 @@
             this.viewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.advancedToggle = new System.Windows.Forms.ToolStripMenuItem();
             this.showUnhashedFilesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.fileView = new System.Windows.Forms.TreeView();
             this.helpProvider1 = new System.Windows.Forms.HelpProvider();
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
@@ -57,8 +59,7 @@
             this.modOrderDown = new System.Windows.Forms.Button();
             this.modOrderUp = new System.Windows.Forms.Button();
             this.addMod = new System.Windows.Forms.Button();
-            this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.openRomFSFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.treeContext.SuspendLayout();
             this.advancedPanel.SuspendLayout();
@@ -82,7 +83,8 @@
             // 
             this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.openFileDescriptorToolStripMenuItem,
-            this.saveFileDescriptorAsToolStripMenuItem});
+            this.saveFileDescriptorAsToolStripMenuItem,
+            this.openRomFSFolderToolStripMenuItem});
             this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
             this.fileToolStripMenuItem.Size = new System.Drawing.Size(37, 20);
             this.fileToolStripMenuItem.Text = "File";
@@ -125,6 +127,21 @@
             this.showUnhashedFilesToolStripMenuItem.Size = new System.Drawing.Size(185, 22);
             this.showUnhashedFilesToolStripMenuItem.Text = "Show Unhashed Files";
             this.showUnhashedFilesToolStripMenuItem.Click += new System.EventHandler(this.showUnhashedFilesToolStripMenuItem_Click);
+            // 
+            // helpToolStripMenuItem
+            // 
+            this.helpToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.aboutToolStripMenuItem});
+            this.helpToolStripMenuItem.Name = "helpToolStripMenuItem";
+            this.helpToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
+            this.helpToolStripMenuItem.Text = "Help";
+            // 
+            // aboutToolStripMenuItem
+            // 
+            this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
+            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.aboutToolStripMenuItem.Text = "About";
+            this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
             // 
             // fileView
             // 
@@ -338,20 +355,12 @@
             this.addMod.UseVisualStyleBackColor = true;
             this.addMod.Click += new System.EventHandler(this.addMod_Click);
             // 
-            // helpToolStripMenuItem
+            // openRomFSFolderToolStripMenuItem
             // 
-            this.helpToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.aboutToolStripMenuItem});
-            this.helpToolStripMenuItem.Name = "helpToolStripMenuItem";
-            this.helpToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
-            this.helpToolStripMenuItem.Text = "Help";
-            // 
-            // aboutToolStripMenuItem
-            // 
-            this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.aboutToolStripMenuItem.Text = "About";
-            this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
+            this.openRomFSFolderToolStripMenuItem.Name = "openRomFSFolderToolStripMenuItem";
+            this.openRomFSFolderToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
+            this.openRomFSFolderToolStripMenuItem.Text = "Open RomFS Folder";
+            this.openRomFSFolderToolStripMenuItem.Click += new System.EventHandler(this.openRomFSFolderToolStripMenuItem_Click);
             // 
             // FileSystemForm
             // 
@@ -409,5 +418,6 @@
         private ToolStripMenuItem showUnhashedFilesToolStripMenuItem;
         private ToolStripMenuItem helpToolStripMenuItem;
         private ToolStripMenuItem aboutToolStripMenuItem;
+        private ToolStripMenuItem openRomFSFolderToolStripMenuItem;
     }
 }

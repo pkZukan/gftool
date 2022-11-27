@@ -17,6 +17,9 @@ using SharpCompress.Common;
 using System.Diagnostics;
 using System.Reflection;
 using GFTool.FilesystemExplorer;
+using GFTool.Core.Flatbuffers.TR.PokeLib;
+using System.Text.Json;
+using System.Security.Cryptography;
 
 namespace GFTool.TrinityExplorer
 {
@@ -24,10 +27,9 @@ namespace GFTool.TrinityExplorer
     {
         private FileDescriptor? fileDescriptor = null;
         private FileSystem? fileSystem = null;
-        private string trpfdFile;
-        private string trpfsFile;
 
         private bool hasOodleDll = false;
+        private Settings settings;
 
         public FileSystemForm()
         {
@@ -35,9 +37,28 @@ namespace GFTool.TrinityExplorer
             hasOodleDll = File.Exists("oo2core_8_win64.dll");
             if (!hasOodleDll)
                 MessageBox.Show("Liboodle dll missing. Exporting from TRPFS is disabled.");
-            MessageBox.Show("Please select the TRPFD from your base RomFS.");
-            OpenFileDescriptor();
             LoadMods();
+            LoadSettings();
+        }
+
+        public void LoadSettings()
+        {
+            var file = "settings.json";
+            if (!File.Exists(file))
+            {
+                var settings = new Settings();
+                settings.archiveDir = "";
+
+                var romfs = new FolderBrowserDialog();
+                if (romfs.ShowDialog() != DialogResult.OK) return;
+
+                settings.archiveDir = romfs.SelectedPath + "/arc";
+                var json = JsonSerializer.Serialize<Settings>(settings, new JsonSerializerOptions() { WriteIndented = true });
+                File.WriteAllText(file, json);
+            }
+            else {
+                settings = JsonSerializer.Deserialize<Settings>(File.ReadAllText(file));
+            }
         }
 
         public void LoadMods()
@@ -104,28 +125,42 @@ namespace GFTool.TrinityExplorer
             var ofd = new OpenFileDialog()
             {
                 Filter = "Trinity File Descriptor (*.trpfd) |*.trpfd",
+                InitialDirectory = settings.archiveDir
             };
             if (ofd.ShowDialog() != DialogResult.OK) return;
             fileView.Nodes.Clear();
 
-            fileDescriptor = FlatBufferConverter.DeserializeFrom<FileDescriptor>(ofd.FileName);
-            trpfsFile = ofd.FileName.Replace("trpfd", "trpfs");
-            if (File.Exists(trpfsFile))
-            {
-                fileSystem = ONEFILESerializer.DeserializeFileSystem(trpfsFile);
-            }
+            ParseFileDescriptor(ofd.FileName);
+        }
 
-            if (fileDescriptor != null)
+        public void ParseFileDescriptor(string file = "") {
+            var trpfs = settings.archiveDir + "/data.trpfs";
+            var trpfd = settings.archiveDir + "/data.trpfd";
+
+            try
             {
-                Task.Run(() => {
-                    ThreadSafe(() => statusLbl.Text = "Loading...");
-                    TreeNode nodes = LoadTree(fileDescriptor.FileHashes, fileDescriptor.UnusedHashes);
-                    ThreadSafe(() =>
+                fileDescriptor = FlatBufferConverter.DeserializeFrom<FileDescriptor>(file != "" ? file : trpfd);
+
+                if (File.Exists(trpfs))
+                {
+                    fileSystem = ONEFILESerializer.DeserializeFileSystem(trpfs);
+                }
+
+                if (fileDescriptor != null)
+                {
+                    Task.Run(() =>
                     {
-                        fileView.Nodes.Add(nodes);
-                        statusLbl.Text = "Done";
+                        ThreadSafe(() => statusLbl.Text = "Loading...");
+                        TreeNode nodes = LoadTree(fileDescriptor.FileHashes, fileDescriptor.UnusedHashes);
+                        ThreadSafe(() =>
+                        {
+                            fileView.Nodes.Add(nodes);
+                            statusLbl.Text = "Done";
+                        });
                     });
-                });
+                }
+            } catch {
+                MessageBox.Show("Failed to load either trpfd or trpfs");
             }
         }
 
@@ -146,7 +181,7 @@ namespace GFTool.TrinityExplorer
             var packInfo = fileDescriptor.GetPackInfo(fileHash);
 
             var fileIndex = Array.IndexOf(fileSystem.FileHashes, packHash);
-            var fileBytes = ONEFILESerializer.SplitTRPAK(trpfsFile, (long)fileSystem.FileOffsets[fileIndex], (long)packInfo.FileSize);
+            var fileBytes = ONEFILESerializer.SplitTRPAK(settings.archiveDir + "/data.trpfs", (long)fileSystem.FileOffsets[fileIndex], (long)packInfo.FileSize);
             PackedArchive pack = FlatBufferConverter.DeserializeFrom<PackedArchive>(fileBytes);
             for (int i = 0; i < pack.FileEntry.Length; i++)
             {
@@ -434,6 +469,19 @@ namespace GFTool.TrinityExplorer
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
         {
             new About().ShowDialog();
+        }
+
+        private void openRomFSFolderToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var romfs = new FolderBrowserDialog();
+            if (romfs.ShowDialog() != DialogResult.OK) return;
+
+            settings = new Settings();
+            settings.archiveDir = romfs.SelectedPath + "/arc";
+            var json = JsonSerializer.Serialize<Settings>(settings, new JsonSerializerOptions() { WriteIndented = true });
+            File.WriteAllText("settings.json", json);
+
+            ParseFileDescriptor();
         }
     }
 }
