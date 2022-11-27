@@ -1,16 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 
 namespace GFTool.FilesystemExplorer
 {
     public class Settings
     {
-        public string archiveDir { get; set; }
-        public bool autoloadTrpfd { get; set; }
-        public string outputDir { get; set; }
+        public string archiveDir { get; set; } = "";
+        public bool autoloadTrpfd { get; set; } = true;
+        public string outputDir { get; set; } = "LayeredFS/";
+
+        public void Save() 
+        {
+            var json = JsonSerializer.Serialize<Settings>(this, new JsonSerializerOptions() { WriteIndented = true });
+            File.WriteAllText("settings.json", json);
+        }
     }
 }

@@ -125,6 +125,11 @@ namespace GFTool.Core.Flatbuffers.TR.ResourceDictionary
             if(UnusedHashes == null) return false;
             return UnusedHashes.Contains(hash);
         }
+
+        public bool HasUnusedFiles()
+        {
+            return UnusedHashes != null;
+        }
     }
 
 }

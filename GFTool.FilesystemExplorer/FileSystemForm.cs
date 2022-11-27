@@ -5,13 +5,7 @@ using GFTool.Core.Serializers.TR;
 using System;
 using GFTool.Core.Math.Hash;
 using GFTool.Core.Compression;
-using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using GFTool.Core.Cache;
-using System.Security.Policy;
-using System.Xml.Linq;
-using System.Collections.Generic;
-using System.IO.Compression;
 using SharpCompress.Readers;
 using SharpCompress.Common;
 using System.Diagnostics;
@@ -20,6 +14,8 @@ using GFTool.FilesystemExplorer;
 using GFTool.Core.Flatbuffers.TR.PokeLib;
 using System.Text.Json;
 using System.Security.Cryptography;
+using System.Xml.Linq;
+using System.Windows.Forms;
 
 namespace GFTool.TrinityExplorer
 {
@@ -46,17 +42,13 @@ namespace GFTool.TrinityExplorer
             var file = "settings.json";
             if (!File.Exists(file))
             {
-                var settings = new Settings();
-                settings.archiveDir = "";
-                settings.autoloadTrpfd = true;
-                settings.outputDir = "LayeredFS/";
+                settings = new Settings();
 
                 var romfs = new FolderBrowserDialog();
                 if (romfs.ShowDialog() != DialogResult.OK) return;
 
                 settings.archiveDir = romfs.SelectedPath + "/arc";
-                var json = JsonSerializer.Serialize<Settings>(settings, new JsonSerializerOptions() { WriteIndented = true });
-                File.WriteAllText(file, json);
+                settings.Save();
             }
             else {
                 settings = JsonSerializer.Deserialize<Settings>(File.ReadAllText(file));
@@ -64,12 +56,7 @@ namespace GFTool.TrinityExplorer
             }
         }
 
-        void SaveSettings()
-        {
-            var json = JsonSerializer.Serialize<Settings>(settings, new JsonSerializerOptions() { WriteIndented = true });
-            File.WriteAllText("settings.json", json);
-        }
-
+        //Populate mods from local mods/ folder
         public void LoadMods()
         {
             if (!Directory.Exists("mods")) {
@@ -137,7 +124,6 @@ namespace GFTool.TrinityExplorer
                 InitialDirectory = settings.archiveDir
             };
             if (ofd.ShowDialog() != DialogResult.OK) return;
-            fileView.Nodes.Clear();
 
             ParseFileDescriptor(ofd.FileName);
         }
@@ -154,12 +140,19 @@ namespace GFTool.TrinityExplorer
                 {
                     fileSystem = ONEFILESerializer.DeserializeFileSystem(trpfs);
                 }
+                else {
+                    MessageBox.Show("Trpfs not found, saving files from treeview disabled. Check directory settings");
+                }
 
                 if (fileDescriptor != null)
                 {
                     Task.Run(() =>
                     {
-                        ThreadSafe(() => statusLbl.Text = "Loading...");
+                        ThreadSafe(() => { 
+                            statusLbl.Text = "Loading...";
+                            fileView.Nodes.Clear();
+                        });
+                        
                         TreeNode nodes = LoadTree(fileDescriptor.FileHashes, fileDescriptor.UnusedHashes);
                         ThreadSafe(() =>
                         {
@@ -167,6 +160,9 @@ namespace GFTool.TrinityExplorer
                             statusLbl.Text = "Done";
                             applyModsBut.Enabled = true;
                         });
+                        if (fileDescriptor.HasUnusedFiles()) { 
+                            //TODO
+                        }
                     });
                 }
             } catch {
@@ -311,6 +307,24 @@ namespace GFTool.TrinityExplorer
             }
         }
 
+        private void AddModToList(string file)
+        {
+            var fn = Path.GetFileName(file);
+
+            bool overwriting = false;
+            if (modList.Items.Contains(fn))
+            {
+                var ow = MessageBox.Show("File already exists, do you want to overwrite?", "Mod exists", MessageBoxButtons.YesNo);
+                if (ow == DialogResult.No) return;
+                overwriting = true;
+            }
+
+            File.Copy(file, "mods/" + fn, overwriting);
+
+            if (!overwriting)
+                modList.Items.Add(fn);
+        }
+
         void SerializeTrpfd(string fileOut) 
         {
             var file = new System.IO.FileInfo(fileOut);
@@ -318,6 +332,25 @@ namespace GFTool.TrinityExplorer
 
             var trpfd = FlatBufferConverter.SerializeFrom<FileDescriptor>(fileDescriptor);
             File.WriteAllBytes(fileOut, trpfd);
+        }
+
+        private void PopulateMetaData()
+        {
+            var mod = modList.Items[modList.SelectedIndex].ToString();
+            modNameLbl.Text = mod;
+            authorLbl.Text = "Unknown";
+            //TODO: Check for info file in zip
+        }
+
+        private void SaveTrpfsFiles()
+        {
+            var sfd = new FolderBrowserDialog();
+            if (sfd.ShowDialog() != DialogResult.OK) return;
+
+            statusLbl.Text = "Saving file...";
+            SaveFiles(fileView.SelectedNode, sfd.SelectedPath);
+            statusLbl.Text = "Done";
+            MessageBox.Show("Done");
         }
 
         #region UTIL
@@ -367,17 +400,9 @@ namespace GFTool.TrinityExplorer
 
         private void saveFileToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            TreeNode node = fileView.SelectedNode;
-
             if (!hasOodleDll) return;
 
-            var sfd = new FolderBrowserDialog();
-            if (sfd.ShowDialog() != DialogResult.OK) return;
-
-            statusLbl.Text = "Saving file...";
-            SaveFiles(node, sfd.SelectedPath);
-            statusLbl.Text = "Done";
-            MessageBox.Show("Done");
+            SaveTrpfsFiles();
         }
 
         private void markForLayeredFSToolStripMenuItem_Click(object sender, EventArgs e)
@@ -406,28 +431,15 @@ namespace GFTool.TrinityExplorer
                 Filter = "Zip Files (*.zip)|*.zip|Rar Files (*.rar)|*.rar|All (*.*)|*.*"
             };
             if (openFileDialog.ShowDialog() != DialogResult.OK) return;
-            var fn = Path.GetFileName(openFileDialog.FileName);
-
-            bool overwriting = false;
-            if (modList.Items.Contains(fn))
-            {
-                var ow = MessageBox.Show("File already exists, do you want to overwrite?", "Mod exists", MessageBoxButtons.YesNo);
-                if (ow == DialogResult.No) return;
-                overwriting = true;
-            }
-
-            File.Copy(openFileDialog.FileName, "mods/" + fn, overwriting);
-
-            if (!overwriting)
-                modList.Items.Add(fn);
+            AddModToList(openFileDialog.FileName);
         }
 
         private void modList_SelectedIndexChanged(object sender, EventArgs e)
         {
-            var mod = modList.Items[modList.SelectedIndex].ToString();
-            modNameLbl.Text = mod;
-            authorLbl.Text = "Unknown";
-            //TODO: Check for info file in zip
+            if (modList.SelectedIndex >= 0)
+            {
+                PopulateMetaData();
+            }
         }
 
         private void applyModsBut_Click(object sender, EventArgs e)
@@ -495,7 +507,7 @@ namespace GFTool.TrinityExplorer
 
             settings = new Settings();
             settings.archiveDir = romfs.SelectedPath + "/arc";
-            SaveSettings();
+            settings.Save();
 
             ParseFileDescriptor();
         }
@@ -509,17 +521,27 @@ namespace GFTool.TrinityExplorer
         private void disableTRPFDAutoloadToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
         {
             settings.autoloadTrpfd = !disableAutoLoad.Checked;
-            SaveSettings();
+            settings.Save();
         }
 
         private void deleteModBut_Click(object sender, EventArgs e)
         {
-            //TODO: delete button in modlist
+            var file = "mods/" + modList.Items[modList.SelectedIndex].ToString();
+            Trace.WriteLine(file);
+            if (File.Exists(file)) {
+                File.Delete(file);
+            }
         }
 
         private void modList_MouseUp(object sender, MouseEventArgs e)
         {
-            //TODO impl context menu in modlist
+            Point ClickPoint = new Point(e.X, e.Y);
+            modList.SelectedIndex = modList.IndexFromPoint(ClickPoint);
+
+            if (e.Button == MouseButtons.Right && modList.SelectedIndex >= 0) {
+                
+                basicContext.Show(modList, ClickPoint);
+            }
         }
         
 
@@ -528,7 +550,7 @@ namespace GFTool.TrinityExplorer
             var fold = new FolderBrowserDialog();
             if (fold.ShowDialog() != DialogResult.OK) return;
             settings.outputDir = fold.SelectedPath + "/";
-            SaveSettings();
+            settings.Save();
         }
         #endregion
     }
