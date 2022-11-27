@@ -34,6 +34,7 @@
             this.openFileDescriptorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.saveFileDescriptorAsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openRomFSFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.setOutputFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.disableAutoLoad = new System.Windows.Forms.ToolStripMenuItem();
             this.viewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -64,7 +65,6 @@
             this.addMod = new System.Windows.Forms.Button();
             this.basicContext = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.deleteModBut = new System.Windows.Forms.ToolStripMenuItem();
-            this.setOutputFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.treeContext.SuspendLayout();
             this.advancedPanel.SuspendLayout();
@@ -118,6 +118,13 @@
             this.openRomFSFolderToolStripMenuItem.Text = "Open RomFS Folder";
             this.openRomFSFolderToolStripMenuItem.Click += new System.EventHandler(this.openRomFSFolderToolStripMenuItem_Click);
             // 
+            // setOutputFolderToolStripMenuItem
+            // 
+            this.setOutputFolderToolStripMenuItem.Name = "setOutputFolderToolStripMenuItem";
+            this.setOutputFolderToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
+            this.setOutputFolderToolStripMenuItem.Text = "Set Output Folder";
+            this.setOutputFolderToolStripMenuItem.Click += new System.EventHandler(this.setOutputFolderToolStripMenuItem_Click);
+            // 
             // optionsToolStripMenuItem
             // 
             this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -148,7 +155,7 @@
             this.advancedToggle.CheckOnClick = true;
             this.advancedToggle.Name = "advancedToggle";
             this.advancedToggle.Size = new System.Drawing.Size(185, 22);
-            this.advancedToggle.Text = "Advanced View";
+            this.advancedToggle.Text = "Tree View";
             this.advancedToggle.CheckedChanged += new System.EventHandler(this.advancedViewToolStripMenuItem_CheckedChanged);
             // 
             // showUnhashedFilesToolStripMenuItem
@@ -400,13 +407,6 @@
             this.deleteModBut.Size = new System.Drawing.Size(107, 22);
             this.deleteModBut.Text = "Delete";
             this.deleteModBut.Click += new System.EventHandler(this.deleteModBut_Click);
-            // 
-            // setOutputFolderToolStripMenuItem
-            // 
-            this.setOutputFolderToolStripMenuItem.Name = "setOutputFolderToolStripMenuItem";
-            this.setOutputFolderToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
-            this.setOutputFolderToolStripMenuItem.Text = "Set Output Folder";
-            this.setOutputFolderToolStripMenuItem.Click += new System.EventHandler(this.setOutputFolderToolStripMenuItem_Click);
             // 
             // FileSystemForm
             // 
