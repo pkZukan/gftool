@@ -6,9 +6,9 @@ Trinity Mod Loader requires the oo2core_8_win64.dll and an up-to-date GFPAKHashC
 On initial boot it will ask for your romfs path, once specified the tool will load.
 
 ## Adding a Mod
-1. Add as many mod archive files using the "Add Mod" button. 
-2. When you're done adding mods, simply hit the "Apply Mods" button.
-3. Drag and drop the generated layeredfs folder into your atmosphere layeredfs directory or your emulator of choice's mod folder.
+1. Add as many mod archive files using the "Add Mod" button. (make sure the contents represent how they would on the romfs)
+2. When you're done adding mods, simply hit the "Apply Mods" button. This will generate files either in a LayeredFS folder in the same directory as the program, or a directory of your choice if you set an output directory.
+3. Drag and drop the generated files in the output folder into your atmosphere layeredfs directory or your emulator of choice's mod folder.
 
 ## Creating a Mod
 1. Extract files to modify using ``View > Tree View``.
