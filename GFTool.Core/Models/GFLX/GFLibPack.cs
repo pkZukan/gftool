@@ -20,7 +20,7 @@ namespace GFTool.Core.Models.GFLX
     public class GFLibFile
     {
         public string name;
-        public string path;
+        public string fullname;
         public byte[] data;
     }
 

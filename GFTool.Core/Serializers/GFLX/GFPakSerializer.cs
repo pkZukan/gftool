@@ -106,7 +106,7 @@ namespace GFTool.Core.Serializers.GFLX
                     GFLibFile file = new GFLibFile()
                     {
                         name = name,
-                        path = path,
+                        fullname = path,
                         data = files[(int)content.Index],
                     };
                     folder.AddFile(file);
@@ -157,7 +157,7 @@ namespace GFTool.Core.Serializers.GFLX
             {
                 foreach (GFLibFile file in folder.files)
                 {
-                    bw.Write(GFFNV.Hash(file.path));
+                    bw.Write(GFFNV.Hash(file.fullname));
                 }
             }
 

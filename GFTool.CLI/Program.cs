@@ -1,26 +1,33 @@
 ﻿using System.Text.Json;
 using GFTool.Core.Cache;
-using GFTool.Core.Flatbuffers.TR.ResourceDictionary;
+using GFTool.Core.Flatbuffers.TR.ResourceDictionary.LA;
 using GFTool.Core.Flatbuffers.TR.Animation;
 using GFTool.Core.Models.GFLX;
 using GFTool.Core.Serializers.GFLX;
 using GFTool.Core.Utils;
+using System.Diagnostics;
 
 ////GFPak exporting
-static void ConvertGFPAK()
+static void ConvertGFPAK(string[] args)
 {
+    var path = Path.GetFullPath(args[0]);
+    Trace.WriteLine(path);
     GFPakHashCache.Init();
-
-    var gfpak = GFPakSerializer.Deserialize(new BinaryReader(File.Open("pm0201_37_00.gfpak", FileMode.Open, FileAccess.Read)));
-    foreach (var folder in gfpak.folders)
-    {
-        Console.WriteLine(folder.path);
-        foreach (var file in folder.files)
+    var paks = Directory.EnumerateFiles(args[0], "*.gfpak");
+    foreach (var pak in paks) {
+        var gfpak = GFPakSerializer.Deserialize(new BinaryReader(File.Open(pak, FileMode.Open, FileAccess.Read)));
+        foreach (var gfFolder in gfpak.folders)
         {
-            Console.WriteLine('\t' + file.path);
-            Console.WriteLine('\t' + file.name);
+            foreach (var file in gfFolder.files)
+            {
+                var fullname = path + "\\" + file.fullname;
+                FileInfo finfo = new FileInfo(fullname);
+                finfo.Directory.Create();
+                File.WriteAllBytes(finfo.FullName, file.data);
+            }
         }
     }
+    
 }
 //Flatbuffer Serialization
 static void ConvertFlatbuffer()
@@ -54,5 +61,6 @@ static void ConvertBSEQ()
     File.WriteAllText("d020.bseq.json", jsonbseq);
 }
 
-ConvertTRANMtoJSON(args);
+//ConvertTRANMtoJSON(args);
 //ConvertJSONtoTRANM(args);
+ConvertGFPAK(args);
