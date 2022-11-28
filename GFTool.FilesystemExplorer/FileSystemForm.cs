@@ -269,6 +269,7 @@ namespace GFTool.TrinityExplorer
                     if (!reader.Entry.IsDirectory)
                     {
                         string entry = reader.Entry.Key;
+                        if (entry.Contains("info.toml")) continue;
                         reader.WriteEntryToDirectory(lfsDir, new ExtractionOptions() { ExtractFullPath = true, Overwrite = true });
                         files.Add(entry.Replace('\\', '/'));
                     }
