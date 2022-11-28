@@ -6,7 +6,7 @@ namespace GFTool.FilesystemExplorer
     {
         public string archiveDir { get; set; } = "";
         public bool autoloadTrpfd { get; set; } = true;
-        public string outputDir { get; set; } = "LayeredFS/";
+        public string outputDir { get; set; } = @"\romfs\";
 
         public void Save() 
         {

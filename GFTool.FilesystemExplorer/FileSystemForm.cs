@@ -591,7 +591,7 @@ namespace GFTool.TrinityExplorer
         {
             var fold = new FolderBrowserDialog();
             if (fold.ShowDialog() != DialogResult.OK) return;
-            settings.outputDir = fold.SelectedPath + "\\";
+            settings.outputDir = fold.SelectedPath + @"\romfs\";
             settings.Save();
         }
         #endregion
