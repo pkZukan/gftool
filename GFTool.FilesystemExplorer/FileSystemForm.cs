@@ -107,7 +107,10 @@ namespace GFTool.TrinityExplorer
             List<string> unusedPaths = null;
             if (unused != null) {
                 unusedPaths = unused.Select(x => GFPakHashCache.GetName(x)).Where(x => !string.IsNullOrEmpty(x)).ToList();
+                unusedPaths.Sort();
             }
+
+            paths.Sort();
 
             ThreadSafe(() => {
                 progressBar1.Maximum = paths.Count;
