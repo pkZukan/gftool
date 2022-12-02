@@ -1,6 +1,4 @@
 ﻿using FlatSharp;
-using System;
-using System.IO;
 
 namespace Trinity.Core.Utils
 {

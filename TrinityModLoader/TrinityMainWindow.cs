@@ -10,12 +10,13 @@ using System.Diagnostics;
 using System.Text.Json;
 using Tomlyn;
 using Tomlyn.Model;
+using TrinityModLoader;
 
 namespace Trinity
 {
     public partial class TrinityMainWindow : Form
     {
-        private FileDescriptor? fileDescriptor = null;
+        private FileDescriptorCustom? fileDescriptor = null;
         private FileSystem? fileSystem = null;
 
         private bool hasOodleDll = false;
@@ -134,7 +135,7 @@ namespace Trinity
 
             try
             {
-                fileDescriptor = FlatBufferConverter.DeserializeFrom<FileDescriptor>(file != "" ? file : trpfd);
+                fileDescriptor = FlatBufferConverter.DeserializeFrom<FileDescriptorCustom>(file != "" ? file : trpfd);
 
                 if (File.Exists(trpfs))
                 {
@@ -146,6 +147,10 @@ namespace Trinity
 
                 if (fileDescriptor != null)
                 {
+                    if (fileDescriptor.HasUnusedFiles())
+                    {
+                        MessageBox.Show("This is a modified trpfd");
+                    }
                     Task.Run(() =>
                     {
                         ThreadSafe(() => { 
@@ -160,9 +165,7 @@ namespace Trinity
                             statusLbl.Text = "Done";
                             applyModsBut.Enabled = true;
                         });
-                        if (fileDescriptor.HasUnusedFiles()) { 
-                            //TODO
-                        }
+                        
                     });
                 }
             } catch {
@@ -332,7 +335,7 @@ namespace Trinity
             var file = new System.IO.FileInfo(fileOut);
             if(!file.Directory.Exists) file.Directory.Create();
 
-            var trpfd = FlatBufferConverter.SerializeFrom<FileDescriptor>(fileDescriptor);
+            var trpfd = FlatBufferConverter.SerializeFrom<FileDescriptorCustom>(fileDescriptor);
             File.WriteAllBytes(fileOut, trpfd);
         }
 
