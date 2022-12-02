@@ -20,6 +20,22 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build --no-restore --configuration Release
     - name: Test
       run: dotnet test --no-build --verbosity normal
+    - name: Zip output
+      uses: papeloto/action-zip@v1
+      with:
+        files: TrinityModLoader/bin/Release/net6.0-windows
+        dest: TrinityModLoader/bin/Release/TrinityLoader.zip
+    - name: Update nightly release
+      uses: WebFreak001/deploy-nightly@v1.1.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # automatically provided by github actions
+      with:
+        upload_url: https://uploads.github.com/repos/pkZukan/gftool/releases/84790057/assets{?name,label} # find out this value by opening https://api.github.com/repos/<owner>/<repo>/releases in your browser and copy the full "upload_url" value including the {?name,label} part
+        release_id: 84790057 # same as above (id can just be taken out the upload_url, it's used to find old releases)
+        asset_path: TrinityModLoader/bin/Release/TrinityLoader.zip # path to archive to upload
+        asset_name: TrinityLoader-nightly-$$.zip # name to upload the release as, use $$ to insert date (YYYYMMDD) and 6 letter commit hash
+        asset_content_type: application/zip # required by GitHub API
+        max_releases: 1 # optional, if there are 
