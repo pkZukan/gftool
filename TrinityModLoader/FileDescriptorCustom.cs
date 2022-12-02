@@ -5,7 +5,7 @@ using FileInfo = Trinity.Core.Flatbuffers.TR.ResourceDictionary.FileInfo;
 namespace TrinityModLoader
 {
     [FlatBufferTable]
-    public class FileDescriptorCustom : FileDescriptor
+    public class FileDescriptorCustom
     {
         [FlatBufferItem(0)] public UInt64[] FileHashes { get; set; } = Array.Empty<UInt64>();
         [FlatBufferItem(1)] public string[] PackNames { get; set; } = Array.Empty<string>();
@@ -74,6 +74,43 @@ namespace TrinityModLoader
         public bool HasUnusedFiles()
         {
             return UnusedHashes != null;
+        }
+
+        public virtual long GetPackIndex(UInt64 hash)
+        {
+            long ret = -1;
+            long ind = Array.IndexOf(FileHashes, hash);
+            if (ind >= 0)
+            {
+                var finfo = FileInfo[ind];
+                ret = (long)finfo.PackIndex;
+            }
+
+            return ret;
+        }
+
+        public virtual string GetPackName(UInt64 hash)
+        {
+            string ret = "";
+            long ind = GetPackIndex(hash);
+            if (ind >= 0)
+            {
+                ret = PackNames[ind];
+            }
+
+            return ret;
+        }
+
+        public virtual PackInfo? GetPackInfo(UInt64 hash)
+        {
+            PackInfo ret = null;
+            long ind = GetPackIndex(hash);
+            if (ind >= 0)
+            {
+                ret = PackInfo[ind];
+            }
+
+            return ret;
         }
     }
 }

@@ -1,10 +1,4 @@
 ﻿using FlatSharp.Attributes;
-using Trinity.Core.Math.Hash;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Trinity.Core.Flatbuffers.TR.ResourceDictionary
 {
@@ -67,5 +61,7 @@ namespace Trinity.Core.Flatbuffers.TR.ResourceDictionary
 
             return ret;
         }
+
+
     }
 }
