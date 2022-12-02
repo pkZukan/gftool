@@ -1,6 +1,6 @@
 ﻿using FlatSharp.Attributes;
 
-namespace GFTool.Core.Flatbuffers.TR.Resident
+namespace Trinity.Core.Flatbuffers.TR.Resident
 {
     [FlatBufferTable]
     public class ModelSetAnimations

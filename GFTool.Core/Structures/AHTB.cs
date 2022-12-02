@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 
 
-namespace GFTool.Core.Structures
+namespace Trinity.Core.Structures
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct AHTBHeader

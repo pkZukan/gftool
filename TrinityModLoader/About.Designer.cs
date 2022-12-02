@@ -1,4 +1,4 @@
-﻿namespace GFTool.FilesystemExplorer
+﻿namespace Trinity
 {
     partial class About
     {

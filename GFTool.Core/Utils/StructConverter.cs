@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace GFTool.Core.Utils
+namespace Trinity.Core.Utils
 {
     public static class StructConverter
     {

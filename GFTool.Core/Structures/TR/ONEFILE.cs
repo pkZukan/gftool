@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GFTool.Core.Structures.TR
+namespace Trinity.Core.Structures.TR
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct OneFileHeader

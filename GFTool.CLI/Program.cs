@@ -1,10 +1,10 @@
 ﻿using System.Text.Json;
-using GFTool.Core.Cache;
-using GFTool.Core.Flatbuffers.TR.ResourceDictionary.LA;
-using GFTool.Core.Flatbuffers.TR.Animation;
-using GFTool.Core.Models.GFLX;
-using GFTool.Core.Serializers.GFLX;
-using GFTool.Core.Utils;
+using Trinity.Core.Cache;
+using Trinity.Core.Flatbuffers.TR.ResourceDictionary.LA;
+using Trinity.Core.Flatbuffers.TR.Animation;
+using Trinity.Core.Models.GFLX;
+using Trinity.Core.Serializers.GFLX;
+using Trinity.Core.Utils;
 using System.Diagnostics;
 
 ////GFPak exporting

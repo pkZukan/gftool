@@ -1,6 +1,6 @@
 ﻿using FlatSharp.Attributes;
 
-namespace GFTool.Core.Flatbuffers.TR.ResourceDictionary.SV
+namespace Trinity.Core.Flatbuffers.TR.ResourceDictionary.SV
 {
     [FlatBufferTable]
     public class PokemonCatalogInfo

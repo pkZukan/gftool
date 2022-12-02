@@ -1,6 +1,6 @@
 ﻿using FlatSharp.Attributes;
 
-namespace GFTool.Core.Flatbuffers.TR.PokeLib
+namespace Trinity.Core.Flatbuffers.TR.PokeLib
 {
     [FlatBufferTable]
     public class Personal

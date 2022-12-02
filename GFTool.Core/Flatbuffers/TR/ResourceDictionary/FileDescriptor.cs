@@ -1,12 +1,12 @@
 ﻿using FlatSharp.Attributes;
-using GFTool.Core.Math.Hash;
+using Trinity.Core.Math.Hash;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GFTool.Core.Flatbuffers.TR.ResourceDictionary
+namespace Trinity.Core.Flatbuffers.TR.ResourceDictionary
 {
 
     [FlatBufferTable]

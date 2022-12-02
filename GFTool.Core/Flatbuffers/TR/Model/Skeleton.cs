@@ -1,7 +1,7 @@
 ﻿using FlatSharp.Attributes;
-using GFTool.Core.Flatbuffers.Utils;
+using Trinity.Core.Flatbuffers.Utils;
 
-namespace GFTool.Core.Flatbuffers.TR.Model
+namespace Trinity.Core.Flatbuffers.TR.Model
 {
     [FlatBufferEnum(typeof(int))]
     public enum NodeType

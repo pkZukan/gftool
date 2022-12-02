@@ -1,8 +1,8 @@
 ﻿using FlatSharp.Attributes;
-using GFTool.Core.Flatbuffers.Converters;
+using Trinity.Core.Flatbuffers.Converters;
 using System.Text.Json.Serialization;
 
-namespace GFTool.Core.Flatbuffers.Utils
+namespace Trinity.Core.Flatbuffers.Utils
 {
     [FlatBufferStruct]
     public class Vector3

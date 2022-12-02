@@ -1,4 +1,4 @@
-namespace GFTool.TrinityExplorer
+namespace Trinity
 {
     internal static class Program
     {
@@ -10,9 +10,9 @@ namespace GFTool.TrinityExplorer
         {
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
-            GFTool.Core.Cache.GFPakHashCache.Init();
+            Trinity.Core.Cache.GFPakHashCache.Init();
             ApplicationConfiguration.Initialize();
-            Application.Run(new FileSystemForm());
+            Application.Run(new TrinityMainWindow());
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace GFTool.Core.Compression
+﻿namespace Trinity.Core.Compression
 {
     static class LZ4
     {

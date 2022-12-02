@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace GFTool.FilesystemExplorer
+namespace Trinity
 {
     public class Settings
     {

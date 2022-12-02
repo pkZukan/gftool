@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GFTool.Core", "GFTool.Core\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GFTool.CLI", "GFTool.CLI\GFTool.CLI.csproj", "{7E3CA913-029F-42D4-8F14-5D8CAD0A7E28}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GFTool.FilesystemExplorer", "GFTool.FilesystemExplorer\GFTool.FilesystemExplorer.csproj", "{A11397F1-52FA-412C-B404-27E41AE10DEA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TrinityModLoader", "TrinityModLoader\TrinityModLoader.csproj", "{A11397F1-52FA-412C-B404-27E41AE10DEA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

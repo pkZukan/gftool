@@ -1,7 +1,7 @@
-﻿using GFTool.Core.Flatbuffers.Utils;
+﻿using Trinity.Core.Flatbuffers.Utils;
 using System.Numerics;
 
-namespace GFTool.Core.Utils
+namespace Trinity.Core.Utils
 {
     public static class QuaternionExtensions
     {

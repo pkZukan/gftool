@@ -1,28 +1,19 @@
-using GFTool.Core.Models.TR;
-using GFTool.Core.Flatbuffers.TR.ResourceDictionary;
-using GFTool.Core.Utils;
-using GFTool.Core.Serializers.TR;
-using System;
-using GFTool.Core.Math.Hash;
-using GFTool.Core.Compression;
-using GFTool.Core.Cache;
+using Trinity.Core.Flatbuffers.TR.ResourceDictionary;
+using Trinity.Core.Utils;
+using Trinity.Core.Serializers.TR;
+using Trinity.Core.Math.Hash;
+using Trinity.Core.Compression;
+using Trinity.Core.Cache;
 using SharpCompress.Readers;
 using SharpCompress.Common;
 using System.Diagnostics;
-using System.Reflection;
-using GFTool.FilesystemExplorer;
-using GFTool.Core.Flatbuffers.TR.PokeLib;
 using System.Text.Json;
-using System.Security.Cryptography;
-using System.Xml.Linq;
-using System.Windows.Forms;
 using Tomlyn;
 using Tomlyn.Model;
-using System.IO;
 
-namespace GFTool.TrinityExplorer
+namespace Trinity
 {
-    public partial class FileSystemForm : Form
+    public partial class TrinityMainWindow : Form
     {
         private FileDescriptor? fileDescriptor = null;
         private FileSystem? fileSystem = null;
@@ -33,7 +24,7 @@ namespace GFTool.TrinityExplorer
         private string trpfdRel = @"\arc\data.trpfd";
         private string trpfsRel = @"\arc\data.trpfs";
 
-        public FileSystemForm()
+        public TrinityMainWindow()
         {
             InitializeComponent();
             hasOodleDll = File.Exists("oo2core_8_win64.dll");

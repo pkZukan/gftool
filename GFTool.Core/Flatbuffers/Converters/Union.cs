@@ -2,10 +2,10 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-using GFTool.Core.Flatbuffers.TR.Animation;
-using GFTool.Core.Utils;
+using Trinity.Core.Flatbuffers.TR.Animation;
+using Trinity.Core.Utils;
 
-namespace GFTool.Core.Flatbuffers.Converters
+namespace Trinity.Core.Flatbuffers.Converters
 {
     public class UnionConverterFactory : JsonConverterFactory
     {

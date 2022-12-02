@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace GFTool.FilesystemExplorer
+namespace Trinity
 {
     public partial class About : Form
     {

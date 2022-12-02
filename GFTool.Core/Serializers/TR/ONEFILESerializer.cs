@@ -1,14 +1,14 @@
-﻿using GFTool.Core.Flatbuffers.TR.ResourceDictionary;
-using GFTool.Core.Structures.TR;
-using GFTool.Core.Utils;
-using GFTool.Core.Math.Hash;
+﻿using Trinity.Core.Flatbuffers.TR.ResourceDictionary;
+using Trinity.Core.Structures.TR;
+using Trinity.Core.Utils;
+using Trinity.Core.Math.Hash;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GFTool.Core.Serializers.TR
+namespace Trinity.Core.Serializers.TR
 {
     public static class ONEFILESerializer
     {

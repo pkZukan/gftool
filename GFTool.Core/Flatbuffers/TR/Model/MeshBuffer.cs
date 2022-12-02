@@ -1,6 +1,6 @@
 ﻿using FlatSharp.Attributes;
 
-namespace GFTool.Core.Flatbuffers.TR.Model
+namespace Trinity.Core.Flatbuffers.TR.Model
 {
         [FlatBufferTable]
         public class Buffer

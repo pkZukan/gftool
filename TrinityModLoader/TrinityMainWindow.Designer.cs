@@ -1,6 +1,6 @@
-﻿namespace GFTool.TrinityExplorer
+﻿namespace Trinity
 {
-    partial class FileSystemForm
+    partial class TrinityMainWindow
     {
         /// <summary>
         ///  Required designer variable.

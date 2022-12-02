@@ -2,7 +2,7 @@
 using System;
 using System.IO;
 
-namespace GFTool.Core.Utils
+namespace Trinity.Core.Utils
 {
         public static class FlatBufferConverter
         {

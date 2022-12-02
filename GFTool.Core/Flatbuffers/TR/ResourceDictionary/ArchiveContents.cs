@@ -1,6 +1,6 @@
 ﻿using FlatSharp.Attributes;
 
-namespace GFTool.Core.Flatbuffers.TR.ResourceDictionary
+namespace Trinity.Core.Flatbuffers.TR.ResourceDictionary
 {
     public class ArchiveContents
     {

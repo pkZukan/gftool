@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace GFTool.Core.Compression
+namespace Trinity.Core.Compression
 
 {
     //Note: Stolen from PkNX....

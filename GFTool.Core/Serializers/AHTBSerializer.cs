@@ -1,7 +1,7 @@
-﻿using GFTool.Core.Structures;
-using GFTool.Core.Utils;
+﻿using Trinity.Core.Structures;
+using Trinity.Core.Utils;
 
-namespace GFTool.Core.Serializers
+namespace Trinity.Core.Serializers
 {
     static class AHTBSerializer
     {

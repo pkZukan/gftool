@@ -1,11 +1,11 @@
-﻿using GFTool.Core.Math.Hash;
+﻿using Trinity.Core.Math.Hash;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GFTool.Core.Cache
+namespace Trinity.Core.Cache
 {
     public class GFPakHashCache
     {

@@ -1,11 +1,11 @@
-﻿using GFTool.Core.Compression;
-using GFTool.Core.Math.Hash;
-using GFTool.Core.Models.GFLX;
-using GFTool.Core.Structures.GFLX;
-using GFTool.Core.Utils;
-using GFTool.Core.Cache;
+﻿using Trinity.Core.Compression;
+using Trinity.Core.Math.Hash;
+using Trinity.Core.Models.GFLX;
+using Trinity.Core.Structures.GFLX;
+using Trinity.Core.Utils;
+using Trinity.Core.Cache;
 
-namespace GFTool.Core.Serializers.GFLX
+namespace Trinity.Core.Serializers.GFLX
 {
     public static class GFPakSerializer
     {

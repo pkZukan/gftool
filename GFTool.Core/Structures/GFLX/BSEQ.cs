@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 
 
-namespace GFTool.Core.Structures.GFLX
+namespace Trinity.Core.Structures.GFLX
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct BSEQHeader
