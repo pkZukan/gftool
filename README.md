@@ -21,4 +21,4 @@ Note: We'll be adding a way to add some mod metadata to keep better track of you
 The canonical repository for this tool and the GFTool.Core which provies serializers for Trinity files can be found at [https://github.com/pkZukan/gftool/](https://github.com/pkZukan/gftool/).
 
 ## Feature Suggestions
-Please discuss feature suggestions on the [pokemodding discord.](https://discord.gg/hcVusTVW) Our aim is to make a stable and user friendly tool, so please understand if your dream feature isn't developed immediately.
+Please discuss feature suggestions on the [pokemodding discord.](http://discord.gg/A99eGRF) Our aim is to make a stable and user friendly tool, so please understand if your dream feature isn't developed immediately.

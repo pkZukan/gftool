@@ -18,7 +18,7 @@ namespace Trinity
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName = "http://discord.gg/A99eGRF",
+                FileName = "https://gamebanana.com/tuts/15508",
                 UseShellExecute = true
             });
         }
