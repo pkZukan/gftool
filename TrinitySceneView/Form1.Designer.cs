@@ -28,11 +28,15 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openTRSOT = new System.Windows.Forms.ToolStripMenuItem();
             this.sceneView = new System.Windows.Forms.TreeView();
+            this.sceneContext = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.expandToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
+            this.sceneContext.SuspendLayout();
             this.SuspendLayout();
             // 
             // menuStrip1
@@ -56,7 +60,7 @@
             // openTRSOT
             // 
             this.openTRSOT.Name = "openTRSOT";
-            this.openTRSOT.Size = new System.Drawing.Size(180, 22);
+            this.openTRSOT.Size = new System.Drawing.Size(175, 22);
             this.openTRSOT.Text = "Open Scene Object";
             this.openTRSOT.Click += new System.EventHandler(this.openTRSOT_Click);
             // 
@@ -66,6 +70,20 @@
             this.sceneView.Name = "sceneView";
             this.sceneView.Size = new System.Drawing.Size(518, 411);
             this.sceneView.TabIndex = 1;
+            // 
+            // sceneContext
+            // 
+            this.sceneContext.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.expandToolStripMenuItem});
+            this.sceneContext.Name = "sceneContext";
+            this.sceneContext.Size = new System.Drawing.Size(181, 48);
+            // 
+            // expandToolStripMenuItem
+            // 
+            this.expandToolStripMenuItem.Name = "expandToolStripMenuItem";
+            this.expandToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.expandToolStripMenuItem.Text = "Expand";
+            this.expandToolStripMenuItem.Click += new System.EventHandler(this.expandToolStripMenuItem_Click);
             // 
             // Form1
             // 
@@ -79,6 +97,7 @@
             this.Text = "Trinity Scene View";
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
+            this.sceneContext.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -90,5 +109,7 @@
         private ToolStripMenuItem fileToolStripMenuItem;
         private ToolStripMenuItem openTRSOT;
         private TreeView sceneView;
+        private ContextMenuStrip sceneContext;
+        private ToolStripMenuItem expandToolStripMenuItem;
     }
 }

@@ -29,5 +29,11 @@ namespace TrinitySceneView
             WalkTrsot(tree, trsot.SceneObjectList);
             sceneView.Nodes.Add(tree);
         }
+
+        private void expandToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            TreeNode node = sceneView.SelectedNode;
+            //TODO
+        }
     }
 }
