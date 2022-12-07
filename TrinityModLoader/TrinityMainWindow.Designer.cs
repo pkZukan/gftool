@@ -52,6 +52,8 @@
             this.advancedPanel = new System.Windows.Forms.Panel();
             this.basicPanel = new System.Windows.Forms.Panel();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.versionLbl = new System.Windows.Forms.Label();
+            this.label4 = new System.Windows.Forms.Label();
             this.modDescriptionBox = new System.Windows.Forms.TextBox();
             this.label2 = new System.Windows.Forms.Label();
             this.modNameLbl = new System.Windows.Forms.Label();
@@ -63,8 +65,6 @@
             this.addMod = new System.Windows.Forms.Button();
             this.basicContext = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.deleteModBut = new System.Windows.Forms.ToolStripMenuItem();
-            this.versionLbl = new System.Windows.Forms.Label();
-            this.label4 = new System.Windows.Forms.Label();
             this.menuStrip1.SuspendLayout();
             this.treeContext.SuspendLayout();
             this.advancedPanel.SuspendLayout();
@@ -279,6 +279,23 @@
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Mod Info";
             // 
+            // versionLbl
+            // 
+            this.versionLbl.AutoSize = true;
+            this.versionLbl.Location = new System.Drawing.Point(70, 43);
+            this.versionLbl.Name = "versionLbl";
+            this.versionLbl.Size = new System.Drawing.Size(0, 15);
+            this.versionLbl.TabIndex = 5;
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(16, 43);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(48, 15);
+            this.label4.TabIndex = 4;
+            this.label4.Text = "Version:";
+            // 
             // modDescriptionBox
             // 
             this.modDescriptionBox.AcceptsReturn = true;
@@ -391,24 +408,7 @@
             this.deleteModBut.Text = "Delete";
             this.deleteModBut.Click += new System.EventHandler(this.deleteModBut_Click);
             // 
-            // versionLbl
-            // 
-            this.versionLbl.AutoSize = true;
-            this.versionLbl.Location = new System.Drawing.Point(70, 43);
-            this.versionLbl.Name = "versionLbl";
-            this.versionLbl.Size = new System.Drawing.Size(0, 15);
-            this.versionLbl.TabIndex = 5;
-            // 
-            // label4
-            // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(16, 43);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(48, 15);
-            this.label4.TabIndex = 4;
-            this.label4.Text = "Version:";
-            // 
-            // FileSystemForm
+            // TrinityMainWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -419,8 +419,9 @@
             this.Controls.Add(this.menuStrip1);
             this.Controls.Add(this.advancedPanel);
             this.MainMenuStrip = this.menuStrip1;
-            this.Name = "FileSystemForm";
+            this.Name = "TrinityMainWindow";
             this.Text = "Trinity Mod Loader";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.TrinityMainWindow_FormClosing);
             this.Load += new System.EventHandler(this.FileSystemForm_Load);
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();

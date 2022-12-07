@@ -11,6 +11,7 @@ using System.Text.Json;
 using Tomlyn;
 using Tomlyn.Model;
 using TrinityModLoader;
+using System.Text;
 
 namespace Trinity
 {
@@ -31,8 +32,9 @@ namespace Trinity
             hasOodleDll = File.Exists("oo2core_8_win64.dll");
             if (!hasOodleDll)
                 MessageBox.Show("Liboodle dll missing. Exporting from TRPFS is disabled.");
-            LoadMods();
+            
             LoadSettings();
+            LoadMods();
         }
 
         public void LoadSettings()
@@ -54,18 +56,15 @@ namespace Trinity
             }
         }
 
-        //Populate mods from local mods/ folder
+        //Populate mods from json
         public void LoadMods()
         {
-            if (!Directory.Exists("mods")) {
-                Directory.CreateDirectory("mods");
-            }
-
-            var files = Directory.EnumerateFiles("mods").Where(x => x.EndsWith(".zip") || x.EndsWith(".rar"));
-            foreach ( var file in files)
+            foreach ( var mod in settings.mods)
             {
-                var name = Path.GetFileName(file);
-                modList.Items.Add(name);
+                if (!File.Exists(mod.Path)) continue;
+                var name = Path.GetFileName(mod.Path);
+                var ind = modList.Items.Add(name);
+                modList.SetItemChecked(ind, mod.IsChecked);
             }
         }
 
@@ -164,8 +163,8 @@ namespace Trinity
                             fileView.Nodes.Add(nodes);
                             statusLbl.Text = "Done";
                             applyModsBut.Enabled = true;
+                            GuessModsInstalled();
                         });
-                        
                     });
                 }
             } catch {
@@ -258,7 +257,7 @@ namespace Trinity
         void ApplyModPack(string modFile, string lfsDir) 
         {
             List<string> files = new List<string>();
-            using (Stream stream = File.OpenRead(@"mods\" + modFile))
+            using (Stream stream = File.OpenRead(modFile))
             using (var reader = ReaderFactory.Open(stream))
             {
                 while (reader.MoveToNextEntry())
@@ -282,7 +281,7 @@ namespace Trinity
 
         void RemoveModPack(string modFile) 
         {
-            var files = EnumerateArchiveFiles(@"mods\" + modFile);
+            var files = EnumerateArchiveFiles(modFile);
             foreach (var f in files)
             {
                 fileDescriptor.RemoveFile(GFFNV.Hash(f));
@@ -291,10 +290,10 @@ namespace Trinity
 
         void GuessModsInstalled() 
         {
-            List<string> files = new List<string>();
-            for (int i = 0; i < modList.Items.Count; i++)
+            StringBuilder sb = new StringBuilder("List of mods that may be installed on this trpfd:\n");
+            for (int i = 0; i < settings.mods.Count; i++)
             {
-                using (Stream stream = File.OpenRead(@"mods\" + modList.Items[i].ToString()))
+                using (Stream stream = File.OpenRead(settings.mods[i].Path))
                 using (var reader = ReaderFactory.Open(stream))
                 {
                     while (reader.MoveToNextEntry())
@@ -304,12 +303,13 @@ namespace Trinity
                             string entry = reader.Entry.Key.Replace('\\', '/');
                             var hash = GFFNV.Hash(entry);
                             if (fileDescriptor.IsFileUnused(hash)) { //gonna assume if at least one of the files is marked, that the mod is installed since not all files will be in trpfs
-                                modList.SetItemCheckState(i, CheckState.Checked);
+                                sb.AppendLine(modList.Items[i].ToString());
                             }
                         }
                     }
                 }
             }
+            MessageBox.Show(sb.ToString());
         }
 
         private void AddModToList(string file)
@@ -324,7 +324,11 @@ namespace Trinity
                 overwriting = true;
             }
 
-            File.Copy(file, @"mods\" + fn, overwriting);
+            var mod = new ModEntry()
+            {
+                Path = file
+            };
+            settings.mods.Add(mod);
 
             if (!overwriting)
                 modList.Items.Add(fn);
@@ -368,7 +372,7 @@ namespace Trinity
         private void PopulateMetaData()
         {
             var mod = modList.Items[modList.SelectedIndex].ToString();
-            var toml = FetchToml(@"mods\" + mod);
+            var toml = FetchToml(settings.mods.Where(x => x.Path.EndsWith(mod)).First().Path);
             if (toml.Count >= 3)
             {
                 modNameLbl.Text = toml["display_name"].ToString();
@@ -417,7 +421,6 @@ namespace Trinity
         private void openFileDescriptorToolStripMenuItem_Click(object sender, EventArgs e)
         {
             OpenFileDescriptor();
-            GuessModsInstalled();
         }
 
         private void saveFileDescriptorAsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -501,10 +504,11 @@ namespace Trinity
             Directory.CreateDirectory(lfsDir);
             for (int i = 0; i < modList.Items.Count; i++)
             {
+                var selectedFile = settings.mods.Where(x => x.Path.EndsWith(modList.Items[i].ToString())).First().Path;
                 if (modList.GetItemChecked(i))
-                    ApplyModPack(modList.Items[i].ToString(), lfsDir);
+                    ApplyModPack(selectedFile, lfsDir);
                 else
-                    RemoveModPack(modList.Items[i].ToString());
+                    RemoveModPack(selectedFile);
             }
             SerializeTrpfd(lfsDir + trpfdRel);
             statusLbl.Text = "Done";
@@ -520,8 +524,11 @@ namespace Trinity
 
             var selected = modList.SelectedIndex;
             var item = modList.Items[selected];
+            var entry = settings.mods[selected];
             modList.Items.RemoveAt(selected);
+            settings.mods.RemoveAt(selected);
             modList.Items.Insert(selected - 1, item);
+            settings.mods.Insert(selected - 1, entry);
         }
 
         private void modOrderDown_Click(object sender, EventArgs e)
@@ -530,8 +537,11 @@ namespace Trinity
 
             var selected = modList.SelectedIndex;
             var item = modList.Items[selected];
+            var entry = settings.mods[selected];
             modList.Items.RemoveAt(selected);
+            settings.mods.RemoveAt(selected);
             modList.Items.Insert(selected + 1, item);
+            settings.mods.Insert(selected + 1, entry);
         }
         
 
@@ -565,18 +575,15 @@ namespace Trinity
 
         private void deleteModBut_Click(object sender, EventArgs e)
         {
-            var file = @"mods\" + modList.Items[modList.SelectedIndex].ToString();
-            if (File.Exists(file)) {
-                File.Delete(file);
-                modList.Items.Remove(modList.Items[modList.SelectedIndex]);
-            }
+            settings.mods.RemoveAt(modList.SelectedIndex);
+            modList.Items.Remove(modList.Items[modList.SelectedIndex]);
         }
 
         private void modList_MouseUp(object sender, MouseEventArgs e)
         {
             Point ClickPoint = new Point(e.X, e.Y);
             modList.SelectedIndex = modList.IndexFromPoint(ClickPoint);
-
+            settings.mods[modList.SelectedIndex].IsChecked = modList.GetItemChecked(modList.SelectedIndex);
             if (e.Button == MouseButtons.Right && modList.SelectedIndex >= 0) {
                 
                 basicContext.Show(modList, ClickPoint);
@@ -592,5 +599,10 @@ namespace Trinity
             settings.Save();
         }
         #endregion
+
+        private void TrinityMainWindow_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            settings.Save();
+        }
     }
 }
