@@ -4,8 +4,10 @@ using Trinity.Core.Flatbuffers.TR.ResourceDictionary.LA;
 using Trinity.Core.Flatbuffers.TR.Animation;
 using Trinity.Core.Models.GFLX;
 using Trinity.Core.Serializers.GFLX;
+using Trinity.Core.Serializers;
 using Trinity.Core.Utils;
 using System.Diagnostics;
+using GFTool.Core.Flatbuffers.TR.Scene;
 
 ////GFPak exporting
 static void ConvertGFPAK(string[] args)
@@ -61,6 +63,36 @@ static void ConvertBSEQ()
     File.WriteAllText("d020.bseq.json", jsonbseq);
 }
 
+static void ReadText(string[] args) {
+    string tableFile = args[0];
+    string datFile = tableFile.Replace("tbl", "dat");
+    var br = new BinaryReader(File.Open(tableFile, FileMode.Open));
+    var dic = AHTBSerializer.Deserialize(br);
+    int i = 0;
+    foreach (var d in dic) 
+        Console.WriteLine("ind: {0} | Key = {1}, Value = {2}", i++, d.Key, d.Value);
+}
+
+static void TraverseTrsot(SceneEntry ent) {
+    if(ent.SubObjects.Length == 0) return;
+    
+    foreach (var e in ent.SubObjects) {
+        Console.WriteLine(e.TypeName);
+        TraverseTrsot(e);
+        //File.WriteAllBytes(e.TypeName, e.NestedType);
+    }
+}
+
+static void Test(string[] args) {
+    var trsot = FlatBufferConverter.DeserializeFrom<TrinitySceneObjTemplate>(args[0]);
+    foreach (var t in trsot.SceneObjectList) {
+        Console.WriteLine(t.TypeName);
+        TraverseTrsot(t);
+    }
+}
+
 //ConvertTRANMtoJSON(args);
 //ConvertJSONtoTRANM(args);
-ConvertGFPAK(args);
+//ConvertGFPAK(args);
+//ReadText(args);
+Test(args);

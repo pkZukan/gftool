@@ -3,7 +3,7 @@ using Trinity.Core.Utils;
 
 namespace Trinity.Core.Serializers
 {
-    static class AHTBSerializer
+    public static class AHTBSerializer
     {
         public static Dictionary<UInt64, string> Deserialize(BinaryReader br)
         {
@@ -14,7 +14,7 @@ namespace Trinity.Core.Serializers
             {
                 var hash = br.ReadUInt64();
                 var length = br.ReadUInt16();
-                var name = br.ReadString();
+                var name = new string(br.ReadChars(length));
                 keyValuePairs.Add(hash, name);
             }
 
