@@ -67,10 +67,10 @@ static void ReadText(string[] args) {
     string tableFile = args[0];
     string datFile = tableFile.Replace("tbl", "dat");
     var br = new BinaryReader(File.Open(tableFile, FileMode.Open));
-    var dic = AHTBSerializer.Deserialize(br);
+    /*var dic = AHTBSerializer.Deserialize(br);
     int i = 0;
     foreach (var d in dic) 
-        Console.WriteLine("ind: {0} | Key = {1}, Value = {2}", i++, d.Key, d.Value);
+        Console.WriteLine("ind: {0} | Key = {1}, Value = {2}", i++, d.Key, d.Value);*/
 }
 
 static void TraverseTrsot(SceneEntry ent) {
@@ -91,8 +91,25 @@ static void Test(string[] args) {
     }
 }
 
+static void ParseCommands(string[] args) {
+    if (args.Length < 3) {
+        Console.WriteLine("Usage: CLI [option] <arg>");
+        Console.WriteLine("Options:\n\t-t = type of command [text, gfpak]");
+    }
+    int i = 0;
+    string commType = "";
+    switch (args[i++]) {
+        case "-t": commType = args[i++]; break;
+    }
+    string[] newArgs = args.Skip(i).ToArray();
+    switch (commType) {
+        case "text": ReadText(newArgs); break;
+        case "gfpak": ConvertGFPAK(newArgs); break;
+    }
+}
+
 //ConvertTRANMtoJSON(args);
 //ConvertJSONtoTRANM(args);
 //ConvertGFPAK(args);
 //ReadText(args);
-Test(args);
+ParseCommands(args);
