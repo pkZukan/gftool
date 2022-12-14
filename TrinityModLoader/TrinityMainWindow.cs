@@ -33,7 +33,10 @@ namespace Trinity
             hasOodleDll = File.Exists("oo2core_8_win64.dll");
             if (!hasOodleDll)
                 MessageBox.Show("Liboodle dll missing. Exporting from TRPFS is disabled.");
-            
+
+            if (!File.Exists("GFPAKHashCache.bin")) {
+                MessageBox.Show("Missing GFPAKHashCache.bin");
+            }
             LoadSettings();
             LoadMods();
         }
