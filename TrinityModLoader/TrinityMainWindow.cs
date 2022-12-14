@@ -69,7 +69,30 @@ namespace Trinity
             }
         }
 
-        
+        public TreeNode MakeTreeFromPaths(List<string> paths, TreeNode rootNode, bool used = true)
+        {
+            foreach (var path in paths)
+            {
+                var currentNode = rootNode;
+                var pathItems = path.Split('/');
+                foreach (var item in pathItems)
+                {
+                    var tmp = currentNode.Nodes.Cast<TreeNode>().Where(x => x.Text.Equals(item));
+                    TreeNode tn = new TreeNode();
+                    if (tmp.Count() == 0)
+                    {
+                        tn.Text = item;
+                        if (!used) tn.BackColor = Color.Red;
+                        currentNode.Nodes.Add(tn);
+                        currentNode = tn;
+                    }
+                    else
+                        currentNode = tmp.Single();
+                }
+                ThreadSafe(() => progressBar1.Increment(1));
+            }
+            return rootNode;
+        }
 
         private TreeNode LoadTree(ulong[] hashes, ulong[] unused = null) {
             List<string> paths = hashes.Select(x => GFPakHashCache.GetName(x)).Where(x => !string.IsNullOrEmpty(x)).ToList();
@@ -84,14 +107,16 @@ namespace Trinity
             ThreadSafe(() => {
                 progressBar1.Maximum = paths.Count;
                 progressBar1.Value = 0;
+                openFileDescriptorToolStripMenuItem.Enabled = false;
             });
 
             var rootNode = new TreeNode("romfs");
-            var nodes = TreeBuilder.MakeTreeFromPaths(paths, rootNode, () => ThreadSafe(() => progressBar1.Increment(1)));
+            var nodes = MakeTreeFromPaths(paths, rootNode);
             
             if(unused != null) 
-                nodes = TreeBuilder.MakeTreeFromPaths(unusedPaths, nodes, () => ThreadSafe(() => progressBar1.Increment(1)), false);
+                nodes = MakeTreeFromPaths(unusedPaths, nodes, false);
 
+            ThreadSafe(() => { openFileDescriptorToolStripMenuItem.Enabled = true; });
             return nodes;
         }
 
@@ -137,6 +162,7 @@ namespace Trinity
                         ThreadSafe(() => { 
                             statusLbl.Text = "Loading...";
                             fileView.Nodes.Clear();
+                            openFileDescriptorToolStripMenuItem.Enabled = false;
                         });
                         
                         TreeNode nodes = LoadTree(fileDescriptor.FileHashes, fileDescriptor.UnusedHashes);
@@ -145,6 +171,7 @@ namespace Trinity
                             fileView.Nodes.Add(nodes);
                             statusLbl.Text = "Done";
                             applyModsBut.Enabled = true;
+                            openFileDescriptorToolStripMenuItem.Enabled = true;
                             GuessModsInstalled();
                         });
                     });

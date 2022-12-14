@@ -1,10 +1,15 @@
 using GFTool.Core.Flatbuffers.TR.Scene;
+using System.Diagnostics;
+using System.Reflection;
+using System.Security.Cryptography;
 using Trinity.Core.Utils;
 
 namespace TrinitySceneView
 {
     public partial class Form1 : Form
     {
+        Dictionary<TreeNode, SceneEntry> InnerData= new Dictionary<TreeNode, SceneEntry>();
+
         public Form1()
         {
             InitializeComponent();
@@ -15,7 +20,10 @@ namespace TrinitySceneView
             foreach (var ent in ents) 
             {
                 var newnode = node.Nodes.Add(ent.TypeName);
-                if (ent.SubObjects.Length > 0) WalkTrsot(newnode, ent.SubObjects);
+                if (ent.NestedType.Length > 0)
+                    InnerData.Add(newnode, ent);
+                if (ent.SubObjects.Length > 0) 
+                    WalkTrsot(newnode, ent.SubObjects);
             }
         }
 
@@ -33,7 +41,29 @@ namespace TrinitySceneView
         private void expandToolStripMenuItem_Click(object sender, EventArgs e)
         {
             TreeNode node = sceneView.SelectedNode;
-            //TODO
+            var pair = InnerData.Where(x => x.Key == node).First();
+            if (pair.Value != null)
+            {
+                //MethodInfo method = typeof(FlatBufferConverter).GetMethod("DeserializeFrom", BindingFlags.Public | BindingFlags.Static);
+                //MethodInfo generic = method.MakeGenericMethod(Type.GetType(pair.Value.TypeName));
+                //var trsot = generic.Invoke(null, new object[] { pair.Value.NestedType });
+                //WalkTrsot(pair.Key, trsot.);
+            }
+        }
+
+        private void sceneView_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right)
+            {
+                Point ClickPoint = new Point(e.X, e.Y);
+                TreeNode ClickNode = sceneView.GetNodeAt(ClickPoint);
+                sceneView.SelectedNode = ClickNode;
+                if (ClickNode == null) return;
+
+                Point ScreenPoint = sceneView.PointToScreen(ClickPoint);
+                Point FormPoint = this.PointToClient(ScreenPoint);
+                sceneContext.Show(this, FormPoint);
+            }
         }
     }
 }

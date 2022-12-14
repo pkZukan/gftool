@@ -3,7 +3,7 @@
 namespace GFTool.Core.Flatbuffers.TR.Scene.Components
 {
     [FlatBufferTable]
-    public class TrinityScriptComponent
+    public class trinity_ScriptComponent
     {
         [FlatBufferItem(0)]
         public string script_file { get; set; }

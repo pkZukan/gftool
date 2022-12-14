@@ -79,7 +79,7 @@ static void TraverseTrsot(SceneEntry ent) {
     foreach (var e in ent.SubObjects) {
         Console.WriteLine(e.TypeName);
         TraverseTrsot(e);
-        //File.WriteAllBytes(e.TypeName, e.NestedType);
+        File.WriteAllBytes(e.TypeName, e.NestedType);
     }
 }
 
@@ -88,6 +88,7 @@ static void Test(string[] args) {
     foreach (var t in trsot.SceneObjectList) {
         Console.WriteLine(t.TypeName);
         TraverseTrsot(t);
+        File.WriteAllBytes(t.TypeName, t.NestedType);
     }
 }
 

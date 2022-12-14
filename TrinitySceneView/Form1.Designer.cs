@@ -70,18 +70,19 @@
             this.sceneView.Name = "sceneView";
             this.sceneView.Size = new System.Drawing.Size(518, 411);
             this.sceneView.TabIndex = 1;
+            this.sceneView.MouseUp += new System.Windows.Forms.MouseEventHandler(this.sceneView_MouseUp);
             // 
             // sceneContext
             // 
             this.sceneContext.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.expandToolStripMenuItem});
             this.sceneContext.Name = "sceneContext";
-            this.sceneContext.Size = new System.Drawing.Size(181, 48);
+            this.sceneContext.Size = new System.Drawing.Size(114, 26);
             // 
             // expandToolStripMenuItem
             // 
             this.expandToolStripMenuItem.Name = "expandToolStripMenuItem";
-            this.expandToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.expandToolStripMenuItem.Size = new System.Drawing.Size(113, 22);
             this.expandToolStripMenuItem.Text = "Expand";
             this.expandToolStripMenuItem.Click += new System.EventHandler(this.expandToolStripMenuItem_Click);
             // 

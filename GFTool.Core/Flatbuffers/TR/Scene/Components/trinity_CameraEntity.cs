@@ -3,7 +3,7 @@
 namespace GFTool.Core.Flatbuffers.TR.Scene.Components
 {
     [FlatBufferTable]
-    public class TrinityCameraEntity
+    public class trinity_CameraEntity
     {
         [FlatBufferItem(0)]
         public string camera_name { get; set; }

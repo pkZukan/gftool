@@ -15,7 +15,7 @@ namespace GFTool.Core.Flatbuffers.TR.Scene.Components
     }
 
     [FlatBufferTable]
-    public class TrinityCharacterCreationComponent
+    public class trinity_CharacterCreationComponent
     {
         [FlatBufferItem(0)]
         public string Name { get; set; }

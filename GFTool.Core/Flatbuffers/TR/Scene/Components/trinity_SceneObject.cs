@@ -3,7 +3,7 @@
 namespace GFTool.Core.Flatbuffers.TR.Scene.Components
 {
     [FlatBufferTable]
-    public class TrinitySceneObject
+    public class trinity_SceneObject
     {
         [FlatBufferItem(0)]
         public string object_name { get; set; }

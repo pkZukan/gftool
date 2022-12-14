@@ -307,10 +307,7 @@ namespace GFTool.Core.Flatbuffers.TR.Scene
         public byte point_unk { get; set; }
     }
 
-    [FlatBufferTable]
-    public class TrinityStreamingPoint
-    {
-    }
+    
 
     [FlatBufferTable]
     public class TrinityTerrainCollision

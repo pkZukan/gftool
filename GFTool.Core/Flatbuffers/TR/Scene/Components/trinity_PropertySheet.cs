@@ -32,7 +32,7 @@ namespace GFTool.Core.Flatbuffers.TR.Scene.Components
     }
 
     [FlatBufferTable]
-    public class TrinityPropertySheet
+    public class trinity_PropertySheet
     {
         [FlatBufferItem(0)]
         public string property_name { get; set; }

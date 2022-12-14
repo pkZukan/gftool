@@ -3,7 +3,7 @@
 namespace GFTool.Core.Flatbuffers.TR.Scene.Components
 {
     [FlatBufferTable]
-    public class TrinityEnvironmentParameter
+    public class trinity_EnvironmentParameter
     {
 
     }

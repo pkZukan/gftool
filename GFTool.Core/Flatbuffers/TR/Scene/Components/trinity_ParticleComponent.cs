@@ -3,7 +3,7 @@
 namespace GFTool.Core.Flatbuffers.TR.Scene.Components
 {
     [FlatBufferTable]
-    public class TrinityParticleComponent
+    public class trinity_ParticleComponent
     {
         [FlatBufferItem(0)]
         public string particle_file { get; set; }

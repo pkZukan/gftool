@@ -3,7 +3,7 @@
 namespace GFTool.Core.Flatbuffers.TR.Scene.Components
 {
     [FlatBufferTable]
-    public class TrinityGrassCollisionComponent
+    public class trinity_GrassCollisionComponent
     {
         [FlatBufferItem(0)]
         public string name { get; set; }
