@@ -12,6 +12,7 @@ using Tomlyn;
 using Tomlyn.Model;
 using TrinityModLoader;
 using System.Text;
+using static System.ComponentModel.Design.ObjectSelectorEditor;
 
 namespace Trinity
 {
@@ -68,30 +69,7 @@ namespace Trinity
             }
         }
 
-        public TreeNode MakeTreeFromPaths(List<string> paths, TreeNode rootNode, bool used = true)
-        {
-            foreach (var path in paths)
-            {
-                var currentNode = rootNode;
-                var pathItems = path.Split('/');
-                foreach (var item in pathItems)
-                {
-                    var tmp = currentNode.Nodes.Cast<TreeNode>().Where(x => x.Text.Equals(item));
-                    TreeNode tn = new TreeNode();
-                    if (tmp.Count() == 0)
-                    {
-                        tn.Text = item;
-                        if (!used) tn.BackColor = Color.Red;
-                        currentNode.Nodes.Add(tn);
-                        currentNode = tn;
-                    }
-                    else 
-                        currentNode = tmp.Single();
-                }
-                ThreadSafe(() => progressBar1.Increment(1));
-            }
-            return rootNode;
-        }
+        
 
         private TreeNode LoadTree(ulong[] hashes, ulong[] unused = null) {
             List<string> paths = hashes.Select(x => GFPakHashCache.GetName(x)).Where(x => !string.IsNullOrEmpty(x)).ToList();
@@ -109,10 +87,10 @@ namespace Trinity
             });
 
             var rootNode = new TreeNode("romfs");
-            var nodes = MakeTreeFromPaths(paths, rootNode);
+            var nodes = TreeBuilder.MakeTreeFromPaths(paths, rootNode, () => ThreadSafe(() => progressBar1.Increment(1)));
             
             if(unused != null) 
-                nodes = MakeTreeFromPaths(unusedPaths, nodes, false);
+                nodes = TreeBuilder.MakeTreeFromPaths(unusedPaths, nodes, () => ThreadSafe(() => progressBar1.Increment(1)), false);
 
             return nodes;
         }
@@ -139,6 +117,10 @@ namespace Trinity
                 if (File.Exists(trpfs))
                 {
                     fileSystem = ONEFILESerializer.DeserializeFileSystem(trpfs);
+                }
+                else if (Directory.Exists(trpfs)) {
+                    MessageBox.Show("It appears the trpfs may be split. Please concatinate the files in the folder and replace folder with data.trpfs file.");
+                    //TODO: automate this
                 }
                 else {
                     MessageBox.Show("Trpfs not found, saving files from treeview disabled. Check directory settings");
@@ -254,9 +236,31 @@ namespace Trinity
             return files;
         }
 
+        private void ModOrderDown(int selected)
+        {
+            var item = modList.Items[selected];
+            var entry = settings.mods[selected];
+            modList.Items.RemoveAt(selected);
+            settings.mods.RemoveAt(selected);
+            modList.Items.Insert(selected + 1, item);
+            settings.mods.Insert(selected + 1, entry);
+        }
+
+        private void ModOrderUp(int selected)
+        {
+            var item = modList.Items[selected];
+            var entry = settings.mods[selected];
+            modList.Items.RemoveAt(selected);
+            settings.mods.RemoveAt(selected);
+            modList.Items.Insert(selected - 1, item);
+            settings.mods.Insert(selected - 1, entry);
+        }
+
         void ApplyModPack(string modFile, string lfsDir) 
         {
             List<string> files = new List<string>();
+
+            //Read zips to outdir and collect file abs paths
             using (Stream stream = File.OpenRead(modFile))
             using (var reader = ReaderFactory.Open(stream))
             {
@@ -272,6 +276,7 @@ namespace Trinity
                 }
             }
 
+            //Flag relevant files in trpfd
             foreach (var f in files) 
             {
                 var fhash = GFFNV.Hash(f);
@@ -504,7 +509,7 @@ namespace Trinity
             Directory.CreateDirectory(lfsDir);
             for (int i = 0; i < modList.Items.Count; i++)
             {
-                var selectedFile = settings.mods.Where(x => x.Path.EndsWith(modList.Items[i].ToString())).First().Path;
+                var selectedFile = settings.mods.Where(x => Path.GetFileName(x.Path) == (modList.Items[i].ToString())).First().Path;
                 if (modList.GetItemChecked(i))
                     ApplyModPack(selectedFile, lfsDir);
                 else
@@ -523,12 +528,7 @@ namespace Trinity
             if (modList.SelectedIndex < 0 || modList.SelectedIndex == 0) return;
 
             var selected = modList.SelectedIndex;
-            var item = modList.Items[selected];
-            var entry = settings.mods[selected];
-            modList.Items.RemoveAt(selected);
-            settings.mods.RemoveAt(selected);
-            modList.Items.Insert(selected - 1, item);
-            settings.mods.Insert(selected - 1, entry);
+            ModOrderUp(selected);
         }
 
         private void modOrderDown_Click(object sender, EventArgs e)
@@ -536,12 +536,7 @@ namespace Trinity
             if (modList.SelectedIndex < 0 || modList.SelectedIndex >= modList.Items.Count - 1) return;
 
             var selected = modList.SelectedIndex;
-            var item = modList.Items[selected];
-            var entry = settings.mods[selected];
-            modList.Items.RemoveAt(selected);
-            settings.mods.RemoveAt(selected);
-            modList.Items.Insert(selected + 1, item);
-            settings.mods.Insert(selected + 1, entry);
+            ModOrderDown(selected);
         }
         
 
@@ -589,7 +584,6 @@ namespace Trinity
                 basicContext.Show(modList, ClickPoint);
             }
         }
-        
 
         private void setOutputFolderToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -598,11 +592,12 @@ namespace Trinity
             settings.outputDir = fold.SelectedPath + @"\romfs\";
             settings.Save();
         }
-        #endregion
 
         private void TrinityMainWindow_FormClosing(object sender, FormClosingEventArgs e)
         {
             settings.Save();
         }
+
+        #endregion
     }
 }
