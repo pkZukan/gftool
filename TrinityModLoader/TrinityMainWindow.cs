@@ -13,6 +13,7 @@ using Tomlyn.Model;
 using TrinityModLoader;
 using System.Text;
 using static System.ComponentModel.Design.ObjectSelectorEditor;
+using System.Security.Policy;
 
 namespace Trinity
 {
@@ -319,7 +320,7 @@ namespace Trinity
             var files = EnumerateArchiveFiles(modFile);
             foreach (var f in files)
             {
-                fileDescriptor.RemoveFile(GFFNV.Hash(f));
+                fileDescriptor?.AddFile(GFFNV.Hash(f));
             }
         }
 
