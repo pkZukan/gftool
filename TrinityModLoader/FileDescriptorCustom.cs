@@ -25,14 +25,20 @@ namespace TrinityModLoader
             var unusedHashes = UnusedHashes.ToList();
             var unusedFileInfo = UnusedFileInfo.ToList();
 
+            //Make sure hash exists in unused
+            var unusedInd = Array.IndexOf(UnusedHashes, fileHash);
+            if (unusedInd < 0) return;
+
+            //Add hash back into usage, sort and get its index to place the fileinfo
             fileHashes.Add(fileHash);
             fileHashes.Sort();
             FileHashes = fileHashes.ToArray();
 
+            //Insert file infos at the same index
             var ind = Array.IndexOf(FileHashes, fileHash);
-            var unusedInd = Array.IndexOf(UnusedHashes, fileHash);
             fileInfos.Insert(ind, unusedFileInfo[unusedInd]);
 
+            //Finally remove from unused
             unusedFileInfo.Remove(unusedFileInfo[unusedInd]);
             unusedHashes.Remove(fileHash);
 
