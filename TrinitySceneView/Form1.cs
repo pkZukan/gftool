@@ -1,6 +1,5 @@
 using GFTool.Core.Flatbuffers.TR.Scene;
 using SubScene = GFTool.Core.Flatbuffers.TR.Scene.Components.SubScene;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Diagnostics;
 using System.Reflection;
 using System.Security.Cryptography;
