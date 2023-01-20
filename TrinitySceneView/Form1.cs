@@ -1,4 +1,5 @@
 using GFTool.Core.Flatbuffers.TR.Scene;
+using SubScene = GFTool.Core.Flatbuffers.TR.Scene.Components.SubScene;
 using System.Diagnostics;
 using System.Reflection;
 using System.Security.Cryptography;
@@ -15,15 +16,26 @@ namespace TrinitySceneView
             InitializeComponent();
         }
 
-        void WalkTrsot(TreeNode node, SceneEntry[] ents) 
+        void WalkTrsot(TreeNode node, SceneEntry[] ents, string filepath) 
         {
             foreach (var ent in ents) 
             {
                 var newnode = node.Nodes.Add(ent.TypeName);
                 if (ent.NestedType.Length > 0)
                     InnerData.Add(newnode, ent);
+                if(ent.TypeName == "SubScene")
+                {
+                    SubScene s = FlatBufferConverter.DeserializeFrom<SubScene>(ent.NestedType);
+                    string path = new Uri(Path.Combine(Path.GetDirectoryName(filepath), s.Filepath).Replace(".trscn", "_1.trscn")).AbsolutePath;
+                    if (File.Exists(path))
+                    {
+                        var trsot = FlatBufferConverter.DeserializeFrom<TrinitySceneObjTemplate>(path);
+                        newnode.Text += "_" + trsot.SceneName;
+                        WalkTrsot(newnode, trsot.SceneObjectList,path);
+                    }
+                }
                 if (ent.SubObjects.Length > 0) 
-                    WalkTrsot(newnode, ent.SubObjects);
+                    WalkTrsot(newnode, ent.SubObjects, filepath);
             }
         }
 
@@ -34,7 +46,7 @@ namespace TrinitySceneView
             sceneView.Nodes.Clear();
             var trsot = FlatBufferConverter.DeserializeFrom<TrinitySceneObjTemplate>(ofd.FileName);
             var tree = new TreeNode(trsot.SceneName);
-            WalkTrsot(tree, trsot.SceneObjectList);
+            WalkTrsot(tree, trsot.SceneObjectList,ofd.FileName);
             sceneView.Nodes.Add(tree);
         }
 
