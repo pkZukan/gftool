@@ -10,6 +10,7 @@ namespace Trinity.Core.Cache
     public class GFPakHashCache
     {
         private const string CachePath = "GFPAKHashCache.bin";
+        private const string SupplementalCachePath = "trinity_paths.txt";
         private static Dictionary<ulong, string> Cache = new Dictionary<ulong, string>();
 
         public static void Init(string path = CachePath)
@@ -26,6 +27,22 @@ namespace Trinity.Core.Cache
                     var name = new String(br.ReadChars(length));
                     Cache.TryAdd(hash, name);
                     //Cache.Add(hash, name);
+                }
+            }
+
+            if (File.Exists(SupplementalCachePath))
+            {
+                using (StreamReader stream_reader = new StreamReader(SupplementalCachePath))
+                {
+                    string line;
+
+                    while ((line = stream_reader.ReadLine()) != null)
+                    {
+                        var hash = GFFNV.Hash(line.Replace("\n", ""));
+                        var name = line.Replace("\n", "");
+
+                        Cache.TryAdd(hash, name);
+                    }
                 }
             }
         }
