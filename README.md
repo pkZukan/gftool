@@ -8,7 +8,7 @@ On initial boot it will ask for your romfs path, once specified the tool will lo
 ## Supplemental Hashes
 Placing a file named trinity_hashes.txt in the root directory of TrinityLoader enables the loading of supplemental hashes that may not exist in the current GFPAKHashCache.bin.
 
-trinity_hashes.txt formatting is as follows:
+trinity_paths.txt formatting is as follows:
 - One file path per line.
 ### Example
 ```
