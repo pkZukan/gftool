@@ -6,7 +6,7 @@ Trinity Mod Loader requires the oo2core_8_win64.dll and an up-to-date GFPAKHashC
 On initial boot it will ask for your romfs path, once specified the tool will load.
 
 ## Supplemental Hashes
-Placing a file named trinity_hashes.txt in the root directory of TrinityLoader enables the loading of supplemental hashes that may not exist in the current GFPAKHashCache.bin.
+Placing a file named trinity_paths.txt in the root directory of TrinityLoader enables the loading of supplemental hashes that may not exist in the current GFPAKHashCache.bin.
 
 trinity_paths.txt formatting is as follows:
 - One file path per line.
