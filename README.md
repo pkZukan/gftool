@@ -5,17 +5,12 @@ Trinity Mod Loader is a small utility to make and manage mods, while also provid
 Trinity Mod Loader requires the oo2core_8_win64.dll and an up-to-date GFPAKHashCache.bin.
 On initial boot it will ask for your romfs path, once specified the tool will load.
 
-## Supplemental Hashes
-Placing a file named trinity_paths.txt in the root directory of TrinityLoader enables the loading of supplemental hashes that may not exist in the current GFPAKHashCache.bin.
+Trinity Mod Loader will also check if the hashes_inside_fd.txt exists.
+If it does not find this file you will be asked if you want to download the latest hashes.
 
-trinity_paths.txt formatting is as follows:
-- One file path per line.
-### Example
-```
-chara/model_pc/p1_drs1010_s2spring/p1_drs1010_00_drs00.trmdl
-chara/share/cm_drs1010_00_bottoms00_00_alb/cm_drs1010_00_bottoms00_00_alb.bntx
-chara/share/cm_drs1010_00_bottoms00_00_mtl/cm_drs1010_00_bottoms00_00_mtl.bntx
-``` 
+## Updating to the Latest Hashes
+If you need update your hashes you can either delete the existing hashes_inside_fd.txt file and restart Trinity Mod Loader or do the following:
+1. Click ``Help > Get Latest Hashes``
 
 ## Adding a Mod
 1. Add as many mod archive files using the "Add Mod" button. (make sure the contents represent how they would on the romfs)
@@ -28,9 +23,6 @@ chara/share/cm_drs1010_00_bottoms00_00_mtl/cm_drs1010_00_bottoms00_00_mtl.bntx
 3. Once you've tested your mod, zip the modified files in their place in romfs and ship it!
 
 Note: We'll be adding a way to add some mod metadata to keep better track of your mods soon.
-
-
-
 
 ## Source Code
 The canonical repository for this tool and the GFTool.Core which provies serializers for Trinity files can be found at [https://github.com/pkZukan/gftool/](https://github.com/pkZukan/gftool/).
