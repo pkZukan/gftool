@@ -98,6 +98,9 @@ namespace Trinity
                 settings = JsonSerializer.Deserialize<Settings>(File.ReadAllText(file));
                 disableAutoLoad.Checked = !settings.autoloadTrpfd;
             }
+
+            //clean up missing files
+            settings.mods = settings.mods.Where(m => File.Exists(m.Path)).ToList();
         }
 
         //Populate mods from json
