@@ -5,6 +5,13 @@ Trinity Mod Loader is a small utility to make and manage mods, while also provid
 Trinity Mod Loader requires the oo2core_8_win64.dll and an up-to-date GFPAKHashCache.bin.
 On initial boot it will ask for your romfs path, once specified the tool will load.
 
+Trinity Mod Loader will also check if the hashes_inside_fd.txt exists.
+If it does not find this file you will be asked if you want to download the latest hashes.
+
+## Updating to the Latest Hashes
+If you need update your hashes you can either delete the existing hashes_inside_fd.txt file and restart Trinity Mod Loader or do the following:
+1. Click ``Help > Get Latest Hashes``
+
 ## Adding a Mod
 1. Add as many mod archive files using the "Add Mod" button. (make sure the contents represent how they would on the romfs)
 2. When you're done adding mods, simply hit the "Apply Mods" button. This will generate files either in a LayeredFS folder in the same directory as the program, or a directory of your choice if you set an output directory.

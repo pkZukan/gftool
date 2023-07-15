@@ -42,6 +42,7 @@
             this.showUnhashedFilesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.getLatestHashes = new System.Windows.Forms.ToolStripMenuItem();
             this.fileView = new System.Windows.Forms.TreeView();
             this.helpProvider1 = new System.Windows.Forms.HelpProvider();
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
@@ -169,7 +170,8 @@
             // helpToolStripMenuItem
             // 
             this.helpToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.aboutToolStripMenuItem});
+            this.aboutToolStripMenuItem,
+            this.getLatestHashes});
             this.helpToolStripMenuItem.Name = "helpToolStripMenuItem";
             this.helpToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
             this.helpToolStripMenuItem.Text = "Help";
@@ -177,9 +179,16 @@
             // aboutToolStripMenuItem
             // 
             this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(107, 22);
+            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.aboutToolStripMenuItem.Text = "About";
             this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
+            // 
+            // getLatestHashes
+            // 
+            this.getLatestHashes.Name = "getLatestHashes";
+            this.getLatestHashes.Size = new System.Drawing.Size(180, 22);
+            this.getLatestHashes.Text = "Get Latest Hashes";
+            this.getLatestHashes.Click += new System.EventHandler(this.getLatestHashes_Click);
             // 
             // fileView
             // 
@@ -473,5 +482,6 @@
         private ToolStripMenuItem setOutputFolderToolStripMenuItem;
         private Label versionLbl;
         private Label label4;
+        private ToolStripMenuItem getLatestHashes;
     }
 }

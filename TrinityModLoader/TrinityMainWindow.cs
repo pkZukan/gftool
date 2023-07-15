@@ -14,6 +14,7 @@ using TrinityModLoader;
 using System.Text;
 using static System.ComponentModel.Design.ObjectSelectorEditor;
 using System.Security.Policy;
+using System.Windows.Forms;
 
 namespace Trinity
 {
@@ -35,11 +36,49 @@ namespace Trinity
             if (!hasOodleDll)
                 MessageBox.Show("Liboodle dll missing. Exporting from TRPFS is disabled.");
 
-            if (!File.Exists("GFPAKHashCache.bin")) {
-                MessageBox.Show("Missing GFPAKHashCache.bin");
+            if (!File.Exists("hashes_inside_fd.txt"))
+            {
+                DialogResult dialogResult = MessageBox.Show("Missing hash file hashes_inside_fd.txt.\n\nDownload from the PokeDocs GitHub repo?", "Missing Files", MessageBoxButtons.YesNo);
+                if (dialogResult == DialogResult.Yes)
+                {
+                    PullLatestHashes();
+                }
             }
+
+            if (!File.Exists("GFPAKHashCache.bin")) {
+                MessageBox.Show("Missing fallback GFPAKHashCache.bin");
+            }
+
             LoadSettings();
             LoadMods();
+        }
+
+        public void PullLatestHashes()
+        {
+            string fileUrl = "https://raw.githubusercontent.com/pkZukan/PokeDocs/main/SV/Hashlists/FileSystem/hashes_inside_fd.txt";
+            using var httpClient = new HttpClient();
+
+            HttpResponseMessage response = httpClient.GetAsync(fileUrl).GetAwaiter().GetResult();
+            if (response.IsSuccessStatusCode)
+            {
+                Stream fileStream = response.Content.ReadAsStreamAsync().GetAwaiter().GetResult();
+                string filePath = "hashes_inside_fd.txt";
+                using var fileOutput = File.Create(filePath);
+                fileStream.CopyTo(fileOutput);
+
+                MessageBox.Show("Latest hashes downloaded.\n\nTrinity must restart to use the new hashes.");
+                Application.Restart();
+                Environment.Exit(0);
+            }
+            else
+            {
+                var message_text = "Failed to download latest hashes.\n\nManually download the \"hashes_inside_fd.txt\" file into your Trinity folder.\n\nClick OK to copy the URL of the file to your clipboard.";
+
+                if (MessageBox.Show(message_text, "Failed to download", MessageBoxButtons.OKCancel) == DialogResult.OK)
+                { 
+                    Clipboard.SetText(fileUrl); 
+                }
+            }
         }
 
         public void LoadSettings()
@@ -630,5 +669,10 @@ namespace Trinity
         }
 
         #endregion
+
+        private void getLatestHashes_Click(object sender, EventArgs e)
+        {
+            PullLatestHashes();
+        }
     }
 }

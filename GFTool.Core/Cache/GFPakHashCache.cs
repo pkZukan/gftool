@@ -5,17 +5,48 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
 namespace Trinity.Core.Cache
 {
     public class GFPakHashCache
     {
         private const string CachePath = "GFPAKHashCache.bin";
+        private const string LatestCachePath = "hashes_inside_fd.txt";
         private static Dictionary<ulong, string> Cache = new Dictionary<ulong, string>();
 
         public static void Init(string path = CachePath)
         {
             Cache = new Dictionary<ulong, string>();
-            if (File.Exists(path)) {
+            if (File.Exists(LatestCachePath))
+            {
+                using (StreamReader streamReader = new StreamReader(LatestCachePath))
+                {
+                    string line;
+                    while ((line = streamReader.ReadLine()) != null)
+                    {
+                        var hashEntry = line.Split(' ');
+                        ulong hash;
+                        string name;
+
+                        if (hashEntry.Length == 2 && !string.IsNullOrEmpty(hashEntry[0]) && !string.IsNullOrEmpty(hashEntry[1]))
+                        {
+                            try
+                            {
+                                hash = Convert.ToUInt64(hashEntry[0], 16);
+                                name = hashEntry[1].TrimEnd('\r', '\n');
+                            }
+                            catch
+                            {
+                                continue;
+                            }
+
+                            Cache.TryAdd(hash, name);
+                        }
+                    }
+                }
+            }
+            else if (File.Exists(path)) 
+            {
                 BinaryReader br = new BinaryReader(File.OpenRead(path));
                 var version = br.ReadUInt64();
                 var count = br.ReadUInt32();
