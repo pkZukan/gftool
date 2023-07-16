@@ -98,6 +98,9 @@ namespace Trinity
                 settings = JsonSerializer.Deserialize<Settings>(File.ReadAllText(file));
                 disableAutoLoad.Checked = !settings.autoloadTrpfd;
             }
+
+            //clean up missing files
+            settings.mods = settings.mods.Where(m => File.Exists(m.Path)).ToList();
         }
 
         //Populate mods from json
@@ -648,10 +651,14 @@ namespace Trinity
         {
             Point ClickPoint = new Point(e.X, e.Y);
             modList.SelectedIndex = modList.IndexFromPoint(ClickPoint);
-            settings.mods[modList.SelectedIndex].IsChecked = modList.GetItemChecked(modList.SelectedIndex);
-            if (e.Button == MouseButtons.Right && modList.SelectedIndex >= 0) {
-                
-                basicContext.Show(modList, ClickPoint);
+            if (modList.SelectedIndex != -1)
+            {
+                settings.mods[modList.SelectedIndex].IsChecked = modList.GetItemChecked(modList.SelectedIndex);
+                if (e.Button == MouseButtons.Right && modList.SelectedIndex >= 0)
+                {
+
+                    basicContext.Show(modList, ClickPoint);
+                }
             }
         }
 
