@@ -60,7 +60,7 @@
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(270, 15);
             this.label2.TabIndex = 2;
-            this.label2.Text = "Checkout the tutorial here for further clerification:";
+            this.label2.Text = "Checkout the tutorial here for further clarification:";
             // 
             // linkLabel1
             // 
