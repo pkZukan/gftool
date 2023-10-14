@@ -45,7 +45,8 @@ namespace Trinity
                 }
             }
 
-            if (!File.Exists("GFPAKHashCache.bin")) {
+            if (!File.Exists("GFPAKHashCache.bin"))
+            {
                 MessageBox.Show("Missing fallback GFPAKHashCache.bin");
             }
 
@@ -75,8 +76,8 @@ namespace Trinity
                 var message_text = "Failed to download latest hashes.\n\nManually download the \"hashes_inside_fd.txt\" file into your Trinity folder.\n\nClick OK to copy the URL of the file to your clipboard.";
 
                 if (MessageBox.Show(message_text, "Failed to download", MessageBoxButtons.OKCancel) == DialogResult.OK)
-                { 
-                    Clipboard.SetText(fileUrl); 
+                {
+                    Clipboard.SetText(fileUrl);
                 }
             }
         }
@@ -94,7 +95,8 @@ namespace Trinity
                 settings.archiveDir = romfs.SelectedPath;
                 settings.Save();
             }
-            else {
+            else
+            {
                 settings = JsonSerializer.Deserialize<Settings>(File.ReadAllText(file));
                 disableAutoLoad.Checked = !settings.autoloadTrpfd;
             }
@@ -106,7 +108,7 @@ namespace Trinity
         //Populate mods from json
         public void LoadMods()
         {
-            foreach ( var mod in settings.mods)
+            foreach (var mod in settings.mods)
             {
                 if (!File.Exists(mod.Path)) continue;
                 var name = Path.GetFileName(mod.Path);
@@ -140,17 +142,20 @@ namespace Trinity
             return rootNode;
         }
 
-        private TreeNode LoadTree(ulong[] hashes, ulong[] unused = null) {
+        private TreeNode LoadTree(ulong[] hashes, ulong[] unused = null)
+        {
             List<string> paths = hashes.Select(x => GFPakHashCache.GetName(x)).Where(x => !string.IsNullOrEmpty(x)).ToList();
             List<string> unusedPaths = null;
-            if (unused != null) {
+            if (unused != null)
+            {
                 unusedPaths = unused.Select(x => GFPakHashCache.GetName(x)).Where(x => !string.IsNullOrEmpty(x)).ToList();
                 unusedPaths.Sort();
             }
 
             paths.Sort();
 
-            ThreadSafe(() => {
+            ThreadSafe(() =>
+            {
                 progressBar1.Maximum = paths.Count;
                 progressBar1.Value = 0;
                 openFileDescriptorToolStripMenuItem.Enabled = false;
@@ -158,15 +163,16 @@ namespace Trinity
 
             var rootNode = new TreeNode("romfs");
             var nodes = MakeTreeFromPaths(paths, rootNode);
-            
-            if(unused != null) 
+
+            if (unused != null)
                 nodes = MakeTreeFromPaths(unusedPaths, nodes, false);
 
             ThreadSafe(() => { openFileDescriptorToolStripMenuItem.Enabled = true; });
             return nodes;
         }
 
-        public void OpenFileDescriptor() {
+        public void OpenFileDescriptor()
+        {
             var ofd = new OpenFileDialog()
             {
                 Filter = "Trinity File Descriptor (*.trpfd) |*.trpfd",
@@ -177,7 +183,8 @@ namespace Trinity
             ParseFileDescriptor(ofd.FileName);
         }
 
-        public void ParseFileDescriptor(string file = "") {
+        public void ParseFileDescriptor(string file = "")
+        {
             var trpfs = settings.archiveDir + trpfsRel;
             var trpfd = settings.archiveDir + trpfdRel;
 
@@ -189,11 +196,13 @@ namespace Trinity
                 {
                     fileSystem = ONEFILESerializer.DeserializeFileSystem(trpfs);
                 }
-                else if (Directory.Exists(trpfs)) {
+                else if (Directory.Exists(trpfs))
+                {
                     MessageBox.Show("It appears the trpfs may be split. Please concatinate the files in the folder and replace folder with data.trpfs file.");
                     //TODO: automate this
                 }
-                else {
+                else
+                {
                     MessageBox.Show("Trpfs not found, saving files from treeview disabled. Check directory settings");
                 }
 
@@ -205,12 +214,13 @@ namespace Trinity
                     }
                     Task.Run(() =>
                     {
-                        ThreadSafe(() => { 
+                        ThreadSafe(() =>
+                        {
                             statusLbl.Text = "Loading...";
                             fileView.Nodes.Clear();
                             openFileDescriptorToolStripMenuItem.Enabled = false;
                         });
-                        
+
                         TreeNode nodes = LoadTree(fileDescriptor.FileHashes, fileDescriptor.UnusedHashes);
                         ThreadSafe(() =>
                         {
@@ -222,7 +232,9 @@ namespace Trinity
                         });
                     });
                 }
-            } catch {
+            }
+            catch
+            {
                 MessageBox.Show("Failed to load either trpfd or trpfs");
             }
         }
@@ -252,7 +264,8 @@ namespace Trinity
                 var hash = pack.FileHashes[i];
                 var name = GFPakHashCache.GetName(hash);
 
-                if (hash == fileHash) {
+                if (hash == fileHash)
+                {
                     if (name == null)
                         name = hash.ToString("X16");
 
@@ -287,7 +300,7 @@ namespace Trinity
             var hash = GFFNV.Hash(file);
             fileDescriptor?.AddFile(hash);
             MessageBox.Show("Unmark file " + file);
-            fileView.SelectedNode.BackColor= Color.White;
+            fileView.SelectedNode.BackColor = Color.White;
         }
 
         List<string> EnumerateArchiveFiles(string file)
@@ -328,20 +341,50 @@ namespace Trinity
             modList.Items.Insert(selected - 1, item);
             settings.mods.Insert(selected - 1, entry);
         }
-
-        void ApplyModPack(string modFile, string lfsDir) 
+        
+        static IEnumerable<string> WalkDirectory(string directoryPath)
         {
-            List<string> files = new List<string>();
-
-            //Read zips to outdir and collect file abs paths
-            using (Stream stream = File.OpenRead(modFile))
-            using (var reader = ReaderFactory.Open(stream))
+            foreach (var filePath in Directory.EnumerateFiles(directoryPath))
             {
+                yield return filePath;
+            }
+
+            foreach (var subdirectoryPath in Directory.EnumerateDirectories(directoryPath))
+            {
+                foreach (var filePath in WalkDirectory(subdirectoryPath))
+                {
+                    yield return filePath;
+                }
+            }
+        }
+
+        void ApplyModPack(string modLocation, string lfsDir)
+        {
+            var files = new List<string>();
+
+            if (Directory.Exists(modLocation))
+            {
+                foreach (var folderFile in WalkDirectory(modLocation))
+                {
+                    if (File.Exists(folderFile))
+                    {
+                        if (folderFile.Contains("info.toml")) continue;
+                        var destination = $"{lfsDir}/{Path.GetRelativePath(modLocation, folderFile)}";
+                        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                        File.Copy(folderFile, destination, true);
+                    }
+                }
+            }
+            else
+            {
+                //Read zips to outdir and collect file abs paths
+                using Stream stream = File.OpenRead(modLocation);
+                using var reader = ReaderFactory.Open(stream);
                 while (reader.MoveToNextEntry())
                 {
                     if (!reader.Entry.IsDirectory)
                     {
-                        string entry = reader.Entry.Key;
+                        var entry = reader.Entry.Key;
                         if (entry.Contains("info.toml")) continue;
                         reader.WriteEntryToDirectory(lfsDir, new ExtractionOptions() { ExtractFullPath = true, Overwrite = true });
                         files.Add(entry.Replace('\\', '/'));
@@ -350,23 +393,27 @@ namespace Trinity
             }
 
             //Flag relevant files in trpfd
-            foreach (var f in files) 
+            foreach (var f in files)
             {
                 var fhash = GFFNV.Hash(f);
                 fileDescriptor?.RemoveFile(fhash);
             }
         }
 
-        void RemoveModPack(string modFile) 
+        void RemoveModPack(string modLocation)
         {
-            var files = EnumerateArchiveFiles(modFile);
+            var files = new List<string>();
+            files.AddRange(Directory.Exists(modLocation)
+                ? Directory.EnumerateFiles(modLocation).Select(s => s.Replace("\\", "/"))
+                : EnumerateArchiveFiles(modLocation));
+
             foreach (var f in files)
             {
                 fileDescriptor?.AddFile(GFFNV.Hash(f));
             }
         }
 
-        void GuessModsInstalled() 
+        void GuessModsInstalled()
         {
             StringBuilder sb = new StringBuilder("List of mods that may be installed on this trpfd:\n");
             for (int i = 0; i < settings.mods.Count; i++)
@@ -380,7 +427,8 @@ namespace Trinity
                         {
                             string entry = reader.Entry.Key.Replace('\\', '/');
                             var hash = GFFNV.Hash(entry);
-                            if (fileDescriptor.IsFileUnused(hash)) { //gonna assume if at least one of the files is marked, that the mod is installed since not all files will be in trpfs
+                            if (fileDescriptor.IsFileUnused(hash))
+                            { //gonna assume if at least one of the files is marked, that the mod is installed since not all files will be in trpfs
                                 sb.AppendLine(modList.Items[i].ToString());
                             }
                         }
@@ -394,15 +442,15 @@ namespace Trinity
         {
             var fn = Path.GetFileName(file);
 
-            bool overwriting = false;
+            var overwriting = false;
             if (modList.Items.Contains(fn))
             {
-                var ow = MessageBox.Show("File already exists, do you want to overwrite?", "Mod exists", MessageBoxButtons.YesNo);
+                var ow = MessageBox.Show("Mod already exists, do you want to overwrite?", "Mod exists", MessageBoxButtons.YesNo);
                 if (ow == DialogResult.No) return;
                 overwriting = true;
             }
 
-            var mod = new ModEntry()
+            var mod = new ModEntry
             {
                 Path = file
             };
@@ -412,38 +460,43 @@ namespace Trinity
                 modList.Items.Add(fn);
         }
 
-        void SerializeTrpfd(string fileOut) 
+        void SerializeTrpfd(string fileOut)
         {
             var file = new System.IO.FileInfo(fileOut);
-            if(!file.Directory.Exists) file.Directory.Create();
+            if (!file.Directory.Exists) file.Directory.Create();
 
             var trpfd = FlatBufferConverter.SerializeFrom<FileDescriptorCustom>(fileDescriptor);
             File.WriteAllBytes(fileOut, trpfd);
         }
 
-        private TomlTable FetchToml(string file)
+        private TomlTable FetchToml(string modLocation)
         {
             var toml = "";
-            using (Stream stream = File.OpenRead(file))
-            using (var reader = ReaderFactory.Open(stream))
+
+            if (Directory.Exists(modLocation))
             {
+                var tomlInfoPath = $"{modLocation}/info.toml";
+                if (File.Exists(tomlInfoPath)) toml = File.ReadAllText(tomlInfoPath);
+            }
+            else
+            {
+                using Stream stream = File.OpenRead(modLocation);
+                using var reader = ReaderFactory.Open(stream);
                 while (reader.MoveToNextEntry())
                 {
                     if (!reader.Entry.IsDirectory)
                     {
-                        string entry = reader.Entry.Key.Replace('\\', '/');
-                        if (entry.EndsWith("info.toml")) {
-                            using (var entryStream = reader.OpenEntryStream())
-                            {
-                                using (var r = new StreamReader(entryStream))
-                                {
-                                    toml = r.ReadToEnd();
-                                }
-                            }
+                        var entry = reader.Entry.Key.Replace('\\', '/');
+                        if (entry.EndsWith("info.toml"))
+                        {
+                            using var entryStream = reader.OpenEntryStream();
+                            using var r = new StreamReader(entryStream);
+                            toml = r.ReadToEnd();
                         }
                     }
                 }
             }
+
             return Toml.ToModel(toml);
         }
 
@@ -457,13 +510,13 @@ namespace Trinity
                 modDescriptionBox.Text = toml["description"].ToString();
                 versionLbl.Text = toml["version"].ToString();
             }
-            else 
+            else
             {
                 modNameLbl.Text = mod;
                 modDescriptionBox.Text = "None";
                 versionLbl.Text = "Unknown";
             }
-            
+
         }
 
         private void SaveTrpfsFiles()
@@ -520,10 +573,10 @@ namespace Trinity
                 TreeNode ClickNode = fileView.GetNodeAt(ClickPoint);
                 fileView.SelectedNode = ClickNode;
                 if (ClickNode == null) return;
-                
-                Point ScreenPoint = fileView.PointToScreen(ClickPoint);  
+
+                Point ScreenPoint = fileView.PointToScreen(ClickPoint);
                 Point FormPoint = this.PointToClient(ScreenPoint);
-                if(ClickNode.BackColor == Color.Red)
+                if (ClickNode.BackColor == Color.Red)
                     treeContext.Items[1].Text = "Unmark for LayeredFS";
                 treeContext.Show(this, FormPoint);
             }
@@ -555,7 +608,7 @@ namespace Trinity
             basicPanel.Visible = !advancedToggle.Checked;
         }
 
-        private void addMod_Click(object sender, EventArgs e)
+        private void addZipMod_Click(object sender, EventArgs e)
         {
             var openFileDialog = new OpenFileDialog()
             {
@@ -582,7 +635,7 @@ namespace Trinity
             Directory.CreateDirectory(lfsDir);
             for (int i = 0; i < modList.Items.Count; i++)
             {
-                var selectedFile = settings.mods.Where(x => Path.GetFileName(x.Path) == (modList.Items[i].ToString())).First().Path;
+                var selectedFile = settings.mods.First(x => Path.GetFileName(x.Path) == modList.Items[i].ToString()).Path;
                 if (modList.GetItemChecked(i))
                     ApplyModPack(selectedFile, lfsDir);
                 else
@@ -611,7 +664,7 @@ namespace Trinity
             var selected = modList.SelectedIndex;
             ModOrderDown(selected);
         }
-        
+
 
         private void showUnhashedFilesToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -680,6 +733,13 @@ namespace Trinity
         private void getLatestHashes_Click(object sender, EventArgs e)
         {
             PullLatestHashes();
+        }
+
+        private void addFolderMod_Click(object sender, EventArgs e)
+        {
+            var folderBrowserDialog = new FolderBrowserDialog();
+            if (folderBrowserDialog.ShowDialog() != DialogResult.OK) return;
+            AddModToList(folderBrowserDialog.SelectedPath);
         }
     }
 }
