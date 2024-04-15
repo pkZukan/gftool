@@ -31,7 +31,7 @@ namespace Trinity.Core.Flatbuffers.Utils
     }
 
     [FlatBufferTable]
-    public class BoundingBox
+    public class TRBoundingBox
     {
         [FlatBufferItem(0)] public Vector3 MinBound { get; set; } = new Vector3();
         [FlatBufferItem(1)] public Vector3 MaxBound { get; set; } = new Vector3();

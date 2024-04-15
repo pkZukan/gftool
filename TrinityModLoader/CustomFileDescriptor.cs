@@ -5,7 +5,7 @@ using FileInfo = Trinity.Core.Flatbuffers.TR.ResourceDictionary.FileInfo;
 namespace TrinityModLoader
 {
     [FlatBufferTable]
-    public class FileDescriptorCustom
+    public class CustomFileDescriptor
     {
         [FlatBufferItem(0)] public UInt64[] FileHashes { get; set; } = Array.Empty<UInt64>();
         [FlatBufferItem(1)] public string[] PackNames { get; set; } = Array.Empty<string>();

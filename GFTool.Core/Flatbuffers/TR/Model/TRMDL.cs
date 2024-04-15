@@ -16,7 +16,6 @@ namespace Trinity.Core.Flatbuffers.TR.Model
         [FlatBufferItem(0)] public string PathName { get; set; }
     }
 
-
     [FlatBufferTable]
     public class ModelLOD
     {
@@ -38,7 +37,7 @@ namespace Trinity.Core.Flatbuffers.TR.Model
         [FlatBufferItem(2)] public ModelSkeleton Skeleton { get; set; }
         [FlatBufferItem(3)] public string[] Materials { get; set; }
         [FlatBufferItem(4)] public ModelLOD[] LODs { get; set; }
-        [FlatBufferItem(5)] public BoundingBox Bounds { get; set; }
+        [FlatBufferItem(5)] public TRBoundingBox Bounds { get; set; }
         [FlatBufferItem(6)] public Vector4 Field_06 { get; set; }
     }
 }
