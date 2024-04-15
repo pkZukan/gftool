@@ -74,8 +74,7 @@
             menuStrip1.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, viewToolStripMenuItem, helpToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
-            menuStrip1.Padding = new Padding(9, 3, 0, 3);
-            menuStrip1.Size = new Size(1174, 35);
+            menuStrip1.Size = new Size(822, 24);
             menuStrip1.TabIndex = 2;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -83,13 +82,13 @@
             // 
             fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { newModPackMenuItem, OpenModPackMenuItems, toolStripSeparator2, toolStripMenuItem6 });
             fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-            fileToolStripMenuItem.Size = new Size(54, 29);
+            fileToolStripMenuItem.Size = new Size(37, 20);
             fileToolStripMenuItem.Text = "File";
             // 
             // newModPackMenuItem
             // 
             newModPackMenuItem.Name = "newModPackMenuItem";
-            newModPackMenuItem.Size = new Size(248, 34);
+            newModPackMenuItem.Size = new Size(164, 22);
             newModPackMenuItem.Text = "New Mod Pack";
             newModPackMenuItem.Click += newModPackMenuItem_Click;
             // 
@@ -97,43 +96,43 @@
             // 
             OpenModPackMenuItems.DropDownItems.AddRange(new ToolStripItem[] { ChooseModPackMenuItem, toolStripSeparator3 });
             OpenModPackMenuItems.Name = "OpenModPackMenuItems";
-            OpenModPackMenuItems.Size = new Size(248, 34);
+            OpenModPackMenuItems.Size = new Size(164, 22);
             OpenModPackMenuItems.Text = "Open Mod Pack";
             // 
             // ChooseModPackMenuItem
             // 
             ChooseModPackMenuItem.Name = "ChooseModPackMenuItem";
-            ChooseModPackMenuItem.Size = new Size(186, 34);
+            ChooseModPackMenuItem.Size = new Size(123, 22);
             ChooseModPackMenuItem.Text = "Choose...";
             ChooseModPackMenuItem.Click += ChooseModPackMenuItem_Click;
             // 
             // toolStripSeparator3
             // 
             toolStripSeparator3.Name = "toolStripSeparator3";
-            toolStripSeparator3.Size = new Size(183, 6);
+            toolStripSeparator3.Size = new Size(120, 6);
             // 
             // toolStripSeparator2
             // 
             toolStripSeparator2.Name = "toolStripSeparator2";
-            toolStripSeparator2.Size = new Size(245, 6);
+            toolStripSeparator2.Size = new Size(161, 6);
             // 
             // toolStripMenuItem6
             // 
             toolStripMenuItem6.Name = "toolStripMenuItem6";
-            toolStripMenuItem6.Size = new Size(248, 34);
+            toolStripMenuItem6.Size = new Size(164, 22);
             toolStripMenuItem6.Text = "Export Mod Pack";
             // 
             // viewToolStripMenuItem
             // 
             viewToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { advancedToggle });
             viewToolStripMenuItem.Name = "viewToolStripMenuItem";
-            viewToolStripMenuItem.Size = new Size(69, 29);
+            viewToolStripMenuItem.Size = new Size(46, 20);
             viewToolStripMenuItem.Text = "Tools";
             // 
             // advancedToggle
             // 
             advancedToggle.Name = "advancedToggle";
-            advancedToggle.Size = new Size(235, 34);
+            advancedToggle.Size = new Size(154, 22);
             advancedToggle.Text = "TRPFD Explorer";
             advancedToggle.Click += advancedViewToolStripMenuItem_Click;
             // 
@@ -141,51 +140,51 @@
             // 
             helpToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { preferencesMenuItem, toolStripSeparator1, getLatestHashesMenuItem, toolStripMenuItem3, toolStripSeparator4, aboutToolStripMenuItem });
             helpToolStripMenuItem.Name = "helpToolStripMenuItem";
-            helpToolStripMenuItem.Size = new Size(65, 29);
+            helpToolStripMenuItem.Size = new Size(44, 20);
             helpToolStripMenuItem.Text = "Help";
             // 
             // preferencesMenuItem
             // 
             preferencesMenuItem.DropDownItems.AddRange(new ToolStripItem[] { toolStripMenuItem1 });
             preferencesMenuItem.Name = "preferencesMenuItem";
-            preferencesMenuItem.Size = new Size(317, 34);
+            preferencesMenuItem.Size = new Size(209, 22);
             preferencesMenuItem.Text = "Preferences";
             // 
             // toolStripMenuItem1
             // 
             toolStripMenuItem1.Name = "toolStripMenuItem1";
-            toolStripMenuItem1.Size = new Size(255, 34);
+            toolStripMenuItem1.Size = new Size(166, 22);
             toolStripMenuItem1.Text = "Set RomFS Folder";
             toolStripMenuItem1.Click += openRomFSFolderToolStripMenuItem_Click;
             // 
             // toolStripSeparator1
             // 
             toolStripSeparator1.Name = "toolStripSeparator1";
-            toolStripSeparator1.Size = new Size(314, 6);
+            toolStripSeparator1.Size = new Size(206, 6);
             // 
             // getLatestHashesMenuItem
             // 
             getLatestHashesMenuItem.Name = "getLatestHashesMenuItem";
-            getLatestHashesMenuItem.Size = new Size(317, 34);
+            getLatestHashesMenuItem.Size = new Size(209, 22);
             getLatestHashesMenuItem.Text = "Get Updated Hashes";
             getLatestHashesMenuItem.Click += getLatestHashes_Click;
             // 
             // toolStripMenuItem3
             // 
             toolStripMenuItem3.Name = "toolStripMenuItem3";
-            toolStripMenuItem3.Size = new Size(317, 34);
+            toolStripMenuItem3.Size = new Size(209, 22);
             toolStripMenuItem3.Text = "Get Hashes From File";
             toolStripMenuItem3.Click += addHashesFromFile_Click;
             // 
             // toolStripSeparator4
             // 
             toolStripSeparator4.Name = "toolStripSeparator4";
-            toolStripSeparator4.Size = new Size(314, 6);
+            toolStripSeparator4.Size = new Size(206, 6);
             // 
             // aboutToolStripMenuItem
             // 
             aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            aboutToolStripMenuItem.Size = new Size(317, 34);
+            aboutToolStripMenuItem.Size = new Size(209, 22);
             aboutToolStripMenuItem.Text = "About Trinity Mod Loader";
             aboutToolStripMenuItem.Click += aboutToolStripMenuItem_Click;
             // 
@@ -204,12 +203,12 @@
             basicContext.ImageScalingSize = new Size(24, 24);
             basicContext.Items.AddRange(new ToolStripItem[] { deleteModBut });
             basicContext.Name = "basicContext";
-            basicContext.Size = new Size(192, 36);
+            basicContext.Size = new Size(146, 26);
             // 
             // deleteModBut
             // 
             deleteModBut.Name = "deleteModBut";
-            deleteModBut.Size = new Size(191, 32);
+            deleteModBut.Size = new Size(145, 22);
             deleteModBut.Text = "Remove Mod";
             deleteModBut.Click += deleteModButton_Click;
             // 
@@ -217,10 +216,9 @@
             // 
             addPackedMod.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             addPackedMod.Enabled = false;
-            addPackedMod.Location = new Point(6, 818);
-            addPackedMod.Margin = new Padding(4, 5, 4, 5);
+            addPackedMod.Location = new Point(4, 488);
             addPackedMod.Name = "addPackedMod";
-            addPackedMod.Size = new Size(325, 67);
+            addPackedMod.Size = new Size(228, 40);
             addPackedMod.TabIndex = 1;
             addPackedMod.Text = "Add mod (.zip)";
             addPackedMod.UseVisualStyleBackColor = true;
@@ -230,10 +228,9 @@
             // 
             modOrderUp.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             modOrderUp.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
-            modOrderUp.Location = new Point(340, 35);
-            modOrderUp.Margin = new Padding(4, 5, 4, 5);
+            modOrderUp.Location = new Point(238, 21);
             modOrderUp.Name = "modOrderUp";
-            modOrderUp.Size = new Size(40, 50);
+            modOrderUp.Size = new Size(28, 30);
             modOrderUp.TabIndex = 2;
             modOrderUp.Text = "↑";
             modOrderUp.UseVisualStyleBackColor = true;
@@ -243,10 +240,9 @@
             // 
             modOrderDown.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             modOrderDown.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
-            modOrderDown.Location = new Point(340, 95);
-            modOrderDown.Margin = new Padding(4, 5, 4, 5);
+            modOrderDown.Location = new Point(238, 57);
             modOrderDown.Name = "modOrderDown";
-            modOrderDown.Size = new Size(40, 50);
+            modOrderDown.Size = new Size(28, 30);
             modOrderDown.TabIndex = 3;
             modOrderDown.Text = "↓";
             modOrderDown.UseVisualStyleBackColor = true;
@@ -256,10 +252,9 @@
             // 
             modList.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             modList.FormattingEnabled = true;
-            modList.Location = new Point(6, 35);
-            modList.Margin = new Padding(4, 5, 4, 5);
+            modList.Location = new Point(4, 26);
             modList.Name = "modList";
-            modList.Size = new Size(323, 760);
+            modList.Size = new Size(227, 436);
             modList.TabIndex = 4;
             modList.ItemCheck += modList_ItemCheck;
             modList.SelectedIndexChanged += modList_SelectedIndexChanged;
@@ -269,10 +264,9 @@
             // 
             applyModsBut.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             applyModsBut.Enabled = false;
-            applyModsBut.Location = new Point(6, 965);
-            applyModsBut.Margin = new Padding(4, 5, 4, 5);
+            applyModsBut.Location = new Point(4, 576);
             applyModsBut.Name = "applyModsBut";
-            applyModsBut.Size = new Size(325, 67);
+            applyModsBut.Size = new Size(228, 40);
             applyModsBut.TabIndex = 5;
             applyModsBut.Text = "Apply mods";
             applyModsBut.UseVisualStyleBackColor = true;
@@ -282,10 +276,9 @@
             // 
             addFolderMod.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             addFolderMod.Enabled = false;
-            addFolderMod.Location = new Point(6, 892);
-            addFolderMod.Margin = new Padding(4, 5, 4, 5);
+            addFolderMod.Location = new Point(4, 532);
             addFolderMod.Name = "addFolderMod";
-            addFolderMod.Size = new Size(325, 67);
+            addFolderMod.Size = new Size(228, 40);
             addFolderMod.TabIndex = 7;
             addFolderMod.Text = "Add mod (folder)";
             addFolderMod.UseVisualStyleBackColor = true;
@@ -294,8 +287,7 @@
             // splitContainer1
             // 
             splitContainer1.Dock = DockStyle.Fill;
-            splitContainer1.Location = new Point(0, 35);
-            splitContainer1.Margin = new Padding(4, 5, 4, 5);
+            splitContainer1.Location = new Point(0, 24);
             splitContainer1.Name = "splitContainer1";
             // 
             // splitContainer1.Panel1
@@ -310,27 +302,27 @@
             // splitContainer1.Panel2
             // 
             splitContainer1.Panel2.Controls.Add(modPropertyGrid);
-            splitContainer1.Size = new Size(1174, 1040);
-            splitContainer1.SplitterDistance = 389;
-            splitContainer1.SplitterWidth = 6;
+            splitContainer1.Size = new Size(822, 621);
+            splitContainer1.SplitterDistance = 272;
             splitContainer1.TabIndex = 8;
             // 
             // modPropertyGrid
             // 
-            modPropertyGrid.Location = new Point(3, 0);
+            modPropertyGrid.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            modPropertyGrid.Location = new Point(2, 0);
+            modPropertyGrid.Margin = new Padding(2);
             modPropertyGrid.Name = "modPropertyGrid";
-            modPropertyGrid.Size = new Size(773, 1040);
+            modPropertyGrid.Size = new Size(541, 624);
             modPropertyGrid.TabIndex = 0;
             // 
             // TrinityMainWindow
             // 
-            AutoScaleDimensions = new SizeF(10F, 25F);
+            AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1174, 1075);
+            ClientSize = new Size(822, 645);
             Controls.Add(splitContainer1);
             Controls.Add(menuStrip1);
             MainMenuStrip = menuStrip1;
-            Margin = new Padding(4, 5, 4, 5);
             Name = "TrinityMainWindow";
             Text = "Trinity Mod Loader";
             FormClosing += TrinityMainWindow_FormClosing;
