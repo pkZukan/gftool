@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace Trinity
+namespace TrinityModLoader
 {
     public partial class About : Form
     {

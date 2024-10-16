@@ -1,4 +1,4 @@
-﻿namespace Trinity
+﻿namespace TrinityModLoader
 {
     partial class About
     {

@@ -1,11 +1,11 @@
 using Trinity.Core.Utils;
 using Trinity.Core.Math.Hash;
 using Trinity.Core.Cache;
+using Trinity.Core.Flatbuffers.TR.ResourceDictionary;
 using System.Diagnostics;
 using System.Text.Json;
-using TrinityModLoader;
 
-namespace Trinity
+namespace TrinityModLoader
 {
     public partial class TrinityMainWindow : Form
     {
@@ -18,7 +18,6 @@ namespace Trinity
         public TrinityMainWindow()
         {
             InitializeComponent();
-            InitializeCache();
             InitializeSettings();
             InitializeLastModpacks();
         }
@@ -46,7 +45,7 @@ namespace Trinity
 
                 ModLoaderSettings.SetRomFSPath(folderBrowser.SelectedPath);
 
-                if (ParseFileDescriptor(Path.Join(ModLoaderSettings.GetRomFSPath(), Settings.trpfdRel)) != DialogResult.OK)
+                if (ParseFileDescriptor(Path.Join(ModLoaderSettings.GetRomFSPath(), FilepathSettings.trpfdRel)) != DialogResult.OK)
                 {
                     NoValidRomFS();
                 }
@@ -55,65 +54,13 @@ namespace Trinity
             }
             else
             {
-                if (!TryLoadFileDescriptor(Path.Join(romfsDir, Settings.trpfdRel), out customFileDescriptor))
+                if (!TryLoadFileDescriptor(Path.Join(romfsDir, FilepathSettings.trpfdRel), out customFileDescriptor))
                 {
                     NoValidRomFS();
                 };
             }
-        }
 
-        private void InitializeCache()
-        {
-            if (!File.Exists("GFPAKHashCache.bin"))
-            {
-                DialogResult dialogResult = MessageBox.Show("No GFPAKHashCache.bin found, do you want to create one?", "Missing Files", MessageBoxButtons.YesNo);
-
-                if (dialogResult == DialogResult.Yes)
-                {
-                    PullLatestHashes();
-                }
-                else
-                {
-                    MessageBox.Show("Empty GFPAKHashCache.bin Created.");
-                }
-            }
-            else
-            {
-                GFPakHashCache.Open();
-            }
-        }
-
-        private void PullLatestHashes()
-        {
-            string fileUrl = "https://raw.githubusercontent.com/pkZukan/PokeDocs/main/SV/Hashlists/FileSystem/hashes_inside_fd.txt";
-            using var httpClient = new HttpClient();
-
-            HttpResponseMessage response = httpClient.GetAsync(fileUrl).GetAwaiter().GetResult();
-            if (response.IsSuccessStatusCode)
-            {
-                Stream fileStream = response.Content.ReadAsStreamAsync().GetAwaiter().GetResult();
-                var streamReader = new StreamReader(fileStream);
-
-                List<string> lines = new List<string>();
-                string line;
-                while ((line = streamReader.ReadLine()) != null)
-                {
-                    lines.Add(line);
-                }
-                GFPakHashCache.AddHashFromList(lines);
-                GFPakHashCache.Save();
-
-                MessageBox.Show("GFPAKHashCache.bin Created!");
-            }
-            else
-            {
-                var message_text = "Failed to download latest hashes.\n\nManually download the \"hashes_inside_fd.txt\" file into your Trinity folder.\n\nClick OK to copy the URL of the file to your clipboard.";
-
-                if (MessageBox.Show(message_text, "Failed to download", MessageBoxButtons.OKCancel) == DialogResult.OK)
-                {
-                    Clipboard.SetText(fileUrl);
-                }
-            }
+            openModWindowMenuItem.Checked = ModLoaderSettings.GetOpenModWindow();
         }
 
         private void InitializeLastModpacks()
@@ -150,6 +97,12 @@ namespace Trinity
                 }
             }
 
+            if (recentModPacks == null || recentModPacks.Count == 0)
+            {
+                this.Text = $"{titleText} - No Modpack Loaded";
+                return;
+            }
+
             LoadModPack(recentModPacks.Last());
 
         }
@@ -169,7 +122,7 @@ namespace Trinity
 
             addFolderMod.Enabled = true;
             addPackedMod.Enabled = true;
-            
+
             modPack.mods = modPack.mods.Where(x => x.Exists()).ToList();
             if (modPack.mods.Count > 0) applyModsBut.Enabled = true;
 
@@ -392,13 +345,16 @@ namespace Trinity
                     RemoveMod(mod);
             }
 
-            SerializeTRPFD(Path.Join(layeredFSLocation, Settings.trpfdRel));
+            SerializeTRPFD(Path.Join(layeredFSLocation, FilepathSettings.trpfdRel));
 
             //TODO: Make a Mod Merger class that enumerates file conflicts/merges
             MessageBox.Show("Mods Applied!");
 
-            var filePath = Path.GetFullPath(modPackLocation);
-            Process.Start("explorer.exe", string.Format("\"{0}\"", filePath));
+            if (openModWindowMenuItem.Checked == true)
+            {
+                var filePath = Path.GetFullPath(modPackLocation);
+                Process.Start("explorer.exe", string.Format("\"{0}\"", filePath));
+            }
         }
         private void modOrderUp_Click(object sender, EventArgs e)
         {
@@ -420,10 +376,6 @@ namespace Trinity
         {
             new About().ShowDialog();
         }
-        private void advancedViewToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            new TrinityExplorerWindow().ShowDialog();
-        }
 
         private void openRomFSFolderToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -432,26 +384,12 @@ namespace Trinity
 
             ModLoaderSettings.SetRomFSPath(folderBrowser.SelectedPath);
 
-            if (ParseFileDescriptor(Path.Join(ModLoaderSettings.GetRomFSPath(), Settings.trpfdRel)) != DialogResult.OK)
+            if (ParseFileDescriptor(Path.Join(ModLoaderSettings.GetRomFSPath(), FilepathSettings.trpfdRel)) != DialogResult.OK)
             {
                 return;
             }
 
             ModLoaderSettings.Save();
-        }
-
-        private void getLatestHashes_Click(object sender, EventArgs e)
-        {
-            PullLatestHashes();
-        }
-
-        private void addHashesFromFile_Click(object sender, EventArgs e)
-        {
-            var ofd = new OpenFileDialog();
-            if (ofd.ShowDialog() != DialogResult.OK) return;
-            GFPakHashCache.AddHashFromList(File.ReadAllLines(ofd.FileName).ToList());
-            GFPakHashCache.Save();
-            MessageBox.Show("GFPAKHashCache.bin Created!");
         }
 
         private void newModPackMenuItem_Click(object sender, EventArgs e)
@@ -509,6 +447,7 @@ namespace Trinity
                 modPack.Save(modPackLocation);
                 ModLoaderSettings.AddRecentModPack(modPackLocation);
             }
+            ModLoaderSettings.SetOpenModWindow(openModWindowMenuItem.Checked);
             ModLoaderSettings.Save();
 
         }
@@ -529,6 +468,11 @@ namespace Trinity
                     basicContext.Show(modList, e.Location);
                 }
             }
+        }
+
+        private void openModWindowMenuItem_Click(object sender, EventArgs e)
+        {
+            openModWindowMenuItem.Checked = !openModWindowMenuItem.Checked;
         }
     }
     #endregion

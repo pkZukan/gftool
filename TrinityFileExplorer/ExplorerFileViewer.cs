@@ -9,11 +9,11 @@ using Trinity.Core.Flatbuffers.TR.ResourceDictionary;
 using Trinity.Core.Math.Hash;
 using Trinity.Core.Utils;
 
-namespace TrinityModLoader
+namespace TrinityFileExplorer
 {
     public partial class ExplorerFileViewer : DataGridView, IExplorerViewer
     {
-        public const string romfs_disk = "romfs://";
+        public const string disk_path = "romfs://";
 
         private DataGridViewTextBoxColumn FileName;
         private DataGridViewTextBoxColumn FileHash;
@@ -41,7 +41,7 @@ namespace TrinityModLoader
 
         public string GetCwd()
         {
-            return romfs_disk + _cwd;
+            return disk_path + _cwd;
         }
 
         public void ParseFileDescriptor(CustomFileDescriptor fileDescriptor)
@@ -108,6 +108,9 @@ namespace TrinityModLoader
 
         public string? GetPathAtIndex(int index)
         {
+            if (index < 0) return null;
+
+            System.Console.WriteLine(index);
             var row = Rows[index];
 
             if (row.Cells["FileType"].Value.ToString().Equals("File Folder"))
@@ -216,5 +219,9 @@ namespace TrinityModLoader
             return romfs_paths.Where(x => x.StartsWith(path)).Select(x => Convert.ToUInt64(x.ToString(), 16));
         }
 
+        public string GetDiskPath()
+        {
+            return disk_path;
+        }
     }
 }

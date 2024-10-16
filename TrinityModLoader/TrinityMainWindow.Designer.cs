@@ -1,4 +1,4 @@
-﻿namespace Trinity
+﻿namespace TrinityModLoader
 {
     partial class TrinityMainWindow
     {
@@ -37,15 +37,11 @@
             toolStripSeparator3 = new ToolStripSeparator();
             toolStripSeparator2 = new ToolStripSeparator();
             toolStripMenuItem6 = new ToolStripMenuItem();
-            viewToolStripMenuItem = new ToolStripMenuItem();
-            advancedToggle = new ToolStripMenuItem();
             helpToolStripMenuItem = new ToolStripMenuItem();
             preferencesMenuItem = new ToolStripMenuItem();
-            toolStripMenuItem1 = new ToolStripMenuItem();
+            romfsPathMenuItem = new ToolStripMenuItem();
+            openModWindowMenuItem = new ToolStripMenuItem();
             toolStripSeparator1 = new ToolStripSeparator();
-            getLatestHashesMenuItem = new ToolStripMenuItem();
-            toolStripMenuItem3 = new ToolStripMenuItem();
-            toolStripSeparator4 = new ToolStripSeparator();
             aboutToolStripMenuItem = new ToolStripMenuItem();
             helpProvider1 = new HelpProvider();
             saveFileToolStripMenuItem = new ToolStripMenuItem();
@@ -71,7 +67,7 @@
             // menuStrip1
             // 
             menuStrip1.ImageScalingSize = new Size(24, 24);
-            menuStrip1.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, viewToolStripMenuItem, helpToolStripMenuItem });
+            menuStrip1.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, helpToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
             menuStrip1.Size = new Size(822, 24);
@@ -88,7 +84,7 @@
             // newModPackMenuItem
             // 
             newModPackMenuItem.Name = "newModPackMenuItem";
-            newModPackMenuItem.Size = new Size(164, 22);
+            newModPackMenuItem.Size = new Size(180, 22);
             newModPackMenuItem.Text = "New Mod Pack";
             newModPackMenuItem.Click += newModPackMenuItem_Click;
             // 
@@ -96,7 +92,7 @@
             // 
             OpenModPackMenuItems.DropDownItems.AddRange(new ToolStripItem[] { ChooseModPackMenuItem, toolStripSeparator3 });
             OpenModPackMenuItems.Name = "OpenModPackMenuItems";
-            OpenModPackMenuItems.Size = new Size(164, 22);
+            OpenModPackMenuItems.Size = new Size(180, 22);
             OpenModPackMenuItems.Text = "Open Mod Pack";
             // 
             // ChooseModPackMenuItem
@@ -114,72 +110,46 @@
             // toolStripSeparator2
             // 
             toolStripSeparator2.Name = "toolStripSeparator2";
-            toolStripSeparator2.Size = new Size(161, 6);
+            toolStripSeparator2.Size = new Size(177, 6);
             // 
             // toolStripMenuItem6
             // 
             toolStripMenuItem6.Name = "toolStripMenuItem6";
-            toolStripMenuItem6.Size = new Size(164, 22);
+            toolStripMenuItem6.Size = new Size(180, 22);
             toolStripMenuItem6.Text = "Export Mod Pack";
-            // 
-            // viewToolStripMenuItem
-            // 
-            viewToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { advancedToggle });
-            viewToolStripMenuItem.Name = "viewToolStripMenuItem";
-            viewToolStripMenuItem.Size = new Size(46, 20);
-            viewToolStripMenuItem.Text = "Tools";
-            // 
-            // advancedToggle
-            // 
-            advancedToggle.Name = "advancedToggle";
-            advancedToggle.Size = new Size(154, 22);
-            advancedToggle.Text = "TRPFD Explorer";
-            advancedToggle.Click += advancedViewToolStripMenuItem_Click;
             // 
             // helpToolStripMenuItem
             // 
-            helpToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { preferencesMenuItem, toolStripSeparator1, getLatestHashesMenuItem, toolStripMenuItem3, toolStripSeparator4, aboutToolStripMenuItem });
+            helpToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { preferencesMenuItem, toolStripSeparator1, aboutToolStripMenuItem });
             helpToolStripMenuItem.Name = "helpToolStripMenuItem";
             helpToolStripMenuItem.Size = new Size(44, 20);
             helpToolStripMenuItem.Text = "Help";
             // 
             // preferencesMenuItem
             // 
-            preferencesMenuItem.DropDownItems.AddRange(new ToolStripItem[] { toolStripMenuItem1 });
+            preferencesMenuItem.DropDownItems.AddRange(new ToolStripItem[] { romfsPathMenuItem, openModWindowMenuItem });
             preferencesMenuItem.Name = "preferencesMenuItem";
             preferencesMenuItem.Size = new Size(209, 22);
             preferencesMenuItem.Text = "Preferences";
             // 
-            // toolStripMenuItem1
+            // romfsPathMenuItem
             // 
-            toolStripMenuItem1.Name = "toolStripMenuItem1";
-            toolStripMenuItem1.Size = new Size(166, 22);
-            toolStripMenuItem1.Text = "Set RomFS Folder";
-            toolStripMenuItem1.Click += openRomFSFolderToolStripMenuItem_Click;
+            romfsPathMenuItem.Name = "romfsPathMenuItem";
+            romfsPathMenuItem.Size = new Size(260, 22);
+            romfsPathMenuItem.Text = "Change RomFS Path...";
+            romfsPathMenuItem.Click += openRomFSFolderToolStripMenuItem_Click;
+            // 
+            // openModWindowMenuItem
+            // 
+            openModWindowMenuItem.Name = "openModWindowMenuItem";
+            openModWindowMenuItem.Size = new Size(260, 22);
+            openModWindowMenuItem.Text = "Show Explorer after Applying Mods";
+            openModWindowMenuItem.Click += openModWindowMenuItem_Click;
             // 
             // toolStripSeparator1
             // 
             toolStripSeparator1.Name = "toolStripSeparator1";
             toolStripSeparator1.Size = new Size(206, 6);
-            // 
-            // getLatestHashesMenuItem
-            // 
-            getLatestHashesMenuItem.Name = "getLatestHashesMenuItem";
-            getLatestHashesMenuItem.Size = new Size(209, 22);
-            getLatestHashesMenuItem.Text = "Get Updated Hashes";
-            getLatestHashesMenuItem.Click += getLatestHashes_Click;
-            // 
-            // toolStripMenuItem3
-            // 
-            toolStripMenuItem3.Name = "toolStripMenuItem3";
-            toolStripMenuItem3.Size = new Size(209, 22);
-            toolStripMenuItem3.Text = "Get Hashes From File";
-            toolStripMenuItem3.Click += addHashesFromFile_Click;
-            // 
-            // toolStripSeparator4
-            // 
-            toolStripSeparator4.Name = "toolStripSeparator4";
-            toolStripSeparator4.Size = new Size(206, 6);
             // 
             // aboutToolStripMenuItem
             // 
@@ -218,7 +188,7 @@
             addPackedMod.Enabled = false;
             addPackedMod.Location = new Point(4, 488);
             addPackedMod.Name = "addPackedMod";
-            addPackedMod.Size = new Size(228, 40);
+            addPackedMod.Size = new Size(227, 40);
             addPackedMod.TabIndex = 1;
             addPackedMod.Text = "Add mod (.zip)";
             addPackedMod.UseVisualStyleBackColor = true;
@@ -228,7 +198,7 @@
             // 
             modOrderUp.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             modOrderUp.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
-            modOrderUp.Location = new Point(238, 21);
+            modOrderUp.Location = new Point(236, 21);
             modOrderUp.Name = "modOrderUp";
             modOrderUp.Size = new Size(28, 30);
             modOrderUp.TabIndex = 2;
@@ -240,7 +210,7 @@
             // 
             modOrderDown.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             modOrderDown.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
-            modOrderDown.Location = new Point(238, 57);
+            modOrderDown.Location = new Point(236, 57);
             modOrderDown.Name = "modOrderDown";
             modOrderDown.Size = new Size(28, 30);
             modOrderDown.TabIndex = 3;
@@ -254,7 +224,7 @@
             modList.FormattingEnabled = true;
             modList.Location = new Point(4, 26);
             modList.Name = "modList";
-            modList.Size = new Size(227, 436);
+            modList.Size = new Size(226, 400);
             modList.TabIndex = 4;
             modList.ItemCheck += modList_ItemCheck;
             modList.SelectedIndexChanged += modList_SelectedIndexChanged;
@@ -266,7 +236,7 @@
             applyModsBut.Enabled = false;
             applyModsBut.Location = new Point(4, 576);
             applyModsBut.Name = "applyModsBut";
-            applyModsBut.Size = new Size(228, 40);
+            applyModsBut.Size = new Size(227, 40);
             applyModsBut.TabIndex = 5;
             applyModsBut.Text = "Apply mods";
             applyModsBut.UseVisualStyleBackColor = true;
@@ -278,7 +248,7 @@
             addFolderMod.Enabled = false;
             addFolderMod.Location = new Point(4, 532);
             addFolderMod.Name = "addFolderMod";
-            addFolderMod.Size = new Size(228, 40);
+            addFolderMod.Size = new Size(227, 40);
             addFolderMod.TabIndex = 7;
             addFolderMod.Text = "Add mod (folder)";
             addFolderMod.UseVisualStyleBackColor = true;
@@ -303,7 +273,7 @@
             // 
             splitContainer1.Panel2.Controls.Add(modPropertyGrid);
             splitContainer1.Size = new Size(822, 621);
-            splitContainer1.SplitterDistance = 272;
+            splitContainer1.SplitterDistance = 271;
             splitContainer1.TabIndex = 8;
             // 
             // modPropertyGrid
@@ -343,18 +313,14 @@
         private HelpProvider helpProvider1;
         private ToolStripMenuItem saveFileToolStripMenuItem;
         private ToolStripMenuItem markForLayeredFSToolStripMenuItem;
-        private ToolStripMenuItem viewToolStripMenuItem;
-        private ToolStripMenuItem advancedToggle;
         private ToolStripMenuItem helpToolStripMenuItem;
         private ToolStripMenuItem aboutToolStripMenuItem;
         private ToolStripMenuItem optionsToolStripMenuItem;
         private ContextMenuStrip basicContext;
         private ToolStripMenuItem deleteModBut;
-        private ToolStripMenuItem getLatestHashesMenuItem;
         private ToolStripMenuItem preferencesMenuItem;
-        private ToolStripMenuItem toolStripMenuItem1;
+        private ToolStripMenuItem romfsPathMenuItem;
         private ToolStripSeparator toolStripSeparator1;
-        private ToolStripMenuItem toolStripMenuItem3;
         private ToolStripMenuItem newModPackMenuItem;
         private ToolStripMenuItem toolStripMenuItem6;
         private ToolStripSeparator toolStripSeparator2;
@@ -368,7 +334,7 @@
         private Button applyModsBut;
         private Button addFolderMod;
         private SplitContainer splitContainer1;
-        private ToolStripSeparator toolStripSeparator4;
         private PropertyGrid modPropertyGrid;
+        private ToolStripMenuItem openModWindowMenuItem;
     }
 }

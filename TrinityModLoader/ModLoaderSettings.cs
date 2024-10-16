@@ -4,24 +4,24 @@ using System.Text.Json.Serialization;
 using Trinity.Core.Flatbuffers.TR.ResourceDictionary;
 using TrinityModLoader;
 
-namespace Trinity
+namespace TrinityModLoader
 {
-    public class Settings
+    public class FilepathSettings
     {
 
         public List<string> recentMods { get; set; } = new List<string>();
         public string romfsDir { get; set; } = "";
-
+        public bool openModWindow { get; set; }
         public const string trpfdRel = @"\arc\data.trpfd";
         public const string trpfsRel = @"\arc\data.trpfs";
 
-        public Settings()
+        public FilepathSettings()
         {
         }
 
         public void Save(string path)
         {
-            var json = JsonSerializer.Serialize<Settings>(this, new JsonSerializerOptions() { WriteIndented = true });
+            var json = JsonSerializer.Serialize<FilepathSettings>(this, new JsonSerializerOptions() { WriteIndented = true });
             File.WriteAllText(path, json);
         }
     }
@@ -29,7 +29,7 @@ namespace Trinity
     public static class ModLoaderSettings
     {
         private static string _settingsPath;
-        public static Settings _settings;
+        public static FilepathSettings _settings;
 
         public static void Open(string path = "settings.json")
         {
@@ -37,11 +37,11 @@ namespace Trinity
 
             if (!File.Exists(path))
             {
-                _settings = new Settings();
+                _settings = new FilepathSettings();
             }
             else
             {
-                _settings = JsonSerializer.Deserialize<Settings>(File.ReadAllText(path));
+                _settings = JsonSerializer.Deserialize<FilepathSettings>(File.ReadAllText(path));
             }
         }
 
@@ -53,6 +53,16 @@ namespace Trinity
         public static List<string> GetRecentModPacks()
         {
             return _settings.recentMods;
+        }
+
+        public static void SetOpenModWindow(bool value)
+        {
+            _settings.openModWindow = value;
+        }
+
+        public static bool GetOpenModWindow()
+        {
+            return _settings.openModWindow;
         }
 
         public static string GetRomFSPath()
@@ -67,10 +77,8 @@ namespace Trinity
 
         public static void Save()
         {
-            if (_settings != null)
-            {
-                _settings.Save(_settingsPath);
-            }
+            if (_settings == null) return;
+            _settings.Save(_settingsPath);
         }
     }
 }

@@ -1,8 +1,6 @@
 ﻿using FlatSharp.Attributes;
-using Trinity.Core.Flatbuffers.TR.ResourceDictionary;
-using FileInfo = Trinity.Core.Flatbuffers.TR.ResourceDictionary.FileInfo;
 
-namespace TrinityModLoader
+namespace Trinity.Core.Flatbuffers.TR.ResourceDictionary
 {
     [FlatBufferTable]
     public class CustomFileDescriptor
@@ -12,7 +10,7 @@ namespace TrinityModLoader
         [FlatBufferItem(2)] public FileInfo[] FileInfo { get; set; } = Array.Empty<FileInfo>();
         [FlatBufferItem(3)] public PackInfo[] PackInfo { get; set; } = Array.Empty<PackInfo>();
 
-        //Only used by us
+        //Added fields to keep track of used files
         [FlatBufferItem(4)] public UInt64[] UnusedHashes { get; set; } = Array.Empty<UInt64>();
         [FlatBufferItem(5)] public FileInfo[] UnusedFileInfo { get; set; } = Array.Empty<FileInfo>();
 

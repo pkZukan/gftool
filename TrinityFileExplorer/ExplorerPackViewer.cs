@@ -13,12 +13,13 @@ using System.Xml.XPath;
 using Trinity.Core.Cache;
 using Trinity.Core.Compression;
 using System.IO;
+using System.Xml.Linq;
 
-namespace TrinityModLoader
+namespace TrinityFileExplorer
 {
     public partial class ExplorerPackViewer : DataGridView, IExplorerViewer
     {
-        public const string arc_disk = "arc://";
+        public const string disk_path = "trpfs://";
 
         private DataGridViewTextBoxColumn FileName;
         private DataGridViewTextBoxColumn FileHash;
@@ -29,7 +30,7 @@ namespace TrinityModLoader
         private CustomFileDescriptor _fileDescriptor;
         private FileSystem _fileSystem;
 
-        private List<string> packNames = new List<string>();
+        private DataGridViewRow[] rootRows;
         public int activePack = -1;
 
         public ExplorerPackViewer()
@@ -45,11 +46,11 @@ namespace TrinityModLoader
 
         public string GetCwd()
         {
-            var cwd = arc_disk;
+            var cwd = disk_path;
 
             if (activePack != -1)
             {
-                cwd += packNames[activePack];
+                cwd += _fileDescriptor.PackNames[activePack];
             }
 
             return cwd;
@@ -58,7 +59,6 @@ namespace TrinityModLoader
         public void ParseFileDescriptor(CustomFileDescriptor fileDescriptor)
         {
             _fileDescriptor = fileDescriptor;
-            packNames = _fileDescriptor.PackNames.ToList();
         }
 
         public string? GetPathAtIndex(int index)
@@ -74,21 +74,33 @@ namespace TrinityModLoader
 
         private void AddRowsFromPackNames(List<string> paths)
         {
-            foreach (string path in paths)
+            if (rootRows == null)
             {
-                var index = packNames.IndexOf(path);
-                PackInfo? packInfo = _fileDescriptor.PackInfo[index];
-                string[] row = new string[] { path, GFFNV.Hash(path).ToString("X16"), "arc", "File Archive", packInfo.FileSize.ToString() + "B" };
-                Rows.Add(row);
+                var names = _fileDescriptor.PackNames.ToList();
+
+
+                for (int i = 0; i < paths.Count; i++)
+                {
+                    string? path = paths[i];
+                    PackInfo? packInfo = _fileDescriptor.PackInfo[i];
+                    Rows.Add(new string[] { path, GFFNV.Hash(path).ToString("X16"), "arc", "File Archive", packInfo.FileSize.ToString() + "B" });
+
+                }
+                rootRows = new DataGridViewRow[paths.Count];
+                Rows.CopyTo(rootRows, 0);
+            }
+            else
+            {
+                Rows.AddRange(rootRows);
             }
         }
 
         private void AddRowsFromPack(int index)
         {
-            int fileIndex = Array.IndexOf(_fileSystem.FileHashes, GFFNV.Hash(packNames[index]));
+            int fileIndex = Array.IndexOf(_fileSystem.FileHashes, GFFNV.Hash(_fileDescriptor.PackNames[index]));
             PackInfo? packInfo = _fileDescriptor.PackInfo[index];
 
-            byte[] fileBytes = ONEFILESerializer.SplitTRPAK(Path.Join(ModLoaderSettings.GetRomFSPath(), Settings.trpfsRel), (long)_fileSystem.FileOffsets[fileIndex], (long)packInfo.FileSize);
+            byte[] fileBytes = ONEFILESerializer.SplitTRPAK(Path.Join(ExplorerSettings.GetRomFSPath(), FilepathSettings.trpfsRel), (long)_fileSystem.FileOffsets[fileIndex], (long)packInfo.FileSize);
             PackedArchive pack = FlatBufferConverter.DeserializeFrom<PackedArchive>(fileBytes);
 
             for (int i = 0; i < pack.FileEntry.Length; i++)
@@ -109,6 +121,8 @@ namespace TrinityModLoader
         public void NavigateTo(string path)
         {
             Rows.Clear();
+
+            var packNames = _fileDescriptor.PackNames.ToList();
 
             activePack = packNames.IndexOf(path);
 
@@ -179,6 +193,11 @@ namespace TrinityModLoader
         public IEnumerable<ulong> GetFolderPaths(string path)
         {
             throw new NotImplementedException();
+        }
+
+        public string GetDiskPath()
+        {
+            return disk_path;
         }
     }
 }

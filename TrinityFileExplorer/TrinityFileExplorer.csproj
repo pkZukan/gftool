@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SharpCompress" Version="0.32.2" />
+    <PackageReference Include="Tomlyn.Signed" Version="0.16.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GFTool.Core\GFTool.Core.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Compile Update="ExplorerFileViewer.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="ExplorerPackViewer.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Update="TrinityExplorerWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+  </ItemGroup>
+
+</Project>
