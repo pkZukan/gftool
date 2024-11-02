@@ -5,7 +5,14 @@ using System.Text.Json.Serialization;
 namespace Trinity.Core.Flatbuffers.Utils
 {
     [FlatBufferStruct]
-    public class Vector3
+    public class Vector2f
+    {
+        [FlatBufferItem(0)] public float X { get; set; } = 0.0f;
+        [FlatBufferItem(1)] public float Y { get; set; } = 0.0f;
+    }
+
+    [FlatBufferStruct]
+    public class Vector3f
     {
         [FlatBufferItem(0)] public float X { get; set; } = 0.0f;
         [FlatBufferItem(1)] public float Y { get; set; } = 0.0f;
@@ -13,7 +20,7 @@ namespace Trinity.Core.Flatbuffers.Utils
     }
 
     [FlatBufferStruct]
-    public class Vector4
+    public class Vector4f
     {
         [FlatBufferItem(0)] public float W { get; set; } = 0.0f;
         [FlatBufferItem(1)] public float X { get; set; } = 0.0f;
@@ -33,8 +40,8 @@ namespace Trinity.Core.Flatbuffers.Utils
     [FlatBufferTable]
     public class TRBoundingBox
     {
-        [FlatBufferItem(0)] public Vector3 MinBound { get; set; } = new Vector3();
-        [FlatBufferItem(1)] public Vector3 MaxBound { get; set; } = new Vector3();
+        [FlatBufferItem(0)] public Vector3f MinBound { get; set; } = new Vector3f();
+        [FlatBufferItem(1)] public Vector3f MaxBound { get; set; } = new Vector3f();
     }
 
     [JsonConverter(typeof(QuaternionConverter))]
@@ -47,14 +54,23 @@ namespace Trinity.Core.Flatbuffers.Utils
     }
 
     [FlatBufferStruct]
+    public class RGBA
+    {
+        [FlatBufferItem(0)] public float R { get; set; }
+        [FlatBufferItem(1)] public float G { get; set; }
+        [FlatBufferItem(2)] public float B { get; set; }
+        [FlatBufferItem(3)] public float A { get; set; }
+    };
+
+    [FlatBufferStruct]
     public class Transform
     {
         [FlatBufferItem(0)]
-        public Vector3 Scale { get; set; }
+        public Vector3f Scale { get; set; }
         [FlatBufferItem(1)]
-        public Vector4 Rotate { get; set; }
+        public Vector4f Rotate { get; set; }
         [FlatBufferItem(2)]
-        public Vector3 Translate { get; set; }
+        public Vector3f Translate { get; set; }
     }
 
 }

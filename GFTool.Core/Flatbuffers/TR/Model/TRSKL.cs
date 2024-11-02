@@ -14,9 +14,9 @@ namespace Trinity.Core.Flatbuffers.TR.Model
     [FlatBufferTable]
     public class Transform
     {
-        [FlatBufferItem(0)] public Vector3 Scale { get; set; }
-        [FlatBufferItem(1)] public Vector3 Rotation { get; set; }
-        [FlatBufferItem(2)] public Vector3 Translation { get; set; }
+        [FlatBufferItem(0)] public Vector3f Scale { get; set; }
+        [FlatBufferItem(1)] public Vector3f Rotation { get; set; }
+        [FlatBufferItem(2)] public Vector3f Translation { get; set; }
 
     }
     [FlatBufferTable]
@@ -31,10 +31,10 @@ namespace Trinity.Core.Flatbuffers.TR.Model
     [FlatBufferTable]
     public class BoneMatrix
     {
-        [FlatBufferItem(0)] public Vector3 X { get; set; }
-        [FlatBufferItem(1)] public Vector3 Y { get; set; }
-        [FlatBufferItem(2)] public Vector3 Z { get; set; }
-        [FlatBufferItem(3)] public Vector3 W { get; set; }
+        [FlatBufferItem(0)] public Vector3f X { get; set; }
+        [FlatBufferItem(1)] public Vector3f Y { get; set; }
+        [FlatBufferItem(2)] public Vector3f Z { get; set; }
+        [FlatBufferItem(3)] public Vector3f W { get; set; }
     }
 
     [FlatBufferTable]
@@ -45,8 +45,8 @@ namespace Trinity.Core.Flatbuffers.TR.Model
         [FlatBufferItem(2)] public string Pole { get; set; }
         [FlatBufferItem(3)] public string Type { get; set; }
         [FlatBufferItem(4)] public string Field_04 { get; set; }
-        [FlatBufferItem(5)] public Vector3 Field_05 { get; set; }
-        [FlatBufferItem(6)] public Vector4 Field_06 { get; set; }
+        [FlatBufferItem(5)] public Vector3f Field_05 { get; set; }
+        [FlatBufferItem(6)] public Vector4f Field_06 { get; set; }
     }
 
     [FlatBufferTable]
@@ -54,8 +54,8 @@ namespace Trinity.Core.Flatbuffers.TR.Model
     {
         [FlatBufferItem(0)] public string Name { get; set; }
         [FlatBufferItem(1)] public Transform Transform { get; set; }
-        [FlatBufferItem(2)] public Vector3 ScalePivot { get; set; }
-        [FlatBufferItem(3)] public Vector3 RotatePivot { get; set; }
+        [FlatBufferItem(2)] public Vector3f ScalePivot { get; set; }
+        [FlatBufferItem(3)] public Vector3f RotatePivot { get; set; }
         [FlatBufferItem(4)] public int ParentNodeIndex { get; set; }
         [FlatBufferItem(5)] public int BoneMetaDataIndex { get; set; }
         [FlatBufferItem(6)] public string LocatorMetaDataPath { get; set; }

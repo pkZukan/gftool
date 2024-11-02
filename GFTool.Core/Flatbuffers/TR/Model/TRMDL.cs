@@ -38,6 +38,6 @@ namespace Trinity.Core.Flatbuffers.TR.Model
         [FlatBufferItem(3)] public string[] Materials { get; set; }
         [FlatBufferItem(4)] public ModelLOD[] LODs { get; set; }
         [FlatBufferItem(5)] public TRBoundingBox Bounds { get; set; }
-        [FlatBufferItem(6)] public Vector4 Field_06 { get; set; }
+        [FlatBufferItem(6)] public Vector4f Field_06 { get; set; }
     }
 }
