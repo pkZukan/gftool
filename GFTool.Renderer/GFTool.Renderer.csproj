@@ -16,6 +16,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="BnTxx">
+      <HintPath>..\..\BnTxx-master\BnTxx\bin\Debug\net6.0\BnTxx.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="Shaders\EyeClearCoat.fsh">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

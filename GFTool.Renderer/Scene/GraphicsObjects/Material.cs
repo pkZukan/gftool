@@ -1,5 +1,4 @@
-﻿using GFTool.Core.Middleware;
-using GFTool.Core.Utils;
+﻿using GFTool.Core.Utils;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using System;
@@ -29,9 +28,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             textures = new List<Texture>();
             foreach (var tex in trmat.Textures)
             {
-                var bntx = new BNTX();
-                bntx.LoadFromFile(modelpath.Combine(tex.File));
-                textures.Add(new Texture(tex.Name, bntx));
+                textures.Add(new Texture(modelPath, tex));
             }
         }
 
@@ -42,7 +39,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             {
                 GL.ActiveTexture(TextureUnit.Texture0 + i);
                 GL.BindTexture(TextureTarget.Texture2D, textures[i].textureId);
-                shader.SetInt(textures[i].Name, textures[i].textureId);
+                shader.SetInt(textures[i].Name, i);
             }
             shader.SetMatrix4("model", model);
             shader.SetMatrix4("view", view);

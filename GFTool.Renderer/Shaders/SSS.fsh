@@ -25,23 +25,26 @@ in vec2 TexCoord;
 
 void main()
 {
-    vec4 layerMask = texture(LayerMaskMap, TexCoord);
+    //UV flip v
+    vec2 uv = vec2(TexCoord.x, 1.0f - TexCoord.y);
+
+    vec4 layerMask = texture(LayerMaskMap, uv);
     float layerWeight = clamp(1.0f - dot(vec4(1.0f), layerMask), 0.0f, 1.0f);
 
     vec3 normalOutput = normalize(Normal);
-    //vec2 normalXY = texture(NormalMap, TexCoord).rg;
-    //normalXY = normalXY * 2.0 - 1.0; // Transform to [-1, 1]
-    //float normalZ = sqrt(max(0.0, 1.0 - dot(normalXY, normalXY)));
-    //normalOutput = normalize(vec3(normalXY, normalZ));
+    vec2 normalXY = texture(NormalMap, uv).rg;
+    normalXY = normalXY * 2.0 - 1.0; // Transform to [-1, 1]
+    float normalZ = sqrt(max(0.0, 1.0 - dot(normalXY, normalXY)));
+    normalOutput = normalize(vec3(normalXY, normalZ));
 
-    float rough = texture(RoughnessMap, TexCoord).r;
+    float rough = texture(RoughnessMap, uv).r;
     layerWeight = mix(layerWeight, 1.0f, layerMask.r);
 
-    float ao = texture(AOMap, TexCoord).r;
+    float ao = texture(AOMap, uv).r;
 
-    float sssMask = texture(SSSMaskMap, TexCoord).r;
+    float sssMask = texture(SSSMaskMap, uv).r;
 
-    gAlbedo = texture(BaseColorMap, TexCoord).rgb * layerWeight;
+    gAlbedo = texture(BaseColorMap, uv).rgb * layerWeight;
     gNormal = normalOutput * 0.5 + 0.5;
     gSpecular = vec3(0.5);
     gAO = vec3(ao);

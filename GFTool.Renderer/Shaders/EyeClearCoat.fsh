@@ -25,22 +25,25 @@ in vec2 TexCoord;
 
 void main()
 {
-    vec4 layerMask = texture(LayerMaskMap, TexCoord);
+    //UV flip v
+    vec2 uv = vec2(TexCoord.x, 1.0f - TexCoord.y);
+
+    vec4 layerMask = texture(LayerMaskMap, uv);
     float layerWeight = clamp(1.0f - dot(vec4(1.0f), layerMask), 0.0f, 1.0f);
 
-    vec2 norm = texture(NormalMap, TexCoord).rg;
+    vec2 norm = texture(NormalMap, uv).rg;
     norm = 2.0 * norm - 1.0;
 
-    vec2 norm1 = texture(NormalMap1, TexCoord).rg;
+    vec2 norm1 = texture(NormalMap1, uv).rg;
     norm1 = 2.0 * norm1 - 1.0;
     vec3 norm1Out = vec3(norm1, sqrt(1.0 - clamp(dot(norm1, norm1), 0.0, 1.0)));
 
-    float rough = texture(RoughnessMap, TexCoord).r;
+    float rough = texture(RoughnessMap, uv).r;
     layerWeight = mix(layerWeight, 1.0f, layerMask.r);
 
-    float ao = texture(AOMap, TexCoord).r;
+    float ao = texture(AOMap, uv).r;
 
-    gAlbedo = texture(BaseColorMap, TexCoord).rgb * layerWeight;
+    gAlbedo = texture(BaseColorMap, uv).rgb * layerWeight;
     gNormal = normalize(Normal) * 0.5 + 0.5;
     gSpecular = vec3(0.5);  // Default medium specular for testing
 
