@@ -35,7 +35,7 @@ namespace TrinitySceneView
                 if (ent.TypeName == "SubScene")
                 {
                     SubScene s = FlatBufferConverter.DeserializeFrom<SubScene>(ent.NestedType);
-                    string path = new Uri(Path.Combine(Path.GetDirectoryName(filepath), s.Filepath).Replace(".trscn", "_1.trscn")).AbsolutePath;
+                    string path = new Uri(Path.Combine(Path.GetDirectoryName(filepath), s.Filepath).Replace(".trscn", "_0.trscn")).AbsolutePath;
                     if (File.Exists(path))
                     {
                         var trsot = FlatBufferConverter.DeserializeFrom<TrinitySceneObjTemplate>(path);

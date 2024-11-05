@@ -48,6 +48,7 @@
             keyTimer = new System.Windows.Forms.Timer(components);
             messageListView = new ListView();
             columnHeader1 = new ColumnHeader();
+            propertiesGroup = new GroupBox();
             menuStrip1.SuspendLayout();
             sceneContext.SuspendLayout();
             SuspendLayout();
@@ -57,7 +58,7 @@
             menuStrip1.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, viewToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
-            menuStrip1.Size = new Size(1384, 24);
+            menuStrip1.Size = new Size(1659, 24);
             menuStrip1.TabIndex = 0;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -137,7 +138,7 @@
             sceneView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             sceneView.Location = new Point(12, 27);
             sceneView.Name = "sceneView";
-            sceneView.Size = new Size(274, 880);
+            sceneView.Size = new Size(241, 868);
             sceneView.TabIndex = 1;
             sceneView.MouseUp += sceneView_MouseUp;
             // 
@@ -161,7 +162,7 @@
             glCtxt.APIVersion = new Version(4, 2, 0, 0);
             glCtxt.Flags = OpenTK.Windowing.Common.ContextFlags.Default;
             glCtxt.IsEventDriven = true;
-            glCtxt.Location = new Point(292, 27);
+            glCtxt.Location = new Point(259, 27);
             glCtxt.Name = "glCtxt";
             glCtxt.Profile = OpenTK.Windowing.Common.ContextProfile.Core;
             glCtxt.SharedContext = null;
@@ -174,7 +175,7 @@
             // statusLbl
             // 
             statusLbl.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            statusLbl.Location = new Point(292, 910);
+            statusLbl.Location = new Point(259, 898);
             statusLbl.Name = "statusLbl";
             statusLbl.Size = new Size(1080, 14);
             statusLbl.TabIndex = 3;
@@ -193,9 +194,9 @@
             messageListView.FullRowSelect = true;
             messageListView.GridLines = true;
             messageListView.LabelWrap = false;
-            messageListView.Location = new Point(292, 753);
+            messageListView.Location = new Point(259, 753);
             messageListView.Name = "messageListView";
-            messageListView.Size = new Size(1080, 154);
+            messageListView.Size = new Size(1388, 142);
             messageListView.TabIndex = 4;
             messageListView.UseCompatibleStateImageBehavior = false;
             messageListView.View = View.Details;
@@ -203,13 +204,24 @@
             // columnHeader1
             // 
             columnHeader1.Text = "Messages";
-            columnHeader1.Width = 1076;
+            columnHeader1.Width = 0;
+            // 
+            // propertiesGroup
+            // 
+            propertiesGroup.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            propertiesGroup.Location = new Point(1345, 27);
+            propertiesGroup.Name = "propertiesGroup";
+            propertiesGroup.Size = new Size(302, 720);
+            propertiesGroup.TabIndex = 5;
+            propertiesGroup.TabStop = false;
+            propertiesGroup.Text = "Properties";
             // 
             // SceneViewerForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1384, 933);
+            ClientSize = new Size(1659, 921);
+            Controls.Add(propertiesGroup);
             Controls.Add(messageListView);
             Controls.Add(statusLbl);
             Controls.Add(glCtxt);
@@ -249,5 +261,6 @@
         private ToolStripMenuItem toolstripGBuf_AO;
         private ListView messageListView;
         private ColumnHeader columnHeader1;
+        private GroupBox propertiesGroup;
     }
 }

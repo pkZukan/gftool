@@ -17,7 +17,15 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         public Texture(PathString modelPath, TRTexture img)
         {
             Name = img.Name;
-            tex = BNTX.LoadFromFile(modelPath.Combine(img.File));
+            try
+            {
+                tex = BNTX.LoadFromFile(modelPath.Combine(img.File));
+            }
+            catch (Exception ex)
+            {
+                tex = new Bitmap(32,32);
+                MessageHandler.Instance.AddMessage(MessageType.ERROR, string.Format("Texture error: {0}", ex.Message));
+            }
             textureId = Generate();
         }
 

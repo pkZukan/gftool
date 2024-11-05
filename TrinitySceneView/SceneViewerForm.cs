@@ -78,8 +78,8 @@ namespace TrinitySceneView
             //Initialize renderer
             renderer.Setup();
 
-            string file = @"C:\Users\Rei\Desktop\Titan_Develop\data\pokemon\data\pm0001\pm0001_00_00\pm0001_00_00.trmdl";
-            renderer.AddSceneModel(file);
+            //string file = @"E:\pokemon\data\pm0025\pm0025_01_00\pm0025_01_00.trmdl";
+            //renderer.AddSceneModel(file);
         }
 
         private void glCtxt_MouseMove(object sender, MouseEventArgs e)

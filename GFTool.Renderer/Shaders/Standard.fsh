@@ -8,6 +8,7 @@ uniform sampler2D NormalMap2;
 uniform sampler2D RoughnessMap;
 uniform sampler2D RoughnessMap1;
 uniform sampler2D RoughnessMap2;
+uniform sampler2D MetallicMap;
 uniform sampler2D AOMap;
 uniform sampler2D DetailMaskMap;
 
@@ -46,6 +47,8 @@ void main()
 
     vec4 detailMap = texture(DetailMaskMap, TexCoord);
 
+    vec4 metalMap = texture(MetallicMap, TexCoord);
+
     float rough = texture(RoughnessMap, uv).r;
     float rough1 = texture(RoughnessMap1, uv).r;
     float rough2 = texture(RoughnessMap2, uv).r;
@@ -53,7 +56,7 @@ void main()
 
     float ao = texture(AOMap, uv).r;
 
-    gAlbedo = texture(BaseColorMap, uv).rgb * layerWeight;
+    gAlbedo = texture(BaseColorMap, uv).rgb;// * layerWeight;
     gNormal = normalize(Normal) * 0.5 + 0.5;
     gSpecular = vec3(0.5);  // Default medium specular for testing
 
