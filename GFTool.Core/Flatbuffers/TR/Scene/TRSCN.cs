@@ -31,10 +31,10 @@ namespace GFTool.Core.Flatbuffers.TR.Scene
         public string ScriptPackage { get; set; }
 
         [FlatBufferItem(4)]
-        public SceneChunk[] Chunk { get; set; }
+        public SceneChunk[] Chunks { get; set; }
 
         [FlatBufferItem(5)]
-        public string SubScene { get; set; }
+        public string[] SubScenes { get; set; }
 
         [FlatBufferItem(6)]
         public bool unk_5 { get; set; }

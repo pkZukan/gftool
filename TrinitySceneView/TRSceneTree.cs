@@ -23,40 +23,42 @@ namespace TrinitySceneView
         {
             var trscn = FlatBufferConverter.DeserializeFrom<TRSCN>(filename);
             TreeNode = new TreeNode(trscn.Name);
-            WalkTrsot(TreeNode, trscn.Chunk, filename);
+            WalkTrScene(TreeNode, trscn, filename);
         }
 
-        private void WalkTrsot(TreeNode node, SceneChunk[] ents, string filepath)
+        private object DeserializeChunk(SceneChunk chunk)
         {
-            foreach (var ent in ents)
+            var method = typeof(FlatBufferConverter).GetMethod("DeserializeFrom",
+                        BindingFlags.Static | BindingFlags.Public,
+                        null,  // Don't specify binder
+                        new Type[] { typeof(byte[]) },  // Parameter types
+                        null); // Don't specify modifiers
+            var compType = Assembly.Load("GFTool.Core").GetTypes().FirstOrDefault(t => t.Name == chunk.Type);
+            var generic = method.MakeGenericMethod(compType);
+            return generic.Invoke(null, new object[] { chunk.Data });
+        }
+
+        private void WalkTrScene(TreeNode node, TRSCN scene, string filepath)
+        {
+            foreach (var ent in scene.Chunks)
             {
                 var newnode = node.Nodes.Add(ent.Type);
                 if (ent.Children.Length > 0)
                     InnerData.Add(newnode, ent);
-                var test = typeof(FlatBufferConverter).GetMethods();
 
-                var method = typeof(FlatBufferConverter).GetMethod("DeserializeFrom",
-                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public,
-                    null,  // Don't specify binder
-                    new Type[] { typeof(byte[]) },  // Parameter types
-                    null); // Don't specify modifiers
-                var compType = Assembly.Load("GFTool.Core").GetTypes().FirstOrDefault(t => t.Name == ent.Type);
-                var generic = method.MakeGenericMethod(compType);
-                var result = generic.Invoke(null, new object[] { ent.Data });
+                var data = DeserializeChunk(ent);
 
-                /*if (ent.Type == "SubScene")
+                if (ent.Type == "SubScene")
                 {
-                    SubScene s = FlatBufferConverter.DeserializeFrom<SubScene>(ent.Children);
-                    string path = new Uri(Path.Combine(Path.GetDirectoryName(filepath), s.Filepath).Replace(".trscn", "_0.trscn")).AbsolutePath;
+                    //TODO: Link node with trscn
+                    /*string path = new Uri(Path.Combine(Path.GetDirectoryName(filepath), scene.SubScenes[]).Replace(".trscn", "_0.trscn")).AbsolutePath;
                     if (File.Exists(path))
                     {
-                        var trsot = FlatBufferConverter.DeserializeFrom<TRSCN>(path);
-                        newnode.Text += "_" + trsot.Name;
-                        WalkTrsot(newnode, trsot.SceneObjectList, path);
-                    }
+                        //var trsot = FlatBufferConverter.DeserializeFrom<TRSCN>(path);
+                        //newnode.Text += "_" + trsot.Name;
+                        WalkTrScene(newnode, trsot.SceneObjectList, path);
+                    }*/
                 }
-                if (ent.SubObjects.Length > 0)
-                    WalkTrsot(newnode, ent.SubObjects, filepath);*/
             }
         }
 
