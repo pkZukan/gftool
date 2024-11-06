@@ -11,19 +11,18 @@
   <ItemGroup>
     <Compile Remove="Flatbuffers\GFB\**" />
     <Compile Remove="Flatbuffers\TR\DressUp\**" />
+    <Compile Remove="Math\Vector\**" />
     <EmbeddedResource Remove="Flatbuffers\GFB\**" />
     <EmbeddedResource Remove="Flatbuffers\TR\DressUp\**" />
+    <EmbeddedResource Remove="Math\Vector\**" />
     <None Remove="Flatbuffers\GFB\**" />
     <None Remove="Flatbuffers\TR\DressUp\**" />
+    <None Remove="Math\Vector\**" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="FlatSharp" Version="6.3.5" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.10" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Math\Vector\" />
   </ItemGroup>
 
 </Project>

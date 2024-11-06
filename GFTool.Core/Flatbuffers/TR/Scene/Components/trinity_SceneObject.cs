@@ -1,4 +1,5 @@
 ﻿using FlatSharp.Attributes;
+using Trinity.Core.Flatbuffers.Utils;
 
 namespace GFTool.Core.Flatbuffers.TR.Scene.Components
 {
@@ -9,7 +10,7 @@ namespace GFTool.Core.Flatbuffers.TR.Scene.Components
         public string object_name { get; set; }
 
         [FlatBufferItem(1)]
-        public SRT object_SRT { get; set; }
+        public Transform object_SRT { get; set; }
 
         [FlatBufferItem(2)]
         public uint res_2 { get; set; }

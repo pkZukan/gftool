@@ -1,4 +1,5 @@
 ﻿using FlatSharp.Attributes;
+using Trinity.Core.Flatbuffers.Utils;
 
 namespace GFTool.Core.Flatbuffers.TR.Scene.Components
 {
@@ -12,10 +13,10 @@ namespace GFTool.Core.Flatbuffers.TR.Scene.Components
         public uint res_1 { get; set; }
 
         [FlatBufferItem(2)]
-        public Vec3f unk_2 { get; set; }
+        public Vector3f unk_2 { get; set; }
 
         [FlatBufferItem(3)]
-        public Vec3f unk_3 { get; set; }
+        public Vector3f unk_3 { get; set; }
 
         [FlatBufferItem(4)]
         public float unk_4 { get; set; }
