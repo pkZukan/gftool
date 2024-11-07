@@ -1,8 +1,6 @@
-using GFTool.Core.Flatbuffers.TR.Scene;
-using SubScene = GFTool.Core.Flatbuffers.TR.Scene.Components.SubScene;
-using Trinity.Core.Utils;
 using GFTool.Renderer;
 using System.Diagnostics;
+using System.Drawing.Drawing2D;
 
 namespace TrinitySceneView
 {
@@ -23,7 +21,8 @@ namespace TrinitySceneView
             var ofd = new OpenFileDialog();
             if (ofd.ShowDialog() != DialogResult.OK) return;
             sceneView.Nodes.Clear();
-            sceneTree = new TRSceneTree(ofd.FileName);
+            sceneTree = new TRSceneTree();
+            sceneTree.DeserializeScene(ofd.FileName);
             sceneView.Nodes.Add(sceneTree.TreeNode);
         }
 
@@ -31,13 +30,10 @@ namespace TrinitySceneView
         {
             TreeNode node = sceneView.SelectedNode;
             var pair = sceneTree.FindFirst(node);
-            if (pair.Value != null)
-            {
-                //MethodInfo method = typeof(FlatBufferConverter).GetMethod("DeserializeFrom", BindingFlags.Public | BindingFlags.Static);
-                //MethodInfo generic = method.MakeGenericMethod(Type.GetType(pair.Value.TypeName));
-                //var trsot = generic.Invoke(null, new object[] { pair.Value.NestedType });
-                //WalkTrsot(pair.Key, trsot.);
-            }
+            var meta = pair.Value;
+            //Only expand nodes with external files
+            if(meta.IsExternal)
+                sceneTree.NodeExpand(pair.Key, meta);
         }
 
         private void sceneView_MouseUp(object sender, MouseEventArgs e)

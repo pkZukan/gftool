@@ -13,19 +13,64 @@ using Trinity.Core.Utils;
 
 namespace TrinitySceneView
 {
-    public class TRSceneTree
+    public struct SceneMetaData
     {
-        private Dictionary<TreeNode, SceneChunk> InnerData = new Dictionary<TreeNode, SceneChunk>();
+        public bool IsExternal;
+        public string FilePath;
+        public SceneChunk? Chunk;
 
-        public TreeNode TreeNode { get; private set; }
-
-        public TRSceneTree(string filename)
-        {
-            var trscn = FlatBufferConverter.DeserializeFrom<TRSCN>(filename);
-            TreeNode = new TreeNode(trscn.Name);
-            WalkTrScene(TreeNode, trscn, filename);
+        public SceneMetaData(SceneChunk chunk)
+        { 
+            IsExternal = false;
+            FilePath = string.Empty;
+            Chunk = chunk;
         }
 
+        public SceneMetaData(string extFile)
+        {
+            IsExternal = true;
+            FilePath = extFile;
+            Chunk = null;
+        }
+    }
+
+    public class TRSceneTree
+    {
+        //Map node to metadata
+        private Dictionary<TreeNode, SceneMetaData> InnerData = new Dictionary<TreeNode, SceneMetaData>();
+
+        public TreeNode TreeNode { get; private set; } = new TreeNode();
+
+        public TRSceneTree()
+        {
+            //
+        }
+
+        //When node is expanded
+        public void NodeExpand(TreeNode node, SceneMetaData meta)
+        {
+            DeserializeScene(meta, node);
+        }
+
+        //Deserialize scene from metadata
+        public void DeserializeScene(SceneMetaData meta, TreeNode node = null)
+        {
+            var trscn = FlatBufferConverter.DeserializeFrom<TRSCN>(meta.FilePath);
+            var n = (node == null) ? TreeNode : node;
+            if (node == null)
+                TreeNode.Text = trscn.Name;
+            else
+                node.Text = string.Format("SubScene ({0})", trscn.Name);
+            WalkTrScene(n, trscn, meta.FilePath);
+        }
+
+        //Deserialize scene from filepath
+        public void DeserializeScene(string filePath)
+        {
+            DeserializeScene(new SceneMetaData(filePath));
+        }
+
+        //Deserialize scene chunk / nested flatbuffers
         private object DeserializeChunk(SceneChunk chunk)
         {
             var method = typeof(FlatBufferConverter).GetMethod("DeserializeFrom",
@@ -38,31 +83,27 @@ namespace TrinitySceneView
             return generic.Invoke(null, new object[] { chunk.Data });
         }
 
-        private void WalkTrScene(TreeNode node, TRSCN scene, string filepath)
+        private void WalkTrScene(TreeNode node, TRSCN scene, string sceneFile)
         {
+            //Iterate over all children in scene and create tree
             foreach (var ent in scene.Chunks)
             {
                 var newnode = node.Nodes.Add(ent.Type);
-                if (ent.Children.Length > 0)
-                    InnerData.Add(newnode, ent);
 
-                var data = DeserializeChunk(ent);
-
+                //SubScenes save meta with external path
                 if (ent.Type == "SubScene")
                 {
-                    //TODO: Link node with trscn
-                    /*string path = new Uri(Path.Combine(Path.GetDirectoryName(filepath), scene.SubScenes[]).Replace(".trscn", "_0.trscn")).AbsolutePath;
-                    if (File.Exists(path))
-                    {
-                        //var trsot = FlatBufferConverter.DeserializeFrom<TRSCN>(path);
-                        //newnode.Text += "_" + trsot.Name;
-                        WalkTrScene(newnode, trsot.SceneObjectList, path);
-                    }*/
+                    SubScene sub = FlatBufferConverter.DeserializeFrom<SubScene>(ent.Data);
+
+                    string absPath = Path.Combine(Path.GetDirectoryName(sceneFile), sub.Filepath).Replace(".trscn", "_0.trscn");
+                    InnerData.Add(newnode, new SceneMetaData(absPath));
                 }
+                else
+                    InnerData.Add(newnode, new SceneMetaData(ent));
             }
         }
 
-        public KeyValuePair<TreeNode, SceneChunk> FindFirst(TreeNode node)
+        public KeyValuePair<TreeNode, SceneMetaData> FindFirst(TreeNode node)
         { 
             return InnerData.Where(x => x.Key == node).First();
         }
