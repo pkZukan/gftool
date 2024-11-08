@@ -10,27 +10,55 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Trinity.Core.Utils;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace TrinitySceneView
 {
     public struct SceneMetaData
     {
-        public bool IsExternal;
-        public string FilePath;
-        public SceneChunk? Chunk;
+        public bool IsExternal { get; private set; }
+        public string FilePath { get; private set; }
+        public string Type { get; private set; }
+        public object? Data { get; private set; }
+
+        //Deserialize scene component via reflection
+        private object DeserializeChunk(SceneChunk chunk)
+        {
+            object obj = null;
+            try
+            {
+                var method = typeof(FlatBufferConverter).GetMethod("DeserializeFrom",
+                            BindingFlags.Static | BindingFlags.Public,
+                            null,  // Don't specify binder
+                            new Type[] { typeof(byte[]) },  // Parameter types
+                            null); // Don't specify modifiers
+                var compType = Assembly.Load("GFTool.Core").GetTypes().FirstOrDefault(t => t.Name == chunk.Type);
+                var generic = method.MakeGenericMethod(compType);
+                obj = generic.Invoke(null, new object[] { chunk.Data });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error parsing chunk data for " + chunk.Type);
+            }
+            return obj;
+        }
 
         public SceneMetaData(SceneChunk chunk)
         { 
             IsExternal = false;
             FilePath = string.Empty;
-            Chunk = chunk;
+            Type = chunk.Type;
+            Data = null;
+
+            Data = DeserializeChunk(chunk);
         }
 
         public SceneMetaData(string extFile)
         {
             IsExternal = true;
             FilePath = extFile;
-            Chunk = null;
+            Type = string.Empty;
+            Data = null;
         }
     }
 
@@ -52,6 +80,13 @@ namespace TrinitySceneView
             DeserializeScene(meta, node);
         }
 
+        //Get meta from node
+        public SceneMetaData? GetNodeMeta(TreeNode node)
+        {
+            if (!InnerData.ContainsKey(node)) return null;
+            return InnerData[node];
+        }
+
         //Deserialize scene from metadata
         public void DeserializeScene(SceneMetaData meta, TreeNode node = null)
         {
@@ -68,19 +103,6 @@ namespace TrinitySceneView
         public void DeserializeScene(string filePath)
         {
             DeserializeScene(new SceneMetaData(filePath));
-        }
-
-        //Deserialize scene chunk / nested flatbuffers
-        private object DeserializeChunk(SceneChunk chunk)
-        {
-            var method = typeof(FlatBufferConverter).GetMethod("DeserializeFrom",
-                        BindingFlags.Static | BindingFlags.Public,
-                        null,  // Don't specify binder
-                        new Type[] { typeof(byte[]) },  // Parameter types
-                        null); // Don't specify modifiers
-            var compType = Assembly.Load("GFTool.Core").GetTypes().FirstOrDefault(t => t.Name == chunk.Type);
-            var generic = method.MakeGenericMethod(compType);
-            return generic.Invoke(null, new object[] { chunk.Data });
         }
 
         private void WalkTrScene(TreeNode node, TRSCN scene, string sceneFile)

@@ -1,6 +1,8 @@
+using GFTool.Core.Flatbuffers.TR.Scene.Components;
 using GFTool.Renderer;
 using System.Diagnostics;
-using System.Drawing.Drawing2D;
+using System.Text;
+using Point = System.Drawing.Point;
 
 namespace TrinitySceneView
 {
@@ -36,19 +38,68 @@ namespace TrinitySceneView
                 sceneTree.NodeExpand(pair.Key, meta);
         }
 
+        private void ClearProperties()
+        {
+            InfoBox.Text = string.Empty;
+        }
+
         private void sceneView_MouseUp(object sender, MouseEventArgs e)
         {
+            Point ClickPoint = new Point(e.X, e.Y);
+            TreeNode ClickNode = sceneView.GetNodeAt(ClickPoint);
+            sceneView.SelectedNode = ClickNode;
+            if (ClickNode == null) return;
+
             if (e.Button == MouseButtons.Right)
             {
-                Point ClickPoint = new Point(e.X, e.Y);
-                TreeNode ClickNode = sceneView.GetNodeAt(ClickPoint);
-                sceneView.SelectedNode = ClickNode;
-                if (ClickNode == null) return;
-
                 Point ScreenPoint = sceneView.PointToScreen(ClickPoint);
                 Point FormPoint = this.PointToClient(ScreenPoint);
                 sceneContext.Show(this, FormPoint);
             }
+
+            //Check for data to display
+            var meta = sceneTree.GetNodeMeta(sceneView.SelectedNode);
+            if (meta == null || meta?.Data == null)
+            {
+                ClearProperties();
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            switch (meta?.Type)
+            {
+                case "trinity_SceneObject":
+                {
+                    var data = (trinity_SceneObject)meta?.Data;
+                    sb.AppendLine("Name: " + data.Name);
+                    if(data.AttachJointName != string.Empty) 
+                        sb.AppendLine("Attach joint name: " + data.AttachJointName);
+                    sb.AppendLine(string.Format("Tags: ({0})", data.TagList.Length));
+
+                    foreach (var tag in data.TagList)
+                    {
+                        sb.AppendLine(string.Format("  {0}" + Environment.NewLine, tag == string.Empty ? "(Blank)" : tag));
+                    }
+
+                    if (data.Layers.Length > 0)
+                    {
+                        sb.AppendLine(string.Format("Layers: ({0})", data.Layers.Length));
+                        foreach (var layer in data.Layers)
+                        {
+                            sb.AppendLine(string.Format("  {0}" + Environment.NewLine, layer.Name));
+                        }
+                    }
+                    break;
+                }
+                case "trinity_ScriptComponent":
+                {
+                    var data = (trinity_ScriptComponent)meta?.Data;
+                    sb.AppendLine("File: " + data.FilePath);
+                    sb.AppendLine("Package: " + data.PackageName);
+                    sb.AppendLine("Is static: " + (data.IsStatic ? "True" : "False"));
+                    break;
+                }
+            }
+            InfoBox.Text = sb.ToString();
         }
 
         private void glCtxt_Paint(object sender, PaintEventArgs e)

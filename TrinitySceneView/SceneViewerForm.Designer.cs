@@ -49,8 +49,10 @@
             messageListView = new ListView();
             columnHeader1 = new ColumnHeader();
             propertiesGroup = new GroupBox();
+            InfoBox = new TextBox();
             menuStrip1.SuspendLayout();
             sceneContext.SuspendLayout();
+            propertiesGroup.SuspendLayout();
             SuspendLayout();
             // 
             // menuStrip1
@@ -209,12 +211,24 @@
             // propertiesGroup
             // 
             propertiesGroup.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            propertiesGroup.Controls.Add(InfoBox);
             propertiesGroup.Location = new Point(1345, 27);
             propertiesGroup.Name = "propertiesGroup";
             propertiesGroup.Size = new Size(302, 720);
             propertiesGroup.TabIndex = 5;
             propertiesGroup.TabStop = false;
             propertiesGroup.Text = "Properties";
+            // 
+            // InfoBox
+            // 
+            InfoBox.BackColor = SystemColors.Control;
+            InfoBox.BorderStyle = BorderStyle.None;
+            InfoBox.Location = new Point(6, 22);
+            InfoBox.Multiline = true;
+            InfoBox.Name = "InfoBox";
+            InfoBox.ReadOnly = true;
+            InfoBox.Size = new Size(290, 190);
+            InfoBox.TabIndex = 0;
             // 
             // SceneViewerForm
             // 
@@ -236,6 +250,8 @@
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
             sceneContext.ResumeLayout(false);
+            propertiesGroup.ResumeLayout(false);
+            propertiesGroup.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -262,5 +278,6 @@
         private ListView messageListView;
         private ColumnHeader columnHeader1;
         private GroupBox propertiesGroup;
+        private TextBox InfoBox;
     }
 }
