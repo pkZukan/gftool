@@ -7,45 +7,45 @@ namespace GFTool.Core.Flatbuffers.TR.Scene.Components
     public class trinity_CameraEntity
     {
         [FlatBufferItem(0)]
-        public string camera_name { get; set; }
+        public string Name { get; set; }
 
         [FlatBufferItem(1)]
-        public uint res_1 { get; set; }
+        public bool Activate { get; set; }
 
         [FlatBufferItem(2)]
-        public Vector3f unk_2 { get; set; }
+        public Vector3f Position { get; set; }
 
         [FlatBufferItem(3)]
-        public Vector3f unk_3 { get; set; }
+        public Vector3f Rotation { get; set; }
 
         [FlatBufferItem(4)]
-        public float unk_4 { get; set; }
+        public float Distance { get; set; }
 
         [FlatBufferItem(5)]
-        public float unk_5 { get; set; }
+        public float FovY { get; set; }
 
         [FlatBufferItem(6)]
-        public float unk_6 { get; set; }
+        public float NearPlane { get; set; }
 
         [FlatBufferItem(7)]
-        public float unk_7 { get; set; }
+        public float FarPlane { get; set; }
 
         [FlatBufferItem(8)]
-        public uint res_8 { get; set; }
+        public byte ProjectionType { get; set; }
 
         [FlatBufferItem(9)]
-        public byte unk_9 { get; set; }
+        public byte CameraMode { get; set; }
 
         [FlatBufferItem(10)]
-        public uint[] unk_10 { get; set; }
+        public string TargetName { get; set; }
 
         [FlatBufferItem(11)]
-        public uint res_11 { get; set; }
+        public bool UseRoll { get; set; }
 
         [FlatBufferItem(12)]
-        public uint res_12 { get; set; }
+        public float Roll { get; set; }
 
         [FlatBufferItem(13)]
-        public byte res_13 { get; set; }
+        public bool AttachTransform { get; set; }
     }
 }

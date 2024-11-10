@@ -67,6 +67,13 @@ namespace TrinitySceneView
             StringBuilder sb = new StringBuilder();
             switch (meta?.Type)
             {
+                case "trinity_CameraEntity":
+                {
+                    var data = (trinity_CameraEntity)meta?.Data;
+                    sb.AppendLine("Name: " + data.Name);
+                    sb.AppendLine("Target: " + data.TargetName);
+                    break;
+                }
                 case "trinity_SceneObject":
                 {
                     var data = (trinity_SceneObject)meta?.Data;
@@ -88,6 +95,15 @@ namespace TrinitySceneView
                             sb.AppendLine(string.Format("  {0}" + Environment.NewLine, layer.Name));
                         }
                     }
+                    break;
+                }
+                case "trinity_OverrideSensorData":
+                {
+                    var data = (trinity_OverrideSensorData)meta?.Data;
+                    sb.AppendLine("Realizing Dist: " + data.RealizingDistance);
+                    sb.AppendLine("Unrealizing Dist: " + data.UnrealizingDistance);
+                    sb.AppendLine("Loading Dist: " + data.LoadingDistance);
+                    sb.AppendLine("Unloading Dist: " + data.UnloadingDistance);
                     break;
                 }
                 case "trinity_ScriptComponent":

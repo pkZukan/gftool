@@ -7,30 +7,60 @@ namespace GFTool.Renderer.Scene
         public Matrix4 projMat { get; private set; }
         public Matrix4 viewMat { get; private set; }
 
-        public float nearPlane { get; set; } = 0.1f;
-        public float farPlane { get; set; } = 100.0f;
+        private ProjectionType projMode = ProjectionType.Perspective;
+        public float NearPlane { get; set; } = 0.1f;
+        public float FarPlane { get; set; } = 100.0f;
+        public bool CanMove { get; set; } = true;
 
         private int Width, Height;
 
+        //Constants
         const float SENSITIVITY_X = 0.1f;
         const float SENSITIVITY_Y = 0.1f;
 
         const float MOVEMENT_SPEED = 0.1f;
+
+        public enum ProjectionType
+        { 
+            Perspective,
+            Orthographic
+        }
 
         public Camera(int width, int height)
         {
             Width = width;
             Height = height;
             Rotation = Quaternion.FromEulerAngles(0, 90, 0); //Camera defaults to facing forward
+            SetProjectionMode(ProjectionType.Perspective);
+        }
+
+        public void SetProjectionMode(ProjectionType mode)
+        { 
+            projMode = mode;
             UpdateProjMatrix();
         }
 
         public void UpdateProjMatrix()
         {
-            float fov = MathHelper.DegreesToRadians(45.0f);
             float aspectRatio = Width / (float)Height;
-            projMat = Matrix4.CreatePerspectiveFieldOfView(fov, aspectRatio, nearPlane, farPlane);
+
+            if (projMode == ProjectionType.Perspective)
+            {
+                float fov = MathHelper.DegreesToRadians(45.0f);
+                projMat = Matrix4.CreatePerspectiveFieldOfView(fov, aspectRatio, NearPlane, FarPlane);
+            }
+            else if (projMode == ProjectionType.Orthographic)
+            {
+                float orthoSize = 10.0f;
+                float left = -orthoSize * aspectRatio;
+                float right = orthoSize * aspectRatio;
+                float bottom = -orthoSize;
+                float top = orthoSize;
+
+                projMat = Matrix4.CreateOrthographicOffCenter(left, right, bottom, top, NearPlane, FarPlane);
+            }
         }
+
 
         private Vector3 CalculateCameraFront()
         {
@@ -49,6 +79,8 @@ namespace GFTool.Renderer.Scene
 
         public void ApplyRotationalDelta(float deltaX, float deltaY)
         {
+            if (!CanMove) return;
+
             // Get current rotation
             Vector3 currRot = Rotation.ToEulerAngles();
             currRot.Y += MathHelper.DegreesToRadians(deltaX* SENSITIVITY_X);
@@ -60,6 +92,7 @@ namespace GFTool.Renderer.Scene
 
         public void ApplyMovement(float x, float y, float z)
         {
+            if (!CanMove) return;
             Vector3 forward = CalculateCameraFront();
             Vector3 right = Vector3.Cross(forward, Vector3.UnitY).Normalized();
             Vector3 up = Vector3.Cross(right, forward).Normalized();

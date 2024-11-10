@@ -22,9 +22,9 @@ namespace TrinitySceneView
         public object? Data { get; private set; }
 
         //Deserialize scene component via reflection
-        private object DeserializeChunk(SceneChunk chunk)
+        private object? DeserializeChunk(SceneChunk chunk)
         {
-            object obj = null;
+            object? obj = null;
             try
             {
                 var method = typeof(FlatBufferConverter).GetMethod("DeserializeFrom",
@@ -117,7 +117,7 @@ namespace TrinitySceneView
                 {
                     SubScene sub = FlatBufferConverter.DeserializeFrom<SubScene>(ent.Data);
 
-                    string absPath = Path.Combine(Path.GetDirectoryName(sceneFile), sub.Filepath).Replace(".trscn", "_0.trscn");
+                    string absPath = Path.Combine(Path.GetDirectoryName(sceneFile), sub.Filepath).Replace(".trs", "_0.trs"); //trscn, trsot, trsog
                     InnerData.Add(newnode, new SceneMetaData(absPath));
                 }
                 else
