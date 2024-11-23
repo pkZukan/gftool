@@ -17,18 +17,29 @@ namespace GFTool.Renderer
             shaderPath = "Shaders/";
         }
 
-        private void AddShader(string name)
+        private bool AddShader(string name)
         {
             var vsh = shaderPath + name + ".vsh";
             var fsh = shaderPath + name + ".fsh";
+            if (!File.Exists(vsh) || !File.Exists(fsh))
+            {
+                MessageHandler.Instance.AddMessage(MessageType.ERROR, string.Format("Shader \"{0}\" not supported.", name));
+                return false;
+            }
             shaders[name] = new Shader(name, vsh, fsh);
             MessageHandler.Instance.AddMessage(MessageType.LOG, string.Format("Shader \"{0}\" loaded into pool.", name));
+
+            return true;
         }
 
         public Shader GetShader(string name)
         {
             if (!shaders.ContainsKey(name))
-                AddShader(name);
+            {
+                if (!AddShader(name))
+                    return null;
+            }
+               
             return shaders[name];
         }
 

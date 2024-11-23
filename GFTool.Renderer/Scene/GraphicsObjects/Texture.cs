@@ -20,13 +20,14 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             try
             {
                 tex = BNTX.LoadFromFile(modelPath.Combine(img.File));
+                textureId = Generate();
             }
             catch (Exception ex)
             {
                 tex = new Bitmap(32,32);
                 MessageHandler.Instance.AddMessage(MessageType.ERROR, string.Format("Texture error: {0}", ex.Message));
             }
-            textureId = Generate();
+            
         }
 
         private int Generate()

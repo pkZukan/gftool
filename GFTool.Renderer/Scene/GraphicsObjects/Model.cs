@@ -53,7 +53,8 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             }
 
             //Skeleton
-            ParseArmature(modelPath.Combine(mdl.Skeleton.PathName));
+            if(mdl.Skeleton != null)
+                ParseArmature(modelPath.Combine(mdl.Skeleton.PathName));
         }
 
         private void ParseMeshBuffer(TRVertexDeclaration vertDesc, TRBuffer vertBuf, TRBuffer indexBuf, TRIndexFormat polyType, long start, long count)

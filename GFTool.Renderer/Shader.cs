@@ -9,45 +9,51 @@ namespace GFTool.Renderer
         public readonly int Handle;
         private readonly string Name;
 
-        private readonly Dictionary<string, int> uniformLocations;
+        private readonly Dictionary<string, int> uniformLocations = null;
 
         public Shader(string name, string vertPath, string fragPath)
         {
             Name = name;
-
-            //Create shader
-            var shaderSource = File.ReadAllText(vertPath);
-            var vertexShader = GL.CreateShader(ShaderType.VertexShader);
-
-            GL.ShaderSource(vertexShader, shaderSource);
-            CompileShader(vertexShader);
-
-            shaderSource = File.ReadAllText(fragPath);
-            var fragmentShader = GL.CreateShader(ShaderType.FragmentShader);
-            GL.ShaderSource(fragmentShader, shaderSource);
-            CompileShader(fragmentShader);
-
-            Handle = GL.CreateProgram();
-
-            GL.AttachShader(Handle, vertexShader);
-            GL.AttachShader(Handle, fragmentShader);
-
-            LinkProgram(Handle);
-
-            GL.DetachShader(Handle, vertexShader);
-            GL.DetachShader(Handle, fragmentShader);
-            GL.DeleteShader(fragmentShader);
-            GL.DeleteShader(vertexShader);
-
-            GL.GetProgram(Handle, GetProgramParameterName.ActiveUniforms, out var numberOfUniforms);
-
-            uniformLocations = new Dictionary<string, int>();
-
-            for (var i = 0; i < numberOfUniforms; i++)
+            try
             {
-                var key = GL.GetActiveUniform(Handle, i, out _, out _);
-                var location = GL.GetUniformLocation(Handle, key);
-                uniformLocations.Add(key, location);
+                //Create shader
+                var shaderSource = File.ReadAllText(vertPath);
+                var vertexShader = GL.CreateShader(ShaderType.VertexShader);
+
+                GL.ShaderSource(vertexShader, shaderSource);
+                CompileShader(vertexShader);
+
+                shaderSource = File.ReadAllText(fragPath);
+                var fragmentShader = GL.CreateShader(ShaderType.FragmentShader);
+                GL.ShaderSource(fragmentShader, shaderSource);
+                CompileShader(fragmentShader);
+
+                Handle = GL.CreateProgram();
+
+                GL.AttachShader(Handle, vertexShader);
+                GL.AttachShader(Handle, fragmentShader);
+
+                LinkProgram(Handle);
+
+                GL.DetachShader(Handle, vertexShader);
+                GL.DetachShader(Handle, fragmentShader);
+                GL.DeleteShader(fragmentShader);
+                GL.DeleteShader(vertexShader);
+
+                GL.GetProgram(Handle, GetProgramParameterName.ActiveUniforms, out var numberOfUniforms);
+
+                uniformLocations = new Dictionary<string, int>();
+
+                for (var i = 0; i < numberOfUniforms; i++)
+                {
+                    var key = GL.GetActiveUniform(Handle, i, out _, out _);
+                    var location = GL.GetUniformLocation(Handle, key);
+                    uniformLocations.Add(key, location);
+                }
+            }
+            catch (Exception ex)
+            { 
+                //
             }
         }
 
@@ -77,6 +83,8 @@ namespace GFTool.Renderer
 
         private bool HasUniform(string name)
         {
+            if(uniformLocations == null) return false; ;
+
             bool ret = uniformLocations.ContainsKey(name);
             if (!ret)
                 MessageHandler.Instance.AddMessage(MessageType.WARNING, string.Format("Uniform {0} does not exist in shader {1}.", name, Name));

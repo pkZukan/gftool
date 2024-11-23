@@ -34,7 +34,7 @@ namespace TrinitySceneView
             var pair = sceneTree.FindFirst(node);
             var meta = pair.Value;
             //Only expand nodes with external files
-            if(meta.IsExternal)
+            if (meta.IsExternal)
                 sceneTree.NodeExpand(pair.Key, meta);
         }
 
@@ -78,7 +78,7 @@ namespace TrinitySceneView
                 {
                     var data = (trinity_SceneObject)meta?.Data;
                     sb.AppendLine("Name: " + data.Name);
-                    if(data.AttachJointName != string.Empty) 
+                    if (data.AttachJointName != string.Empty)
                         sb.AppendLine("Attach joint name: " + data.AttachJointName);
                     sb.AppendLine(string.Format("Tags: ({0})", data.TagList.Length));
 
@@ -137,12 +137,10 @@ namespace TrinitySceneView
             messageIcons.Images.Add("Error", SystemIcons.Error.ToBitmap());
             messageListView.SmallImageList = messageIcons;
             messageListView.FullRowSelect = true;
+            messageListView.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.HeaderSize);
 
             //Initialize renderer
             renderer.Setup();
-
-            //string file = @"E:\pokemon\data\pm0025\pm0025_01_00\pm0025_01_00.trmdl";
-            //renderer.AddSceneModel(file);
         }
 
         private void glCtxt_MouseMove(object sender, MouseEventArgs e)
@@ -256,7 +254,7 @@ namespace TrinitySceneView
             {
                 messageListView.Items.Add(item);
                 messageListView.EnsureVisible(messageListView.Items.Count - 1);
-            }  
+            }
         }
     }
 }

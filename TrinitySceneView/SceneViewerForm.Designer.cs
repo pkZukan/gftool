@@ -206,7 +206,7 @@
             // columnHeader1
             // 
             columnHeader1.Text = "Messages";
-            columnHeader1.Width = 0;
+            columnHeader1.Width = 1000;
             // 
             // propertiesGroup
             // 

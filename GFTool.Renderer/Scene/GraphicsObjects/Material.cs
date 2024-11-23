@@ -20,6 +20,8 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             modelpath = modelPath;
             //I hope we dont actually have more than one shader per material
             shader = ShaderPool.Instance.GetShader(trmat.Shader[0].Name);
+            if(shader == null) return;
+
             ShaderParams = new List<Tuple<string, string>>();
             foreach (var param in trmat.Shader[0].Values)
             {
@@ -34,6 +36,8 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
         public void SetUniforms(Matrix4 view, Matrix4 model, Matrix4 proj)
         {
+            if (shader == null) return;
+
             shader.Bind();
             for (int i = 0; i < textures.Count; i++)
             {
