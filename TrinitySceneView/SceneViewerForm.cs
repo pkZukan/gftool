@@ -35,7 +35,7 @@ namespace TrinitySceneView
             var meta = pair.Value;
             //Only expand nodes with external files
             if (meta.IsExternal)
-                sceneTree.NodeExpand(pair.Key, meta);
+                sceneTree.DeserializeScene(meta, pair.Key);
         }
 
         private void ClearProperties()
@@ -64,58 +64,8 @@ namespace TrinitySceneView
                 ClearProperties();
                 return;
             }
-            StringBuilder sb = new StringBuilder();
-            switch (meta?.Type)
-            {
-                case "trinity_CameraEntity":
-                {
-                    var data = (trinity_CameraEntity)meta?.Data;
-                    sb.AppendLine("Name: " + data.Name);
-                    sb.AppendLine("Target: " + data.TargetName);
-                    break;
-                }
-                case "trinity_SceneObject":
-                {
-                    var data = (trinity_SceneObject)meta?.Data;
-                    sb.AppendLine("Name: " + data.Name);
-                    if (data.AttachJointName != string.Empty)
-                        sb.AppendLine("Attach joint name: " + data.AttachJointName);
-                    sb.AppendLine(string.Format("Tags: ({0})", data.TagList.Length));
 
-                    foreach (var tag in data.TagList)
-                    {
-                        sb.AppendLine(string.Format("  {0}" + Environment.NewLine, tag == string.Empty ? "(Blank)" : tag));
-                    }
-
-                    if (data.Layers.Length > 0)
-                    {
-                        sb.AppendLine(string.Format("Layers: ({0})", data.Layers.Length));
-                        foreach (var layer in data.Layers)
-                        {
-                            sb.AppendLine(string.Format("  {0}" + Environment.NewLine, layer.Name));
-                        }
-                    }
-                    break;
-                }
-                case "trinity_OverrideSensorData":
-                {
-                    var data = (trinity_OverrideSensorData)meta?.Data;
-                    sb.AppendLine("Realizing Dist: " + data.RealizingDistance);
-                    sb.AppendLine("Unrealizing Dist: " + data.UnrealizingDistance);
-                    sb.AppendLine("Loading Dist: " + data.LoadingDistance);
-                    sb.AppendLine("Unloading Dist: " + data.UnloadingDistance);
-                    break;
-                }
-                case "trinity_ScriptComponent":
-                {
-                    var data = (trinity_ScriptComponent)meta?.Data;
-                    sb.AppendLine("File: " + data.FilePath);
-                    sb.AppendLine("Package: " + data.PackageName);
-                    sb.AppendLine("Is static: " + (data.IsStatic ? "True" : "False"));
-                    break;
-                }
-            }
-            InfoBox.Text = sb.ToString();
+            InfoBox.Text = TRSceneProperties.GetProperties(meta?.Type, meta?.Data);
         }
 
         private void glCtxt_Paint(object sender, PaintEventArgs e)

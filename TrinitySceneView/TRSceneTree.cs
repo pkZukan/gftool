@@ -74,12 +74,6 @@ namespace TrinitySceneView
             //
         }
 
-        //When node is expanded
-        public void NodeExpand(TreeNode node, SceneMetaData meta)
-        {
-            DeserializeScene(meta, node);
-        }
-
         //Get meta from node
         public SceneMetaData? GetNodeMeta(TreeNode node)
         {
@@ -105,23 +99,39 @@ namespace TrinitySceneView
             DeserializeScene(new SceneMetaData(filePath));
         }
 
+        private void ProcessSceneMeta(SceneMetaData meta)
+        { 
+            //TODO
+        }
+
+        private void WalkTrSceneChunks(TreeNode node, SceneChunk chunk, string sceneFile = "")
+        {
+            var newnode = node.Nodes.Add(chunk.Type);
+
+            //SubScenes save meta with external path
+            if (chunk.Type == "SubScene")
+            {
+                SubScene sub = FlatBufferConverter.DeserializeFrom<SubScene>(chunk.Data);
+
+                string absPath = Path.Combine(Path.GetDirectoryName(sceneFile), sub.Filepath).Replace(".trs", "_0.trs"); //trscn, trsot, trsog
+                InnerData.Add(newnode, new SceneMetaData(absPath));
+            }
+            else
+            {
+                var meta = new SceneMetaData(chunk);
+                ProcessSceneMeta(meta);
+                InnerData.Add(newnode, meta);
+                foreach (var child in chunk.Children)
+                    WalkTrSceneChunks(newnode, child);
+            }
+        }
+
         private void WalkTrScene(TreeNode node, TRSCN scene, string sceneFile)
         {
             //Iterate over all children in scene and create tree
             foreach (var ent in scene.Chunks)
             {
-                var newnode = node.Nodes.Add(ent.Type);
-
-                //SubScenes save meta with external path
-                if (ent.Type == "SubScene")
-                {
-                    SubScene sub = FlatBufferConverter.DeserializeFrom<SubScene>(ent.Data);
-
-                    string absPath = Path.Combine(Path.GetDirectoryName(sceneFile), sub.Filepath).Replace(".trs", "_0.trs"); //trscn, trsot, trsog
-                    InnerData.Add(newnode, new SceneMetaData(absPath));
-                }
-                else
-                    InnerData.Add(newnode, new SceneMetaData(ent));
+                WalkTrSceneChunks(node, ent, sceneFile);
             }
         }
 
