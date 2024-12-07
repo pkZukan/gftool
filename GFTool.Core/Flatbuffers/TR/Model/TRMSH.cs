@@ -82,7 +82,7 @@ namespace Trinity.Core.Flatbuffers.TR.Model
     [FlatBufferTable]
     public partial class TRMesh
     {
-        [FlatBufferItem(0)] public string meshName { get; set; }
+        [FlatBufferItem(0)] public string Name { get; set; }
         [FlatBufferItem(1)] public TRBoundingBox boundingBox { get; set; }
         [FlatBufferItem(2)] public TRIndexFormat PolygonType { get; set; }
         [FlatBufferItem(3)] public TRVertexDeclaration[] vertexDeclaration { get; set; }
@@ -100,7 +100,7 @@ namespace Trinity.Core.Flatbuffers.TR.Model
     [FlatBufferTable]
     public partial class TRMSH
     {
-        [FlatBufferItem(0)] public int Field_00 { get; set; }
+        [FlatBufferItem(0)] public int Version { get; set; }
         [FlatBufferItem(1)] public TRMesh[] TRMeshes { get; set; }
         [FlatBufferItem(2)] public string bufferFilePath { get; set; }
 

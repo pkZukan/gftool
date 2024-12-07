@@ -246,15 +246,13 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         {
             for (int i = 0; i < VAOs.Length; i++)
             {
-                //Draw
-                GL.BindVertexArray(VAOs[i]);
-
+                //Bind mats
                 foreach (var mat in materials)
-                {
-                    mat.SetUniforms(view, modelMat, proj);
-                }
-
+                   mat.Use(view, modelMat, proj);
+                materials[0].Use(view, modelMat, proj);
+                
                 // Draw the geometry
+                GL.BindVertexArray(VAOs[i]);
                 GL.DrawElements(PrimitiveType.Triangles, Indices[i].Length, DrawElementsType.UnsignedInt, 0);
 
                 GL.BindVertexArray(0);

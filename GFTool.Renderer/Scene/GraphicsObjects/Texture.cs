@@ -17,21 +17,22 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         public Texture(PathString modelPath, TRTexture img)
         {
             Name = img.Name;
-            try
-            {
-                tex = BNTX.LoadFromFile(modelPath.Combine(img.File));
-                textureId = Generate();
-            }
-            catch (Exception ex)
-            {
-                tex = new Bitmap(32,32);
-                MessageHandler.Instance.AddMessage(MessageType.ERROR, string.Format("Texture error: {0}", ex.Message));
-            }
             
+            tex = BNTX.LoadFromFile(modelPath.Combine(img.File));
+
+            if (tex == null)
+            {
+                tex = new Bitmap(32, 32);
+                MessageHandler.Instance.AddMessage(MessageType.ERROR, string.Format("Failed to load texture: {0}", img.Name));
+            }
+
+            textureId = Generate();
         }
 
         private int Generate()
         {
+            if (tex == null) return -1;
+
             int id = GL.GenTexture();
             GL.BindTexture(TextureTarget.Texture2D, id);
 

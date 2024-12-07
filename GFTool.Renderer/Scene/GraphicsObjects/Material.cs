@@ -34,7 +34,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             }
         }
 
-        public void SetUniforms(Matrix4 view, Matrix4 model, Matrix4 proj)
+        public void Use(Matrix4 view, Matrix4 model, Matrix4 proj)
         {
             if (shader == null) return;
 

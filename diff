@@ -1,0 +1,224 @@
+﻿diff --git a/GFTool.Core/Flatbuffers/TR/Model/TRMSH.cs b/GFTool.Core/Flatbuffers/TR/Model/TRMSH.cs
+index 329429b..9d8954a 100644
+--- a/GFTool.Core/Flatbuffers/TR/Model/TRMSH.cs
++++ b/GFTool.Core/Flatbuffers/TR/Model/TRMSH.cs
+@@ -82,8 +82,8 @@ namespace Trinity.Core.Flatbuffers.TR.Model
+     [FlatBufferTable]
+     public partial class TRMesh
+     {
+-        [FlatBufferItem(0)] public string meshName { get; set; }
+-        [FlatBufferItem(1)] public TRBoundingBox boundingBox { get; set; }
++        [FlatBufferItem(0)] public string Name { get; set; }
++        [FlatBufferItem(1)] public TRBoundingBox BBox { get; set; }
+         [FlatBufferItem(2)] public TRIndexFormat PolygonType { get; set; }
+         [FlatBufferItem(3)] public TRVertexDeclaration[] vertexDeclaration { get; set; }
+         [FlatBufferItem(4)] public TRMeshPart[] meshParts { get; set; }
+@@ -100,7 +100,7 @@ namespace Trinity.Core.Flatbuffers.TR.Model
+     [FlatBufferTable]
+     public partial class TRMSH
+     {
+-        [FlatBufferItem(0)] public int Field_00 { get; set; }
++        [FlatBufferItem(0)] public int Version { get; set; }
+         [FlatBufferItem(1)] public TRMesh[] TRMeshes { get; set; }
+         [FlatBufferItem(2)] public string bufferFilePath { get; set; }
+ 
+diff --git a/GFTool.Core/Flatbuffers/TR/Scene/Components/trinity_CollisionComponent.cs b/GFTool.Core/Flatbuffers/TR/Scene/Components/trinity_CollisionComponent.cs
+index f7ac4a0..e032121 100644
+--- a/GFTool.Core/Flatbuffers/TR/Scene/Components/trinity_CollisionComponent.cs
++++ b/GFTool.Core/Flatbuffers/TR/Scene/Components/trinity_CollisionComponent.cs
+@@ -1,4 +1,5 @@
+-∩╗┐using System;
++∩╗┐using FlatSharp.Attributes;
++using System;
+ using System.Collections.Generic;
+ using System.Linq;
+ using System.Text;
+@@ -6,6 +7,7 @@ using System.Threading.Tasks;
+ 
+ namespace GFTool.Core.Flatbuffers.TR.Scene.Components
+ {
++    [FlatBufferTable]
+     public class trinity_CollisionComponent
+     {
+     }
+diff --git a/GFTool.Core/Flatbuffers/TR/Scene/Components/trinity_LightApplierComponent.cs b/GFTool.Core/Flatbuffers/TR/Scene/Components/trinity_LightApplierComponent.cs
+index 522c585..039396d 100644
+--- a/GFTool.Core/Flatbuffers/TR/Scene/Components/trinity_LightApplierComponent.cs
++++ b/GFTool.Core/Flatbuffers/TR/Scene/Components/trinity_LightApplierComponent.cs
+@@ -1,4 +1,5 @@
+-∩╗┐using System;
++∩╗┐using FlatSharp.Attributes;
++using System;
+ using System.Collections.Generic;
+ using System.Linq;
+ using System.Text;
+@@ -6,6 +7,7 @@ using System.Threading.Tasks;
+ 
+ namespace GFTool.Core.Flatbuffers.TR.Scene.Components
+ {
++    [FlatBufferTable]
+     public class trinity_LightApplierComponent
+     {
+     }
+diff --git a/GFTool.Renderer/Scene/GraphicsObjects/Material.cs b/GFTool.Renderer/Scene/GraphicsObjects/Material.cs
+index d53dd9e..a5cb811 100644
+--- a/GFTool.Renderer/Scene/GraphicsObjects/Material.cs
++++ b/GFTool.Renderer/Scene/GraphicsObjects/Material.cs
+@@ -34,7 +34,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
+             }
+         }
+ 
+-        public void SetUniforms(Matrix4 view, Matrix4 model, Matrix4 proj)
++        public void Use(Matrix4 view, Matrix4 model, Matrix4 proj)
+         {
+             if (shader == null) return;
+ 
+@@ -48,6 +48,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
+             shader.SetMatrix4("model", model);
+             shader.SetMatrix4("view", view);
+             shader.SetMatrix4("projection", proj);
++
+         }
+     }
+ }
+diff --git a/GFTool.Renderer/Scene/GraphicsObjects/Model.cs b/GFTool.Renderer/Scene/GraphicsObjects/Model.cs
+index 0f7a360..ed9873e 100644
+--- a/GFTool.Renderer/Scene/GraphicsObjects/Model.cs
++++ b/GFTool.Renderer/Scene/GraphicsObjects/Model.cs
+@@ -246,17 +246,13 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
+         {
+             for (int i = 0; i < VAOs.Length; i++)
+             {
+-                //Draw
+-                GL.BindVertexArray(VAOs[i]);
+-
+-                foreach (var mat in materials)
+-                {
+-                    mat.SetUniforms(view, modelMat, proj);
+-                }
+-
++                //Bind mats
++                //foreach (var mat in materials)
++                //   mat.Use(view, modelMat, proj);
++                materials[0].Use(view, modelMat, proj);
+                 // Draw the geometry
++                GL.BindVertexArray(VAOs[i]);
+                 GL.DrawElements(PrimitiveType.Triangles, Indices[i].Length, DrawElementsType.UnsignedInt, 0);
+-
+                 GL.BindVertexArray(0);
+             }
+         }
+diff --git a/GFTool.Renderer/Scene/GraphicsObjects/Texture.cs b/GFTool.Renderer/Scene/GraphicsObjects/Texture.cs
+index 0fae2cf..173f32c 100644
+--- a/GFTool.Renderer/Scene/GraphicsObjects/Texture.cs
++++ b/GFTool.Renderer/Scene/GraphicsObjects/Texture.cs
+@@ -17,23 +17,20 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
+         public Texture(PathString modelPath, TRTexture img)
+         {
+             Name = img.Name;
+-            try
+-            {
+             tex = BNTX.LoadFromFile(modelPath.Combine(img.File));
+-                textureId = Generate();
+-            }
+-            catch (Exception ex)
++            if (tex == null)
+             {
+                 tex = new Bitmap(32, 32);
+-                MessageHandler.Instance.AddMessage(MessageType.ERROR, string.Format("Texture error: {0}", ex.Message));
++                MessageHandler.Instance.AddMessage(MessageType.ERROR, string.Format("Failed to load texture: {0}", img.Name));
+             }
+-            
++            textureId = Generate();
+         }
+ 
+         private int Generate()
+         {
+             int id = GL.GenTexture();
+             GL.BindTexture(TextureTarget.Texture2D, id);
++            if (tex == null) return -1;
+ 
+             BitmapData bitmapData = tex.LockBits(new Rectangle(0, 0, tex.Width, tex.Height), ImageLockMode.ReadOnly, tex.PixelFormat);
+             GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, bitmapData.Width, bitmapData.Height, 0, OpenTK.Graphics.OpenGL4.PixelFormat.Rgba, PixelType.UnsignedByte, bitmapData.Scan0);
+diff --git a/TrinityFileExplorer/TrinityExplorerWindow.Designer.cs b/TrinityFileExplorer/TrinityExplorerWindow.Designer.cs
+index f8c7440..e827b11 100644
+--- a/TrinityFileExplorer/TrinityExplorerWindow.Designer.cs
++++ b/TrinityFileExplorer/TrinityExplorerWindow.Designer.cs
+@@ -145,6 +145,7 @@
+             saveFileDescriptorMenuItem.Name = "saveFileDescriptorMenuItem";
+             saveFileDescriptorMenuItem.Size = new Size(181, 22);
+             saveFileDescriptorMenuItem.Text = "Save File Descriptor";
++            saveFileDescriptorMenuItem.Click += saveFileDescriptorMenuItem_Click;
+             // 
+             // ExportFilesToolStripMenuItem
+             // 
+@@ -336,6 +337,7 @@
+             explorerFileViewer.CellBorderStyle = DataGridViewCellBorderStyle.None;
+             explorerFileViewer.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
+             explorerFileViewer.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
++            explorerFileViewer.Columns.AddRange(new DataGridViewColumn[] { dataGridViewTextBoxColumn1, dataGridViewTextBoxColumn2, dataGridViewTextBoxColumn3, dataGridViewTextBoxColumn4, dataGridViewTextBoxColumn5 });
+             explorerFileViewer.Location = new Point(0, 58);
+             explorerFileViewer.Margin = new Padding(4, 5, 4, 5);
+             explorerFileViewer.MultiSelect = false;
+@@ -391,6 +393,7 @@
+             explorerPackViewer.CellBorderStyle = DataGridViewCellBorderStyle.None;
+             explorerPackViewer.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
+             explorerPackViewer.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
++            explorerPackViewer.Columns.AddRange(new DataGridViewColumn[] { dataGridViewTextBoxColumn6, dataGridViewTextBoxColumn7, dataGridViewTextBoxColumn8, dataGridViewTextBoxColumn9, dataGridViewTextBoxColumn10 });
+             explorerPackViewer.Location = new Point(0, 58);
+             explorerPackViewer.Margin = new Padding(4, 5, 4, 5);
+             explorerPackViewer.MultiSelect = false;
+diff --git a/TrinityFileExplorer/TrinityExplorerWindow.cs b/TrinityFileExplorer/TrinityExplorerWindow.cs
+index 3483d43..7e1a4a9 100644
+--- a/TrinityFileExplorer/TrinityExplorerWindow.cs
++++ b/TrinityFileExplorer/TrinityExplorerWindow.cs
+@@ -4,6 +4,7 @@ using Trinity.Core.Compression;
+ using Trinity.Core.Flatbuffers.TR.ResourceDictionary;
+ using Trinity.Core.Serializers.TR;
+ using Trinity.Core.Utils;
++using System.Diagnostics;
+ 
+ namespace TrinityFileExplorer
+ {
+@@ -265,10 +266,17 @@ namespace TrinityFileExplorer
+ 
+                     var filepath = string.Format("{0}\\{1}", outFolder, fileName);
+ 
++                    try
++                    {
+                         if (!Directory.Exists(Path.GetDirectoryName(filepath)))
+                             Directory.CreateDirectory(Path.GetDirectoryName(filepath));
+ 
+                         File.WriteAllBytes(filepath, buffer);
++                    }
++                    catch (Exception ex)
++                    {
++                        MessageBox.Show("Error writing file " + fileName);
++                    }
+ 
+                     break;
+                 }
+@@ -534,6 +542,11 @@ namespace TrinityFileExplorer
+             FetchHashesFromURL();
+             InitializeExplorer();
+         }
++
++        private void saveFileDescriptorMenuItem_Click(object sender, EventArgs e)
++        {
++
++        }
+     }
+ 
+ }
+diff --git a/TrinitySceneView/TRSceneProperties.cs b/TrinitySceneView/TRSceneProperties.cs
+index 7ccc2b4..c891b1f 100644
+--- a/TrinitySceneView/TRSceneProperties.cs
++++ b/TrinitySceneView/TRSceneProperties.cs
+@@ -101,7 +101,6 @@ namespace TrinitySceneView
+                 case "trinity_ScriptComponent": ret = ScriptComponent(objData); break;
+                 case "pe_TextComponent": ret = TextComponent(objData); break;
+                 case "pe_InputEventTriggerComponent": ret = InputEventTriggerComponent(objData); break;
+-
+             }
+ 
+             return ret;
