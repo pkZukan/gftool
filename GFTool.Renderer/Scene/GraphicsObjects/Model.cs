@@ -31,6 +31,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         private List<uint[]> Indices = new List<uint[]>();
 
         private Material[] materials;
+        private List<string> MaterialNames = new List<string>();
 
         private Matrix4 modelMat;
 
@@ -127,10 +128,9 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 {
                     switch (polyType)
                     {
-                        case TRIndexFormat.X8_Y8_Z8_UNSIGNED: indices.Add(indBuf.ReadByte()); break;
-                        case TRIndexFormat.X16_Y16_Z16_UNSIGNED: indices.Add(indBuf.ReadUInt16()); break;
-                        case TRIndexFormat.X32_Y32_Z32_UNSIGNED: indices.Add(indBuf.ReadUInt32()); break;
-                        case TRIndexFormat.X64_Y64_Z64_UNSIGNED: indices.Add((uint)indBuf.ReadUInt64()); break;
+                        case TRIndexFormat.BYTE: indices.Add(indBuf.ReadByte()); break;
+                        case TRIndexFormat.SHORT: indices.Add(indBuf.ReadUInt16()); break;
+                        case TRIndexFormat.INT: indices.Add(indBuf.ReadUInt32()); break;
                     }
                     currPos += indsize;
                 }
@@ -143,17 +143,18 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         {
             var msh = FlatBufferConverter.DeserializeFrom<TRMSH>(file);
             var buffers = FlatBufferConverter.DeserializeFrom<TRMBF>(modelPath.Combine(msh.bufferFilePath)).TRMeshBuffers;
-            var shapeCnt = msh.TRMeshes.Count();
+            var shapeCnt = msh.Meshes.Count();
             for(int i = 0; i < shapeCnt; i++)
             {
-                var meshShape = msh.TRMeshes[i];
+                var meshShape = msh.Meshes[i];
                 var vertBuf = buffers[i].VertexBuffer[0]; //LOD0
                 var indexBuf = buffers[i].IndexBuffer[0]; //LOD0
-                var polyType = meshShape.PolygonType;
+                var polyType = meshShape.IndexType;
 
                 foreach (var part in meshShape.meshParts)
                 {
-                    ParseMeshBuffer(meshShape.vertexDeclaration[0], vertBuf, indexBuf, meshShape.PolygonType, part.indexOffset, part.indexCount);
+                    MaterialNames.Add(part.MaterialName);
+                    ParseMeshBuffer(meshShape.vertexDeclaration[0], vertBuf, indexBuf, meshShape.IndexType, part.indexOffset, part.indexCount);
                 }
             }
 
@@ -246,10 +247,8 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         {
             for (int i = 0; i < VAOs.Length; i++)
             {
-                //Bind mats
-                foreach (var mat in materials)
-                   mat.Use(view, modelMat, proj);
-                materials[0].Use(view, modelMat, proj);
+                //Bind appropriate mat
+                materials.Where(m => m.Name == MaterialNames[i]).First().Use(view, modelMat, proj);
                 
                 // Draw the geometry
                 GL.BindVertexArray(VAOs[i]);

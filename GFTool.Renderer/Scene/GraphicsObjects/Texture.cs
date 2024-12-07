@@ -37,7 +37,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             GL.BindTexture(TextureTarget.Texture2D, id);
 
             BitmapData bitmapData = tex.LockBits(new Rectangle(0, 0, tex.Width, tex.Height), ImageLockMode.ReadOnly, tex.PixelFormat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, bitmapData.Width, bitmapData.Height, 0, OpenTK.Graphics.OpenGL4.PixelFormat.Rgba, PixelType.UnsignedByte, bitmapData.Scan0);
+            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, bitmapData.Width, bitmapData.Height, 0, OpenTK.Graphics.OpenGL4.PixelFormat.Bgra, PixelType.UnsignedByte, bitmapData.Scan0);
 
             // Set texture parameters
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
@@ -50,11 +50,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
         public void Dispose()
         {
-            if (tex != null)
-            {
-                tex = null;
-            }
-
+            tex?.Dispose();
             GL.DeleteTexture(textureId);
         }
     }

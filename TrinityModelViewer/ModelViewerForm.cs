@@ -1,0 +1,156 @@
+using GFTool.Core.Flatbuffers.TR.Scene.Components;
+using GFTool.Renderer;
+using TrinitySceneView;
+using Point = System.Drawing.Point;
+
+namespace TrinityModelViewer
+{
+    public partial class ModelViewerForm : Form
+    {
+        RenderContext renderer;
+        Point prevMousePos;
+
+        public ModelViewerForm()
+        {
+            InitializeComponent();
+        }
+
+        private void messageHandler_Callback(object? sender, GFTool.Renderer.Message e)
+        {
+            var item = new ListViewItem();
+            item.Name = e.GetHashCode().ToString();
+            item.Text = e.Content;
+            item.ImageKey = e.Type switch
+            {
+                MessageType.LOG => "Log",
+                MessageType.WARNING => "Warning",
+                MessageType.ERROR => "Error"
+            };
+
+            //Only unique errors
+            if (!messageListView.Items.ContainsKey(e.GetHashCode().ToString()))
+            {
+                messageListView.Items.Add(item);
+                messageListView.EnsureVisible(messageListView.Items.Count - 1);
+            }
+        }
+
+        #region GL_CONTEXT
+        private void glCtxt_Paint(object sender, PaintEventArgs e)
+        {
+            renderer.Update();
+            statusLbl.Text = string.Format("Camera: Pos={0}, [Quat={1} Euler={2}]", renderer.camera.Position.ToString(), renderer.camera.Rotation.ToString(), renderer.camera.Rotation.ToEulerAngles().ToString());
+        }
+
+        private void glCtxt_Load(object sender, EventArgs e)
+        {
+            //Create rendering context
+            renderer = new RenderContext(glCtxt.Context, glCtxt.Width, glCtxt.Height);
+
+            //Connect to message handler 
+            MessageHandler.Instance.MessageCallback += messageHandler_Callback;
+            var messageIcons = new ImageList();
+            messageIcons.Images.Add("Log", SystemIcons.Information.ToBitmap());
+            messageIcons.Images.Add("Warning", SystemIcons.Warning.ToBitmap());
+            messageIcons.Images.Add("Error", SystemIcons.Error.ToBitmap());
+            messageListView.SmallImageList = messageIcons;
+            messageListView.FullRowSelect = true;
+            messageListView.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.HeaderSize);
+
+            //Initialize renderer
+            renderer.Setup();
+        }
+
+        private void glCtxt_MouseMove(object sender, MouseEventArgs e)
+        {
+            Point mousePos = e.Location;
+
+            if (mousePos == prevMousePos) return;
+
+            int deltaX = (mousePos.X - prevMousePos.X);
+            int deltaY = (mousePos.Y - prevMousePos.Y);
+
+            prevMousePos = mousePos;
+            if ((e.Button & MouseButtons.Left) != 0)
+            {
+                renderer.camera.ApplyRotationalDelta(deltaX, deltaY);
+                glCtxt.Invalidate();
+            }
+        }
+
+        private void glCtxt_Resize(object sender, EventArgs e)
+        {
+            renderer?.Resize(glCtxt.Width, glCtxt.Height);
+            glCtxt.Invalidate();
+        }
+
+        private void keyTimer_Tick(object sender, EventArgs e)
+        {
+            float x = 0;
+            float y = 0;
+            float z = 0;
+
+            if (KeyboardControls.Forward)
+                x = 1.0f;
+            else if (KeyboardControls.Backward)
+                x = -1.0f;
+            if (KeyboardControls.Right)
+                z = 1.0f;
+            else if (KeyboardControls.Left)
+                z = -1.0f;
+            if (KeyboardControls.Up)
+                y = 1.0f;
+            else if (KeyboardControls.Down)
+                y = -1.0f;
+
+            renderer.camera.ApplyMovement(x, y, z);
+            glCtxt.Invalidate();
+        }
+
+        private void glCtxt_KeyDown(object sender, KeyEventArgs e)
+        {
+            switch (e.KeyCode)
+            {
+                case Keys.W: KeyboardControls.Forward = true; break;
+                case Keys.A: KeyboardControls.Left = true; break;
+                case Keys.S: KeyboardControls.Backward = true; break;
+                case Keys.D: KeyboardControls.Right = true; break;
+                case Keys.Q: KeyboardControls.Up = true; break;
+                case Keys.E: KeyboardControls.Down = true; break;
+            }
+        }
+
+        private void glCtxt_KeyUp(object sender, KeyEventArgs e)
+        {
+            switch (e.KeyCode)
+            {
+                case Keys.W: KeyboardControls.Forward = false; break;
+                case Keys.A: KeyboardControls.Left = false; break;
+                case Keys.S: KeyboardControls.Backward = false; break;
+                case Keys.D: KeyboardControls.Right = false; break;
+                case Keys.Q: KeyboardControls.Up = false; break;
+                case Keys.E: KeyboardControls.Down = false; break;
+            }
+        }
+        #endregion
+
+        private void openToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.Filter = "Trinity Model files (*.trmdl)|*.trmdl|All files (*.*)|*.*";
+            if (ofd.ShowDialog() != DialogResult.OK) return;
+
+            renderer.ClearScene();
+            renderer.AddSceneModel(ofd.FileName);
+        }
+
+        private void importToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.Filter = "Trinity Model files (*.trmdl)|*.trmdl|All files (*.*)|*.*";
+            if (ofd.ShowDialog() != DialogResult.OK) return;
+
+            renderer.AddSceneModel(ofd.FileName);
+        }
+    }
+}

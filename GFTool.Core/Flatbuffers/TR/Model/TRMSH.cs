@@ -6,10 +6,10 @@ namespace Trinity.Core.Flatbuffers.TR.Model
     [FlatBufferEnum(typeof(int))]
     public enum TRIndexFormat
     {
-        X8_Y8_Z8_UNSIGNED = 0,
-        X16_Y16_Z16_UNSIGNED = 1,
-        X32_Y32_Z32_UNSIGNED = 2,
-        X64_Y64_Z64_UNSIGNED = 3,
+        BYTE = 0,
+        SHORT,
+        INT,
+        Count
     }
 
     [FlatBufferEnum(typeof(int))]
@@ -68,7 +68,7 @@ namespace Trinity.Core.Flatbuffers.TR.Model
         [FlatBufferItem(0)] public int indexCount { get; set; }
         [FlatBufferItem(1)] public int indexOffset { get; set; }
         [FlatBufferItem(2)] public int Field_02 { get; set; }
-        [FlatBufferItem(3)] public string meshPartName { get; set; }
+        [FlatBufferItem(3)] public string MaterialName { get; set; }
         [FlatBufferItem(4)] public int vertexDeclarationIndex { get; set; }
     }
     
@@ -84,7 +84,7 @@ namespace Trinity.Core.Flatbuffers.TR.Model
     {
         [FlatBufferItem(0)] public string Name { get; set; }
         [FlatBufferItem(1)] public TRBoundingBox boundingBox { get; set; }
-        [FlatBufferItem(2)] public TRIndexFormat PolygonType { get; set; }
+        [FlatBufferItem(2)] public TRIndexFormat IndexType { get; set; }
         [FlatBufferItem(3)] public TRVertexDeclaration[] vertexDeclaration { get; set; }
         [FlatBufferItem(4)] public TRMeshPart[] meshParts { get; set; }
         [FlatBufferItem(5)] public int Field_05 { get; set; }
@@ -101,7 +101,7 @@ namespace Trinity.Core.Flatbuffers.TR.Model
     public partial class TRMSH
     {
         [FlatBufferItem(0)] public int Version { get; set; }
-        [FlatBufferItem(1)] public TRMesh[] TRMeshes { get; set; }
+        [FlatBufferItem(1)] public TRMesh[] Meshes { get; set; }
         [FlatBufferItem(2)] public string bufferFilePath { get; set; }
 
     }

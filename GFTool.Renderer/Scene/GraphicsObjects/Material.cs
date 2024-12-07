@@ -6,8 +6,10 @@ using Trinity.Core.Flatbuffers.TR.Model;
 
 namespace GFTool.Renderer.Scene.GraphicsObjects
 {
-    public class Material
+    public class Material : IDisposable
     {
+        public string Name { get; set; }
+
         private Shader shader;
         private List<Texture> textures;
 
@@ -17,6 +19,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
         public Material(PathString modelPath, TRMaterial trmat)
         {
+            Name = trmat.Name;
             modelpath = modelPath;
             //I hope we dont actually have more than one shader per material
             shader = ShaderPool.Instance.GetShader(trmat.Shader[0].Name);
@@ -32,6 +35,12 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             {
                 textures.Add(new Texture(modelPath, tex));
             }
+        }
+
+        public void Dispose()
+        {
+            foreach(var tex in textures)
+                tex.Dispose();
         }
 
         public void Use(Matrix4 view, Matrix4 model, Matrix4 proj)

@@ -34,9 +34,6 @@ namespace GFTool.Renderer
             GL.DepthFunc(DepthFunction.Lequal);
             GL.ClearColor(Color.Gray);
 
-            //Create GBuffer
-            gbuffer = new GBuffer(Width, Height);
-
             //Set viewport size
             Resize(Width, Height);
         }
@@ -91,6 +88,11 @@ namespace GFTool.Renderer
             SceneGraph.Instance.GetRoot().AddChild(new Model(file));
         }
 
+        public void ClearScene()
+        {
+            SceneGraph.Instance.GetRoot().children.Clear();
+        }
+
         public void SetGBufferDisplayMode(GBuffer.DisplayType displayType)
         {
             gbuffer.DisplayMode = displayType;
@@ -103,6 +105,9 @@ namespace GFTool.Renderer
 
         public void Resize(int width, int height)
         {
+            //Create GBuffer
+            gbuffer = new GBuffer(width, height);
+
             GL.Viewport(0, 0, width, height);
         }
 
