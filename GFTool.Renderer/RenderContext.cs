@@ -98,6 +98,11 @@ namespace GFTool.Renderer
             gbuffer.DisplayMode = displayType;
         }
 
+        public void SetWireframe(bool b)
+        {
+            //TODO: Solid wireframe shader
+        }
+
         private void Render()
         {
             viewport.SwapBuffers();

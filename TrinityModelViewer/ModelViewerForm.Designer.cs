@@ -33,6 +33,9 @@
             menuStrip1 = new MenuStrip();
             fileToolStripMenuItem = new ToolStripMenuItem();
             openToolStripMenuItem = new ToolStripMenuItem();
+            importToolStripMenuItem = new ToolStripMenuItem();
+            viewToolStripMenuItem = new ToolStripMenuItem();
+            wireframeToolStripMenuItem = new ToolStripMenuItem();
             messageListView = new ListView();
             columnHeader1 = new ColumnHeader();
             keyTimer = new System.Windows.Forms.Timer(components);
@@ -55,7 +58,6 @@
             numericUpDown1 = new NumericUpDown();
             label1 = new Label();
             tabPage2 = new TabPage();
-            importToolStripMenuItem = new ToolStripMenuItem();
             menuStrip1.SuspendLayout();
             panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
@@ -94,7 +96,7 @@
             // 
             // menuStrip1
             // 
-            menuStrip1.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem });
+            menuStrip1.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, viewToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
             menuStrip1.Size = new Size(1474, 24);
@@ -111,9 +113,31 @@
             // openToolStripMenuItem
             // 
             openToolStripMenuItem.Name = "openToolStripMenuItem";
-            openToolStripMenuItem.Size = new Size(180, 22);
+            openToolStripMenuItem.Size = new Size(110, 22);
             openToolStripMenuItem.Text = "Open";
             openToolStripMenuItem.Click += openToolStripMenuItem_Click;
+            // 
+            // importToolStripMenuItem
+            // 
+            importToolStripMenuItem.Name = "importToolStripMenuItem";
+            importToolStripMenuItem.Size = new Size(110, 22);
+            importToolStripMenuItem.Text = "Import";
+            importToolStripMenuItem.Click += importToolStripMenuItem_Click;
+            // 
+            // viewToolStripMenuItem
+            // 
+            viewToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { wireframeToolStripMenuItem });
+            viewToolStripMenuItem.Name = "viewToolStripMenuItem";
+            viewToolStripMenuItem.Size = new Size(44, 20);
+            viewToolStripMenuItem.Text = "View";
+            // 
+            // wireframeToolStripMenuItem
+            // 
+            wireframeToolStripMenuItem.CheckOnClick = true;
+            wireframeToolStripMenuItem.Name = "wireframeToolStripMenuItem";
+            wireframeToolStripMenuItem.Size = new Size(180, 22);
+            wireframeToolStripMenuItem.Text = "Wireframe";
+            wireframeToolStripMenuItem.Click += wireframeToolStripMenuItem_Click;
             // 
             // messageListView
             // 
@@ -317,13 +341,6 @@
             tabPage2.Text = "Materials";
             tabPage2.UseVisualStyleBackColor = true;
             // 
-            // importToolStripMenuItem
-            // 
-            importToolStripMenuItem.Name = "importToolStripMenuItem";
-            importToolStripMenuItem.Size = new Size(180, 22);
-            importToolStripMenuItem.Text = "Import";
-            importToolStripMenuItem.Click += importToolStripMenuItem_Click;
-            // 
             // ModelViewerForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -391,5 +408,7 @@
         private NumericUpDown numericUpDown6;
         private Label label2;
         private ToolStripMenuItem importToolStripMenuItem;
+        private ToolStripMenuItem viewToolStripMenuItem;
+        private ToolStripMenuItem wireframeToolStripMenuItem;
     }
 }

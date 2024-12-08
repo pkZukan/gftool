@@ -134,13 +134,19 @@ namespace TrinityModelViewer
         }
         #endregion
 
+        private void ClearAll()
+        {
+            renderer.ClearScene();
+            messageListView.Items.Clear();
+        }
+
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
             OpenFileDialog ofd = new OpenFileDialog();
             ofd.Filter = "Trinity Model files (*.trmdl)|*.trmdl|All files (*.*)|*.*";
             if (ofd.ShowDialog() != DialogResult.OK) return;
 
-            renderer.ClearScene();
+            ClearAll();
             renderer.AddSceneModel(ofd.FileName);
         }
 
@@ -151,6 +157,12 @@ namespace TrinityModelViewer
             if (ofd.ShowDialog() != DialogResult.OK) return;
 
             renderer.AddSceneModel(ofd.FileName);
+        }
+
+        private void wireframeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            renderer.SetWireframe(wireframeToolStripMenuItem.CheckState == CheckState.Checked);
+            glCtxt.Invalidate();
         }
     }
 }
