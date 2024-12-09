@@ -1,5 +1,6 @@
 using GFTool.Core.Flatbuffers.TR.Scene.Components;
 using GFTool.Renderer;
+using GFTool.Renderer.Scene.GraphicsObjects;
 using TrinitySceneView;
 using Point = System.Drawing.Point;
 
@@ -9,6 +10,8 @@ namespace TrinityModelViewer
     {
         RenderContext renderer;
         Point prevMousePos;
+
+        private Dictionary<TreeNode, Model> modelMap = new Dictionary<TreeNode, Model>();
 
         public ModelViewerForm()
         {
@@ -147,7 +150,10 @@ namespace TrinityModelViewer
             if (ofd.ShowDialog() != DialogResult.OK) return;
 
             ClearAll();
-            renderer.AddSceneModel(ofd.FileName);
+            var mdl = renderer.AddSceneModel(ofd.FileName);
+            var node = new TreeNode(mdl.Name);
+            modelMap.Add(node, mdl);
+            sceneTree.Nodes.Add(node);
         }
 
         private void importToolStripMenuItem_Click(object sender, EventArgs e)
@@ -156,13 +162,47 @@ namespace TrinityModelViewer
             ofd.Filter = "Trinity Model files (*.trmdl)|*.trmdl|All files (*.*)|*.*";
             if (ofd.ShowDialog() != DialogResult.OK) return;
 
-            renderer.AddSceneModel(ofd.FileName);
+            var mdl = renderer.AddSceneModel(ofd.FileName);
+            var node = new TreeNode(mdl.Name);
+            modelMap.Add(node, mdl);
+            sceneTree.Nodes.Add(node);
         }
 
         private void wireframeToolStripMenuItem_Click(object sender, EventArgs e)
         {
             renderer.SetWireframe(wireframeToolStripMenuItem.CheckState == CheckState.Checked);
             glCtxt.Invalidate();
+        }
+
+        //Treeview handler
+        private void sceneTree_MouseUp(object sender, MouseEventArgs e)
+        {
+            Point ClickPoint = new Point(e.X, e.Y);
+            TreeNode ClickNode = sceneTree.GetNodeAt(ClickPoint);
+            sceneTree.SelectedNode = ClickNode;
+            if (ClickNode == null) return;
+
+            if (e.Button == MouseButtons.Right)
+            {
+                Point ScreenPoint = sceneTree.PointToScreen(ClickPoint);
+                Point FormPoint = this.PointToClient(ScreenPoint);
+                sceneTreeCtxtMenu.Show(this, FormPoint);
+            }
+        }
+
+        //Context menu delete
+        private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var selected = sceneTree.SelectedNode;
+            if (selected != null)
+            {
+                modelMap.TryGetValue(selected, out var mdl);
+                if (mdl == null) return;
+
+                renderer.RemoveSceneModel(mdl);
+                sceneTree.Nodes.Remove(selected);
+                modelMap.Remove(selected);
+            }
         }
     }
 }

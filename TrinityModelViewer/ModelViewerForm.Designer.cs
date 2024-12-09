@@ -45,19 +45,23 @@
             sceneTree = new TreeView();
             modelProperties = new TabControl();
             tabPage1 = new TabPage();
-            numericUpDown7 = new NumericUpDown();
-            numericUpDown8 = new NumericUpDown();
-            numericUpDown9 = new NumericUpDown();
-            label3 = new Label();
-            numericUpDown4 = new NumericUpDown();
-            numericUpDown5 = new NumericUpDown();
-            numericUpDown6 = new NumericUpDown();
-            label2 = new Label();
-            numericUpDown3 = new NumericUpDown();
-            numericUpDown2 = new NumericUpDown();
-            numericUpDown1 = new NumericUpDown();
+            groupBox1 = new GroupBox();
             label1 = new Label();
+            numericScaleZ = new NumericUpDown();
+            numericTransX = new NumericUpDown();
+            numericScaleY = new NumericUpDown();
+            numericTransY = new NumericUpDown();
+            numericScaleX = new NumericUpDown();
+            numericTransZ = new NumericUpDown();
+            label3 = new Label();
+            label2 = new Label();
+            numericRotZ = new NumericUpDown();
+            numericRotX = new NumericUpDown();
+            numericRotY = new NumericUpDown();
             tabPage2 = new TabPage();
+            materialList = new ListView();
+            sceneTreeCtxtMenu = new ContextMenuStrip(components);
+            deleteToolStripMenuItem = new ToolStripMenuItem();
             menuStrip1.SuspendLayout();
             panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
@@ -66,15 +70,18 @@
             splitContainer1.SuspendLayout();
             modelProperties.SuspendLayout();
             tabPage1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown7).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown8).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown9).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown4).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown5).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown6).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown3).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown2).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown1).BeginInit();
+            groupBox1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)numericScaleZ).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numericTransX).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numericScaleY).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numericTransY).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numericScaleX).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numericTransZ).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numericRotZ).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numericRotX).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numericRotY).BeginInit();
+            tabPage2.SuspendLayout();
+            sceneTreeCtxtMenu.SuspendLayout();
             SuspendLayout();
             // 
             // glCtxt
@@ -135,7 +142,7 @@
             // 
             wireframeToolStripMenuItem.CheckOnClick = true;
             wireframeToolStripMenuItem.Name = "wireframeToolStripMenuItem";
-            wireframeToolStripMenuItem.Size = new Size(180, 22);
+            wireframeToolStripMenuItem.Size = new Size(129, 22);
             wireframeToolStripMenuItem.Text = "Wireframe";
             wireframeToolStripMenuItem.Click += wireframeToolStripMenuItem_Click;
             // 
@@ -207,6 +214,7 @@
             sceneTree.Name = "sceneTree";
             sceneTree.Size = new Size(358, 413);
             sceneTree.TabIndex = 0;
+            sceneTree.MouseUp += sceneTree_MouseUp;
             // 
             // modelProperties
             // 
@@ -221,18 +229,7 @@
             // 
             // tabPage1
             // 
-            tabPage1.Controls.Add(numericUpDown7);
-            tabPage1.Controls.Add(numericUpDown8);
-            tabPage1.Controls.Add(numericUpDown9);
-            tabPage1.Controls.Add(label3);
-            tabPage1.Controls.Add(numericUpDown4);
-            tabPage1.Controls.Add(numericUpDown5);
-            tabPage1.Controls.Add(numericUpDown6);
-            tabPage1.Controls.Add(label2);
-            tabPage1.Controls.Add(numericUpDown3);
-            tabPage1.Controls.Add(numericUpDown2);
-            tabPage1.Controls.Add(numericUpDown1);
-            tabPage1.Controls.Add(label1);
+            tabPage1.Controls.Add(groupBox1);
             tabPage1.Location = new Point(4, 24);
             tabPage1.Name = "tabPage1";
             tabPage1.Padding = new Padding(3);
@@ -241,98 +238,121 @@
             tabPage1.Text = "Object";
             tabPage1.UseVisualStyleBackColor = true;
             // 
-            // numericUpDown7
+            // groupBox1
             // 
-            numericUpDown7.Location = new Point(226, 81);
-            numericUpDown7.Name = "numericUpDown7";
-            numericUpDown7.Size = new Size(69, 23);
-            numericUpDown7.TabIndex = 11;
-            // 
-            // numericUpDown8
-            // 
-            numericUpDown8.Location = new Point(151, 81);
-            numericUpDown8.Name = "numericUpDown8";
-            numericUpDown8.Size = new Size(69, 23);
-            numericUpDown8.TabIndex = 10;
-            // 
-            // numericUpDown9
-            // 
-            numericUpDown9.Location = new Point(76, 81);
-            numericUpDown9.Name = "numericUpDown9";
-            numericUpDown9.Size = new Size(69, 23);
-            numericUpDown9.TabIndex = 9;
-            // 
-            // label3
-            // 
-            label3.AutoSize = true;
-            label3.Location = new Point(36, 83);
-            label3.Name = "label3";
-            label3.Size = new Size(34, 15);
-            label3.TabIndex = 8;
-            label3.Text = "Scale";
-            // 
-            // numericUpDown4
-            // 
-            numericUpDown4.Location = new Point(226, 52);
-            numericUpDown4.Name = "numericUpDown4";
-            numericUpDown4.Size = new Size(69, 23);
-            numericUpDown4.TabIndex = 7;
-            // 
-            // numericUpDown5
-            // 
-            numericUpDown5.Location = new Point(151, 52);
-            numericUpDown5.Name = "numericUpDown5";
-            numericUpDown5.Size = new Size(69, 23);
-            numericUpDown5.TabIndex = 6;
-            // 
-            // numericUpDown6
-            // 
-            numericUpDown6.Location = new Point(76, 52);
-            numericUpDown6.Name = "numericUpDown6";
-            numericUpDown6.Size = new Size(69, 23);
-            numericUpDown6.TabIndex = 5;
-            // 
-            // label2
-            // 
-            label2.AutoSize = true;
-            label2.Location = new Point(18, 54);
-            label2.Name = "label2";
-            label2.Size = new Size(52, 15);
-            label2.TabIndex = 4;
-            label2.Text = "Rotation";
-            // 
-            // numericUpDown3
-            // 
-            numericUpDown3.Location = new Point(226, 23);
-            numericUpDown3.Name = "numericUpDown3";
-            numericUpDown3.Size = new Size(69, 23);
-            numericUpDown3.TabIndex = 3;
-            // 
-            // numericUpDown2
-            // 
-            numericUpDown2.Location = new Point(151, 23);
-            numericUpDown2.Name = "numericUpDown2";
-            numericUpDown2.Size = new Size(69, 23);
-            numericUpDown2.TabIndex = 2;
-            // 
-            // numericUpDown1
-            // 
-            numericUpDown1.Location = new Point(76, 23);
-            numericUpDown1.Name = "numericUpDown1";
-            numericUpDown1.Size = new Size(69, 23);
-            numericUpDown1.TabIndex = 1;
+            groupBox1.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            groupBox1.Controls.Add(label1);
+            groupBox1.Controls.Add(numericScaleZ);
+            groupBox1.Controls.Add(numericTransX);
+            groupBox1.Controls.Add(numericScaleY);
+            groupBox1.Controls.Add(numericTransY);
+            groupBox1.Controls.Add(numericScaleX);
+            groupBox1.Controls.Add(numericTransZ);
+            groupBox1.Controls.Add(label3);
+            groupBox1.Controls.Add(label2);
+            groupBox1.Controls.Add(numericRotZ);
+            groupBox1.Controls.Add(numericRotX);
+            groupBox1.Controls.Add(numericRotY);
+            groupBox1.Location = new Point(6, 6);
+            groupBox1.Name = "groupBox1";
+            groupBox1.Size = new Size(338, 120);
+            groupBox1.TabIndex = 12;
+            groupBox1.TabStop = false;
+            groupBox1.Text = "Transform";
             // 
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(6, 25);
+            label1.Location = new Point(6, 28);
             label1.Name = "label1";
             label1.Size = new Size(64, 15);
             label1.TabIndex = 0;
             label1.Text = "Translation";
             // 
+            // numericScaleZ
+            // 
+            numericScaleZ.Location = new Point(226, 84);
+            numericScaleZ.Name = "numericScaleZ";
+            numericScaleZ.Size = new Size(69, 23);
+            numericScaleZ.TabIndex = 11;
+            // 
+            // numericTransX
+            // 
+            numericTransX.Location = new Point(76, 26);
+            numericTransX.Name = "numericTransX";
+            numericTransX.Size = new Size(69, 23);
+            numericTransX.TabIndex = 1;
+            // 
+            // numericScaleY
+            // 
+            numericScaleY.Location = new Point(151, 84);
+            numericScaleY.Name = "numericScaleY";
+            numericScaleY.Size = new Size(69, 23);
+            numericScaleY.TabIndex = 10;
+            // 
+            // numericTransY
+            // 
+            numericTransY.Location = new Point(151, 26);
+            numericTransY.Name = "numericTransY";
+            numericTransY.Size = new Size(69, 23);
+            numericTransY.TabIndex = 2;
+            // 
+            // numericScaleX
+            // 
+            numericScaleX.Location = new Point(76, 84);
+            numericScaleX.Name = "numericScaleX";
+            numericScaleX.Size = new Size(69, 23);
+            numericScaleX.TabIndex = 9;
+            // 
+            // numericTransZ
+            // 
+            numericTransZ.Location = new Point(226, 26);
+            numericTransZ.Name = "numericTransZ";
+            numericTransZ.Size = new Size(69, 23);
+            numericTransZ.TabIndex = 3;
+            // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.Location = new Point(36, 86);
+            label3.Name = "label3";
+            label3.Size = new Size(34, 15);
+            label3.TabIndex = 8;
+            label3.Text = "Scale";
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Location = new Point(18, 57);
+            label2.Name = "label2";
+            label2.Size = new Size(52, 15);
+            label2.TabIndex = 4;
+            label2.Text = "Rotation";
+            // 
+            // numericRotZ
+            // 
+            numericRotZ.Location = new Point(226, 55);
+            numericRotZ.Name = "numericRotZ";
+            numericRotZ.Size = new Size(69, 23);
+            numericRotZ.TabIndex = 7;
+            // 
+            // numericRotX
+            // 
+            numericRotX.Location = new Point(76, 55);
+            numericRotX.Name = "numericRotX";
+            numericRotX.Size = new Size(69, 23);
+            numericRotX.TabIndex = 5;
+            // 
+            // numericRotY
+            // 
+            numericRotY.Location = new Point(151, 55);
+            numericRotY.Name = "numericRotY";
+            numericRotY.Size = new Size(69, 23);
+            numericRotY.TabIndex = 6;
+            // 
             // tabPage2
             // 
+            tabPage2.Controls.Add(materialList);
             tabPage2.Location = new Point(4, 24);
             tabPage2.Name = "tabPage2";
             tabPage2.Padding = new Padding(3);
@@ -340,6 +360,27 @@
             tabPage2.TabIndex = 1;
             tabPage2.Text = "Materials";
             tabPage2.UseVisualStyleBackColor = true;
+            // 
+            // materialList
+            // 
+            materialList.Location = new Point(6, 6);
+            materialList.Name = "materialList";
+            materialList.Size = new Size(338, 407);
+            materialList.TabIndex = 0;
+            materialList.UseCompatibleStateImageBehavior = false;
+            // 
+            // sceneTreeCtxtMenu
+            // 
+            sceneTreeCtxtMenu.Items.AddRange(new ToolStripItem[] { deleteToolStripMenuItem });
+            sceneTreeCtxtMenu.Name = "sceneTreeCtxtMenu";
+            sceneTreeCtxtMenu.Size = new Size(108, 26);
+            // 
+            // deleteToolStripMenuItem
+            // 
+            deleteToolStripMenuItem.Name = "deleteToolStripMenuItem";
+            deleteToolStripMenuItem.Size = new Size(107, 22);
+            deleteToolStripMenuItem.Text = "Delete";
+            deleteToolStripMenuItem.Click += deleteToolStripMenuItem_Click;
             // 
             // ModelViewerForm
             // 
@@ -365,16 +406,19 @@
             splitContainer1.ResumeLayout(false);
             modelProperties.ResumeLayout(false);
             tabPage1.ResumeLayout(false);
-            tabPage1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown7).EndInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown8).EndInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown9).EndInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown4).EndInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown5).EndInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown6).EndInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown3).EndInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown2).EndInit();
-            ((System.ComponentModel.ISupportInitialize)numericUpDown1).EndInit();
+            groupBox1.ResumeLayout(false);
+            groupBox1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)numericScaleZ).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numericTransX).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numericScaleY).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numericTransY).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numericScaleX).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numericTransZ).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numericRotZ).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numericRotX).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numericRotY).EndInit();
+            tabPage2.ResumeLayout(false);
+            sceneTreeCtxtMenu.ResumeLayout(false);
             ResumeLayout(false);
             PerformLayout();
         }
@@ -395,20 +439,24 @@
         private TabControl modelProperties;
         private TabPage tabPage1;
         private TabPage tabPage2;
-        private NumericUpDown numericUpDown3;
-        private NumericUpDown numericUpDown2;
-        private NumericUpDown numericUpDown1;
+        private NumericUpDown numericTransZ;
+        private NumericUpDown numericTransY;
+        private NumericUpDown numericTransX;
         private Label label1;
-        private NumericUpDown numericUpDown7;
-        private NumericUpDown numericUpDown8;
-        private NumericUpDown numericUpDown9;
+        private NumericUpDown numericScaleZ;
+        private NumericUpDown numericScaleY;
+        private NumericUpDown numericScaleX;
         private Label label3;
-        private NumericUpDown numericUpDown4;
-        private NumericUpDown numericUpDown5;
-        private NumericUpDown numericUpDown6;
+        private NumericUpDown numericRotZ;
+        private NumericUpDown numericRotY;
+        private NumericUpDown numericRotX;
         private Label label2;
         private ToolStripMenuItem importToolStripMenuItem;
         private ToolStripMenuItem viewToolStripMenuItem;
         private ToolStripMenuItem wireframeToolStripMenuItem;
+        private ListView materialList;
+        private GroupBox groupBox1;
+        private ContextMenuStrip sceneTreeCtxtMenu;
+        private ToolStripMenuItem deleteToolStripMenuItem;
     }
 }

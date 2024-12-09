@@ -82,10 +82,21 @@ namespace GFTool.Renderer
             gbuffer.Draw();
         }
 
-        public void AddSceneModel(string file)
-        { 
+        public Model AddSceneModel(string file)
+        {
             //TODO: Probably figure out how we're adding shit to child nodes (assuming necessary at this level)
-            SceneGraph.Instance.GetRoot().AddChild(new Model(file));
+
+            var mdl = new Model(file);
+            SceneGraph.Instance.GetRoot().AddChild(mdl);
+
+            return mdl;
+        }
+
+        public void RemoveSceneModel(Model mdl)
+        {
+            var root = SceneGraph.Instance.GetRoot();
+            if (root.children.Contains(mdl)) 
+                root.children.Remove(mdl);
         }
 
         public void ClearScene()
