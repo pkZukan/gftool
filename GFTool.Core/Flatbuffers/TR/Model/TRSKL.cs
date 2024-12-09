@@ -22,8 +22,8 @@ namespace Trinity.Core.Flatbuffers.TR.Model
     [FlatBufferTable]
     public class TRBoneMetaData
     {
-        [FlatBufferItem(0)] public byte LockTranslation { get; set; }
-        [FlatBufferItem(1)] public byte Field_01 { get; set; }
+        [FlatBufferItem(0)] public bool LockTranslation { get; set; }
+        [FlatBufferItem(1)] public bool Skinning { get; set; }
         [FlatBufferItem(2)] public BoneMatrix BoneMatrix { get; set; }
 
     }
@@ -64,7 +64,7 @@ namespace Trinity.Core.Flatbuffers.TR.Model
     [FlatBufferTable]
     public class TRSKL
     {
-        [FlatBufferItem(0)] public int Field_00 { get; set; }
+        [FlatBufferItem(0)] public int Version { get; set; }
         [FlatBufferItem(1)] public TRTransformNode[] TransformNodes { get; set; }
         [FlatBufferItem(2)] public TRBoneMetaData[] BoneMetaData { get; set; }
         [FlatBufferItem(3)] public TRInverseKinematicMetaData[] IKMetaData { get; set; }

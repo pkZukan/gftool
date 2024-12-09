@@ -1,14 +1,8 @@
 ﻿using GFTool.Core.Utils;
-using GFTool.Renderer.Scene;
-using Microsoft.CodeAnalysis.CodeActions;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
-using System.Linq;
 using Trinity.Core.Flatbuffers.TR.Model;
-using Trinity.Core.Flatbuffers.TR.Resident;
 using Trinity.Core.Utils;
-using static OpenTK.Graphics.OpenGL.GL;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace GFTool.Renderer.Scene.GraphicsObjects
 {
@@ -32,6 +26,8 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
         private Material[] materials;
         private List<string> MaterialNames = new List<string>();
+
+        private Armature armature;
 
         private Matrix4 modelMat;
 
@@ -174,8 +170,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         private void ParseArmature(string file)
         {
             var skel = FlatBufferConverter.DeserializeFrom<TRSKL>(file);
-            var name = skel.TransformNodes[0].Name;
-            //TODO
+            armature = new Armature(skel);
         }
 
         public override void Setup()

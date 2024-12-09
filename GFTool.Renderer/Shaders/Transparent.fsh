@@ -40,7 +40,7 @@ void main()
 
     gAlbedo = texture(BaseColorMap, TexCoord).rgb * layerWeight;
     gNormal = normalize(Normal) * 0.5 + 0.5;
-    gSpecular = vec3(0.5);  // Default medium specular for testing
+    gSpecular = vec3(0.0);
 
     gAO = vec3(1.0);
 }

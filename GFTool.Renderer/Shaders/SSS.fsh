@@ -46,6 +46,6 @@ void main()
 
     gAlbedo = texture(BaseColorMap, uv).rgb * layerWeight;
     gNormal = normalOutput * 0.5 + 0.5;
-    gSpecular = vec3(0.5);
+    gSpecular = vec3(0.0);
     gAO = vec3(ao);
 }
