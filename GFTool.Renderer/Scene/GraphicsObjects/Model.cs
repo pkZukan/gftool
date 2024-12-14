@@ -1,4 +1,5 @@
 ﻿using GFTool.Core.Utils;
+using GFTool.Renderer.Core;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using Trinity.Core.Flatbuffers.TR.Model;
@@ -6,7 +7,7 @@ using Trinity.Core.Utils;
 
 namespace GFTool.Renderer.Scene.GraphicsObjects
 {
-    public class Model : GraphicsObjects.Object
+    public class Model : RefObject
     {
         private PathString modelPath;
 
@@ -191,6 +192,8 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 var vertSize = Positions[i].Length * Vector3.SizeInBytes;
                 var normSize = Normals[i].Length * Vector3.SizeInBytes;
                 var uvSize = UVs[i].Length * Vector2.SizeInBytes;
+                var blendSize = BlendIndicies[i].Length * 4;
+                var weightSize = BlendWeights[i].Length * 4;
                 var totalSize = vertSize + normSize + uvSize;
 
                 //VBO
@@ -200,9 +203,11 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
                 //Upload vertex data to the buffer
                 IntPtr offset = IntPtr.Zero;
-                GL.BufferSubData(BufferTarget.ArrayBuffer, offset, vertSize, Positions[i].SelectMany(x => x.ToBytes()).ToArray()); offset += vertSize;  // Verts
-                GL.BufferSubData(BufferTarget.ArrayBuffer, offset, normSize, Normals[i].SelectMany(x => x.ToBytes()).ToArray()); offset += normSize;    // Normals
-                GL.BufferSubData(BufferTarget.ArrayBuffer, offset, uvSize, UVs[i].SelectMany(x => x.ToBytes()).ToArray()); offset += uvSize;            // TexCoords
+                GL.BufferSubData(BufferTarget.ArrayBuffer, offset, vertSize, Positions[i].SelectMany(x => x.ToBytes()).ToArray()); offset += vertSize;          // Verts
+                GL.BufferSubData(BufferTarget.ArrayBuffer, offset, normSize, Normals[i].SelectMany(x => x.ToBytes()).ToArray()); offset += normSize;            // Normals
+                GL.BufferSubData(BufferTarget.ArrayBuffer, offset, uvSize, UVs[i].SelectMany(x => x.ToBytes()).ToArray()); offset += uvSize;                    // TexCoords
+                GL.BufferSubData(BufferTarget.ArrayBuffer, offset, blendSize, BlendIndicies[i].SelectMany(x => x.ToBytes()).ToArray()); offset += blendSize;    // BlendInds
+                GL.BufferSubData(BufferTarget.ArrayBuffer, offset, weightSize, BlendWeights[i].SelectMany(x => x.ToBytes()).ToArray()); offset += weightSize;   // BlendWeights
 
                 // EBO (indices)
                 GL.GenBuffers(1, out EBOs[i]);
@@ -222,6 +227,14 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 // UV attribute
                 GL.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, Vector2.SizeInBytes, offset); offset += uvSize;
                 GL.EnableVertexAttribArray(2);
+
+                // index attribute
+                GL.VertexAttribPointer(3, 1, VertexAttribPointerType.Int, false, 4, offset); offset += blendSize;
+                GL.EnableVertexAttribArray(3);
+
+                // weight attribute
+                GL.VertexAttribPointer(4, 1, VertexAttribPointerType.Float, false, 4, offset); offset += weightSize;
+                GL.EnableVertexAttribArray(4);
 
                 //Clear bindings
                 GL.BindBuffer(BufferTarget.ArrayBuffer, 0);

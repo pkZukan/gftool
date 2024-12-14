@@ -187,7 +187,7 @@
             // 
             keyTimer.Enabled = true;
             keyTimer.Interval = 10;
-            keyTimer.Tick += keyTimer_Tick;
+            keyTimer.Tick += movementTimer_Tick;
             // 
             // messageListView
             // 

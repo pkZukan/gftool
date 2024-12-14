@@ -2,20 +2,20 @@
 
 namespace GFTool.Renderer.Scene.GraphicsObjects
 {
-    public class Object
+    public class RefObject
     {
         public long ID { get; private set; }
         private static long nextID = 0;
 
-        public List<Object> children;
+        public List<RefObject> children;
 
-        public Vector3 Position { get; protected set; } = new Vector3();
-        public Quaternion Rotation { get; protected set; } = new Quaternion();
+        public Transform Transform { get; protected set; }
 
-        public Object()
+        public RefObject()
         {
             ID = nextID++;
-            children = new List<Object>();
+            Transform = new Transform();
+            children = new List<RefObject>();
         }
 
         public virtual void Setup() 
@@ -35,7 +35,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
         public void Translate(Vector3 translation)
         {
-            Position += translation;
+            Transform.Position += translation;
         }
 
         public long GetID()
@@ -43,15 +43,15 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             return ID;
         }
 
-        public void AddChild(Object child)
+        public void AddChild(RefObject child)
         { 
             children.Add(child);
             child.Setup();
         }
 
-        public Object Find(Type type)
+        public RefObject Find(Type type)
         {
-            Object ob = null;
+            RefObject ob = null;
 
             foreach (var c in children)
             {

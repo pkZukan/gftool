@@ -1,7 +1,7 @@
 ﻿
 using System.Xml.Linq;
 
-namespace GFTool.Renderer
+namespace GFTool.Renderer.Core.Graphics
 {
     public class ShaderPool
     {
@@ -12,7 +12,7 @@ namespace GFTool.Renderer
 
         private string shaderPath;
 
-        private ShaderPool() 
+        private ShaderPool()
         {
             shaderPath = "Shaders/";
         }
@@ -39,12 +39,12 @@ namespace GFTool.Renderer
                 if (!AddShader(name))
                     return null;
             }
-               
+
             return shaders[name];
         }
 
         public void Bind(string name)
-        { 
+        {
             var shader = GetShader(name);
             shader.Bind();
         }

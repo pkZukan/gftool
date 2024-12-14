@@ -1,6 +1,6 @@
 ﻿using BnTxx;
 using GFTool.Core.Utils;
-using GFTool.Renderer.Utils;
+using GFTool.Renderer.Core;
 using OpenTK.Graphics.OpenGL4;
 using System.Drawing;
 using System.Drawing.Imaging;

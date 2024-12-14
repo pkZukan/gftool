@@ -2,7 +2,7 @@
 using OpenTK.Mathematics;
 using System.Runtime.CompilerServices;
 
-namespace GFTool.Renderer
+namespace GFTool.Renderer.Core.Graphics
 {
     public class Shader
     {
@@ -52,7 +52,7 @@ namespace GFTool.Renderer
                 }
             }
             catch (Exception ex)
-            { 
+            {
                 //
             }
         }
@@ -83,7 +83,7 @@ namespace GFTool.Renderer
 
         private bool HasUniform(string name)
         {
-            if(uniformLocations == null) return false; ;
+            if (uniformLocations == null) return false; ;
 
             bool ret = uniformLocations.ContainsKey(name);
             if (!ret)
@@ -103,31 +103,31 @@ namespace GFTool.Renderer
 
         public void SetBool(string name, bool data)
         {
-            if(HasUniform(name))
+            if (HasUniform(name))
                 GL.Uniform1(uniformLocations[name], data ? 1 : 0);
         }
 
         public void SetInt(string name, int data)
         {
-            if (HasUniform(name)) 
+            if (HasUniform(name))
                 GL.Uniform1(uniformLocations[name], data);
         }
 
         public void SetFloat(string name, float data)
         {
-            if (HasUniform(name)) 
+            if (HasUniform(name))
                 GL.Uniform1(uniformLocations[name], data);
         }
 
         public void SetMatrix4(string name, Matrix4 data)
         {
-            if (HasUniform(name)) 
+            if (HasUniform(name))
                 GL.UniformMatrix4(uniformLocations[name], false, ref data);
         }
 
         public void SetVector3(string name, Vector3 data)
         {
-            if (HasUniform(name)) 
+            if (HasUniform(name))
                 GL.Uniform3(uniformLocations[name], data);
         }
     }

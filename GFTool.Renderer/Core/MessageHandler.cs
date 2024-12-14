@@ -1,7 +1,7 @@
 ﻿
 using System.Diagnostics.CodeAnalysis;
 
-namespace GFTool.Renderer
+namespace GFTool.Renderer.Core
 {
     public enum MessageType
     {
@@ -24,9 +24,9 @@ namespace GFTool.Renderer
             return Content.Equals(obj);
         }
 
-        public override int GetHashCode() 
-        { 
-            return Content.GetHashCode(); 
+        public override int GetHashCode()
+        {
+            return Content.GetHashCode();
         }
     }
     public class MessageHandler
@@ -37,7 +37,7 @@ namespace GFTool.Renderer
         public event EventHandler<Message> MessageCallback;
 
         private MessageHandler()
-        { 
+        {
             //
         }
 

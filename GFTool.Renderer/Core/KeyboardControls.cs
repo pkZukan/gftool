@@ -1,4 +1,4 @@
-﻿namespace TrinitySceneView
+﻿namespace GFTool.Renderer.Core
 {
     public static class KeyboardControls
     {

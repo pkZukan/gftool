@@ -1,8 +1,9 @@
-﻿using OpenTK.Mathematics;
+﻿using GFTool.Renderer.Scene.GraphicsObjects;
+using OpenTK.Mathematics;
 
 namespace GFTool.Renderer.Scene
 {
-    public class Camera : GraphicsObjects.Object
+    public class Camera : RefObject
     {
         public Matrix4 projMat { get; private set; }
         public Matrix4 viewMat { get; private set; }
@@ -30,7 +31,7 @@ namespace GFTool.Renderer.Scene
         {
             Width = width;
             Height = height;
-            Rotation = Quaternion.FromEulerAngles(0, 90, 0); //Camera defaults to facing forward
+            Transform.Rotation = Quaternion.FromEulerAngles(0, 90, 0); //Camera defaults to facing forward
             SetProjectionMode(ProjectionType.Perspective);
         }
 
@@ -65,7 +66,7 @@ namespace GFTool.Renderer.Scene
         private Vector3 CalculateCameraFront()
         {
             Vector3 front = new Vector3();
-            Vector3 currRot = Rotation.ToEulerAngles();
+            Vector3 currRot = Transform.Rotation.ToEulerAngles();
 
             float yawRad = currRot.Y;
             float pitchRad = currRot.X;
@@ -82,11 +83,11 @@ namespace GFTool.Renderer.Scene
             if (!CanMove) return;
 
             // Get current rotation
-            Vector3 currRot = Rotation.ToEulerAngles();
+            Vector3 currRot = Transform.Rotation.ToEulerAngles();
             currRot.Y += MathHelper.DegreesToRadians(deltaX* SENSITIVITY_X);
             currRot.X += MathHelper.DegreesToRadians(deltaY * SENSITIVITY_Y);
 
-            Rotation = Quaternion.FromEulerAngles(currRot);
+            Transform.Rotation = Quaternion.FromEulerAngles(currRot);
         }
 
 
@@ -98,17 +99,17 @@ namespace GFTool.Renderer.Scene
             Vector3 up = Vector3.Cross(right, forward).Normalized();
 
             // Combine movement along each axis
-            Position += right * z * MOVEMENT_SPEED;
-            Position += up * y * MOVEMENT_SPEED; 
-            Position += forward * x * MOVEMENT_SPEED;
+            Transform.Position += right * z * MOVEMENT_SPEED;
+            Transform.Position += up * y * MOVEMENT_SPEED;
+            Transform.Position += forward * x * MOVEMENT_SPEED;
         }
 
         public void Update()
         {
             Vector3 front = CalculateCameraFront();
             viewMat = Matrix4.LookAt(
-                Position,               // Camera position
-                Position + front,       // Target (position + front vector)
+                Transform.Position,               // Camera position
+                Transform.Position + front,       // Target (position + front vector)
                 new Vector3(0, 1, 0)    // Up vector (y-axis up)
             );
         }

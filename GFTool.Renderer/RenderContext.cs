@@ -1,4 +1,6 @@
-﻿using GFTool.Renderer.Scene;
+﻿using GFTool.Renderer.Core;
+using GFTool.Renderer.Core.Graphics;
+using GFTool.Renderer.Scene;
 using GFTool.Renderer.Scene.GraphicsObjects;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Windowing.Common;
@@ -13,7 +15,9 @@ namespace GFTool.Renderer
         private int Width, Height;
 
         GBuffer gbuffer;
-        public Camera camera { get; private set; }
+        private Camera camera;
+
+        public bool AllowUserInput = true;
 
         public RenderContext(IGLFWGraphicsContext ctxt, int width, int height)
         {
@@ -82,6 +86,36 @@ namespace GFTool.Renderer
             gbuffer.Draw();
         }
 
+        public void UpdateMovementControls()
+        {
+            if (!AllowUserInput) return;
+
+            float x = 0;
+            float y = 0;
+            float z = 0;
+
+            if (KeyboardControls.Forward)
+                x = 1.0f;
+            else if (KeyboardControls.Backward)
+                x = -1.0f;
+            if (KeyboardControls.Right)
+                z = 1.0f;
+            else if (KeyboardControls.Left)
+                z = -1.0f;
+            if (KeyboardControls.Up)
+                y = 1.0f;
+            else if (KeyboardControls.Down)
+                y = -1.0f;
+
+            camera.ApplyMovement(x, y, z);
+        }
+
+        public void RotateCamera(float dx, float dy)
+        {
+            if (!AllowUserInput) return;
+            camera.ApplyRotationalDelta(dx, dy);
+        }
+
         public Model AddSceneModel(string file)
         {
             //TODO: Probably figure out how we're adding shit to child nodes (assuming necessary at this level)
@@ -102,6 +136,11 @@ namespace GFTool.Renderer
         public void ClearScene()
         {
             SceneGraph.Instance.GetRoot().children.Clear();
+        }
+
+        public Transform GetCameraTransform()
+        { 
+            return camera.Transform;
         }
 
         public void SetGBufferDisplayMode(GBuffer.DisplayType displayType)

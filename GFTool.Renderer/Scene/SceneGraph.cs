@@ -1,18 +1,20 @@
 ﻿
+using GFTool.Renderer.Scene.GraphicsObjects;
+
 namespace GFTool.Renderer.Scene
 {
     public sealed class SceneGraph
     {
-        private GraphicsObjects.Object rootScene;
+        private RefObject rootScene;
 
         private static readonly Lazy<SceneGraph> lazy = new Lazy<SceneGraph>(() => new SceneGraph());
         public static SceneGraph Instance { get { return lazy.Value; } }
         private SceneGraph()
         {
-            rootScene = new GraphicsObjects.Object();
+            rootScene = new RefObject();
         }
 
-        public GraphicsObjects.Object GetRoot()
+        public RefObject GetRoot()
         {
             return rootScene;
         }

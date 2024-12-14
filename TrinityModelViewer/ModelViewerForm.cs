@@ -1,7 +1,7 @@
 using GFTool.Core.Flatbuffers.TR.Scene.Components;
 using GFTool.Renderer;
+using GFTool.Renderer.Core;
 using GFTool.Renderer.Scene.GraphicsObjects;
-using TrinitySceneView;
 using Point = System.Drawing.Point;
 
 namespace TrinityModelViewer
@@ -18,7 +18,7 @@ namespace TrinityModelViewer
             InitializeComponent();
         }
 
-        private void messageHandler_Callback(object? sender, GFTool.Renderer.Message e)
+        private void messageHandler_Callback(object? sender, GFTool.Renderer.Core.Message e)
         {
             var item = new ListViewItem();
             item.Name = e.GetHashCode().ToString();
@@ -42,7 +42,8 @@ namespace TrinityModelViewer
         private void glCtxt_Paint(object sender, PaintEventArgs e)
         {
             renderer.Update();
-            statusLbl.Text = string.Format("Camera: Pos={0}, [Quat={1} Euler={2}]", renderer.camera.Position.ToString(), renderer.camera.Rotation.ToString(), renderer.camera.Rotation.ToEulerAngles().ToString());
+            var cam = renderer.GetCameraTransform();
+            statusLbl.Text = string.Format("Camera: Pos={0}, [Quat={1} Euler={2}]", cam.Position.ToString(), cam.Rotation.ToString(), cam.Rotation.ToEulerAngles().ToString());
         }
 
         private void glCtxt_Load(object sender, EventArgs e)
@@ -76,7 +77,7 @@ namespace TrinityModelViewer
             prevMousePos = mousePos;
             if ((e.Button & MouseButtons.Left) != 0)
             {
-                renderer.camera.ApplyRotationalDelta(deltaX, deltaY);
+                renderer.RotateCamera(deltaX, deltaY);
                 glCtxt.Invalidate();
             }
         }
@@ -89,24 +90,7 @@ namespace TrinityModelViewer
 
         private void keyTimer_Tick(object sender, EventArgs e)
         {
-            float x = 0;
-            float y = 0;
-            float z = 0;
-
-            if (KeyboardControls.Forward)
-                x = 1.0f;
-            else if (KeyboardControls.Backward)
-                x = -1.0f;
-            if (KeyboardControls.Right)
-                z = 1.0f;
-            else if (KeyboardControls.Left)
-                z = -1.0f;
-            if (KeyboardControls.Up)
-                y = 1.0f;
-            else if (KeyboardControls.Down)
-                y = -1.0f;
-
-            renderer.camera.ApplyMovement(x, y, z);
+            renderer.UpdateMovementControls();
             glCtxt.Invalidate();
         }
 

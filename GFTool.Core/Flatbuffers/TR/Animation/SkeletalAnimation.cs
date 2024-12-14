@@ -6,6 +6,13 @@ using System.Text.Json.Serialization;
 
 namespace Trinity.Core.Flatbuffers.TR.Animation
 {
+    [FlatBufferEnum(typeof(uint))]
+    public enum PlayType
+    {
+        Once = 0,
+        Looped
+    }
+
     [FlatBufferTable]
     public class FixedVectorTrack
     {
@@ -93,7 +100,7 @@ namespace Trinity.Core.Flatbuffers.TR.Animation
     public class PlaybackInfo
     {
         [FlatBufferItem(0)]
-        public UInt32 IsLooped { get; set; }
+        public PlayType PlayType { get; set; }
         [FlatBufferItem(1)]
         public UInt32 FrameCount { get; set; }
         [FlatBufferItem(2)]

@@ -2,7 +2,7 @@
 using OpenTK.Graphics.OpenGL4;
 using System.Drawing;
 
-namespace GFTool.Renderer
+namespace GFTool.Renderer.Core.Graphics
 {
     public class GBuffer : IDisposable
     {
@@ -16,7 +16,7 @@ namespace GFTool.Renderer
         };
 
         public enum DisplayType
-        { 
+        {
             DISPLAY_ALL,
             DISPLAY_ALBEDO,
             DISPLAY_NORMAL,
@@ -35,7 +35,7 @@ namespace GFTool.Renderer
 
         public DisplayType DisplayMode { get; set; } = DisplayType.DISPLAY_ALL;
 
-        public GBuffer(int width, int height) 
+        public GBuffer(int width, int height)
         {
             this.width = width;
             this.height = height;
@@ -48,7 +48,7 @@ namespace GFTool.Renderer
             textures = new int[(int)GBufferType.GBUFFER_MAX];
             GL.GenTextures(textures.Length, textures);
             for (int i = 0; i < textures.Length; i++)
-            { 
+            {
                 GL.BindTexture(TextureTarget.Texture2D, textures[i]);
                 GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgb32f, width, height, 0, PixelFormat.Rgb, PixelType.Float, IntPtr.Zero);
                 GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
@@ -146,7 +146,7 @@ namespace GFTool.Renderer
             gbShader.Bind();
 
             // Copy depth buffer over
-            if (DisplayMode == DisplayType.DISPLAY_ALL || DisplayMode == DisplayType.DISPLAY_DEPTH) 
+            if (DisplayMode == DisplayType.DISPLAY_ALL || DisplayMode == DisplayType.DISPLAY_DEPTH)
                 GL.BlitFramebuffer(0, 0, width, height, 0, 0, width, height, ClearBufferMask.DepthBufferBit, BlitFramebufferFilter.Nearest);
 
             //Set frame textures
@@ -160,7 +160,7 @@ namespace GFTool.Renderer
 
             //Attach frames
             int i = 0;
-            foreach(var frame in frameList )
+            foreach (var frame in frameList)
             {
                 GL.ActiveTexture(TextureUnit.Texture0 + i);
                 GL.BindTexture(TextureTarget.Texture2D, textures[i]);
