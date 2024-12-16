@@ -1,5 +1,3 @@
-using GFTool.Core.Flatbuffers.TR.Scene.Components;
-using GFTool.Renderer;
 using GFTool.Renderer.Core;
 using GFTool.Renderer.Scene.GraphicsObjects;
 using Point = System.Drawing.Point;
@@ -8,9 +6,6 @@ namespace TrinityModelViewer
 {
     public partial class ModelViewerForm : Form
     {
-        RenderContext renderer;
-        Point prevMousePos;
-
         private Dictionary<TreeNode, Model> modelMap = new Dictionary<TreeNode, Model>();
 
         public ModelViewerForm()
@@ -41,16 +36,12 @@ namespace TrinityModelViewer
         #region GL_CONTEXT
         private void glCtxt_Paint(object sender, PaintEventArgs e)
         {
-            renderer.Update();
-            var cam = renderer.GetCameraTransform();
+            var cam = renderCtrl.renderer.GetCameraTransform();
             statusLbl.Text = string.Format("Camera: Pos={0}, [Quat={1} Euler={2}]", cam.Position.ToString(), cam.Rotation.ToString(), cam.Rotation.ToEulerAngles().ToString());
         }
 
         private void glCtxt_Load(object sender, EventArgs e)
         {
-            //Create rendering context
-            renderer = new RenderContext(glCtxt.Context, glCtxt.Width, glCtxt.Height);
-
             //Connect to message handler 
             MessageHandler.Instance.MessageCallback += messageHandler_Callback;
             var messageIcons = new ImageList();
@@ -60,38 +51,45 @@ namespace TrinityModelViewer
             messageListView.SmallImageList = messageIcons;
             messageListView.FullRowSelect = true;
             messageListView.AutoResizeColumn(0, ColumnHeaderAutoResizeStyle.HeaderSize);
+        }
+        #endregion
 
-            //Initialize renderer
-            renderer.Setup();
+
+        private void ClearAll()
+        {
+            renderCtrl.renderer.ClearScene();
+            messageListView.Items.Clear();
         }
 
-        private void glCtxt_MouseMove(object sender, MouseEventArgs e)
+        private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Point mousePos = e.Location;
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.Filter = "Trinity Model files (*.trmdl)|*.trmdl|All files (*.*)|*.*";
+            if (ofd.ShowDialog() != DialogResult.OK) return;
 
-            if (mousePos == prevMousePos) return;
-
-            int deltaX = (mousePos.X - prevMousePos.X);
-            int deltaY = (mousePos.Y - prevMousePos.Y);
-
-            prevMousePos = mousePos;
-            if ((e.Button & MouseButtons.Left) != 0)
-            {
-                renderer.RotateCamera(deltaX, deltaY);
-                glCtxt.Invalidate();
-            }
+            ClearAll();
+            var mdl = renderCtrl.renderer.AddSceneModel(ofd.FileName);
+            var node = new TreeNode(mdl.Name);
+            modelMap.Add(node, mdl);
+            sceneTree.Nodes.Add(node);
         }
 
-        private void glCtxt_Resize(object sender, EventArgs e)
+        private void importToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            renderer?.Resize(glCtxt.Width, glCtxt.Height);
-            glCtxt.Invalidate();
+            OpenFileDialog ofd = new OpenFileDialog();
+            ofd.Filter = "Trinity Model files (*.trmdl)|*.trmdl|All files (*.*)|*.*";
+            if (ofd.ShowDialog() != DialogResult.OK) return;
+
+            var mdl = renderCtrl.renderer.AddSceneModel(ofd.FileName);
+            var node = new TreeNode(mdl.Name);
+            modelMap.Add(node, mdl);
+            sceneTree.Nodes.Add(node);
         }
 
-        private void keyTimer_Tick(object sender, EventArgs e)
+        private void wireframeToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            renderer.UpdateMovementControls();
-            glCtxt.Invalidate();
+            renderCtrl.renderer.SetWireframe(wireframeToolStripMenuItem.CheckState == CheckState.Checked);
+            renderCtrl.Invalidate();
         }
 
         private void glCtxt_KeyDown(object sender, KeyEventArgs e)
@@ -119,44 +117,6 @@ namespace TrinityModelViewer
                 case Keys.E: KeyboardControls.Down = false; break;
             }
         }
-        #endregion
-
-        private void ClearAll()
-        {
-            renderer.ClearScene();
-            messageListView.Items.Clear();
-        }
-
-        private void openToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            OpenFileDialog ofd = new OpenFileDialog();
-            ofd.Filter = "Trinity Model files (*.trmdl)|*.trmdl|All files (*.*)|*.*";
-            if (ofd.ShowDialog() != DialogResult.OK) return;
-
-            ClearAll();
-            var mdl = renderer.AddSceneModel(ofd.FileName);
-            var node = new TreeNode(mdl.Name);
-            modelMap.Add(node, mdl);
-            sceneTree.Nodes.Add(node);
-        }
-
-        private void importToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            OpenFileDialog ofd = new OpenFileDialog();
-            ofd.Filter = "Trinity Model files (*.trmdl)|*.trmdl|All files (*.*)|*.*";
-            if (ofd.ShowDialog() != DialogResult.OK) return;
-
-            var mdl = renderer.AddSceneModel(ofd.FileName);
-            var node = new TreeNode(mdl.Name);
-            modelMap.Add(node, mdl);
-            sceneTree.Nodes.Add(node);
-        }
-
-        private void wireframeToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            renderer.SetWireframe(wireframeToolStripMenuItem.CheckState == CheckState.Checked);
-            glCtxt.Invalidate();
-        }
 
         //Treeview handler
         private void sceneTree_MouseUp(object sender, MouseEventArgs e)
@@ -183,7 +143,7 @@ namespace TrinityModelViewer
                 modelMap.TryGetValue(selected, out var mdl);
                 if (mdl == null) return;
 
-                renderer.RemoveSceneModel(mdl);
+                renderCtrl.renderer.RemoveSceneModel(mdl);
                 sceneTree.Nodes.Remove(selected);
                 modelMap.Remove(selected);
             }

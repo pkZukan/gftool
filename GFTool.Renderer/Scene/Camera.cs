@@ -82,12 +82,10 @@ namespace GFTool.Renderer.Scene
         {
             if (!CanMove) return;
 
-            // Get current rotation
-            Vector3 currRot = Transform.Rotation.ToEulerAngles();
-            currRot.Y += MathHelper.DegreesToRadians(deltaX* SENSITIVITY_X);
-            currRot.X += MathHelper.DegreesToRadians(deltaY * SENSITIVITY_Y);
+            Quaternion yawRotation = Quaternion.FromAxisAngle(Vector3.UnitY, MathHelper.DegreesToRadians(deltaX * SENSITIVITY_X));
+            Quaternion pitchRotation = Quaternion.FromAxisAngle(Vector3.UnitX, MathHelper.DegreesToRadians(-deltaY * SENSITIVITY_Y));
 
-            Transform.Rotation = Quaternion.FromEulerAngles(currRot);
+            Transform.Rotation = yawRotation * pitchRotation * Transform.Rotation;
         }
 
 
@@ -108,9 +106,9 @@ namespace GFTool.Renderer.Scene
         {
             Vector3 front = CalculateCameraFront();
             viewMat = Matrix4.LookAt(
-                Transform.Position,               // Camera position
-                Transform.Position + front,       // Target (position + front vector)
-                new Vector3(0, 1, 0)    // Up vector (y-axis up)
+                Transform.Position,         // Camera position
+                Transform.Position + front, // Target (position + front vector)
+                new Vector3(0, 1, 0)        // Up vector (y-axis up)
             );
         }
 

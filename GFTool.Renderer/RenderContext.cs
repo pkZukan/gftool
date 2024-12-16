@@ -2,9 +2,11 @@
 using GFTool.Renderer.Core.Graphics;
 using GFTool.Renderer.Scene;
 using GFTool.Renderer.Scene.GraphicsObjects;
+using OpenTK;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
+using OpenTK.Windowing.GraphicsLibraryFramework;
 using System.Drawing;
 
 namespace GFTool.Renderer
@@ -24,11 +26,7 @@ namespace GFTool.Renderer
             Width = width;
             Height = height;
             viewport = ctxt;
-        }
 
-        //Render init
-        public void Setup()
-        {
             //Create camera and add to root scene
             camera = new Camera(Width, Height);
             SceneGraph.Instance.GetRoot().AddChild(camera);

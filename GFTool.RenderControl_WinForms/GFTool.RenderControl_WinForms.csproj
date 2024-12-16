@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Library</OutputType>
     <TargetFramework>net6.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
@@ -13,8 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GFTool.Core\GFTool.Core.csproj" />
-    <ProjectReference Include="..\GFTool.RenderControl_WinForms\GFTool.RenderControl_WinForms.csproj" />
+    <ProjectReference Include="..\GFTool.Renderer\GFTool.Renderer.csproj" />
   </ItemGroup>
 
 </Project>

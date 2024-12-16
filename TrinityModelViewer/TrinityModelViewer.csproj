@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\GFTool.Core\GFTool.Core.csproj" />
-    <ProjectReference Include="..\GFTool.Renderer\GFTool.Renderer.csproj" />
+    <ProjectReference Include="..\GFTool.RenderControl_WinForms\GFTool.RenderControl_WinForms.csproj" />
   </ItemGroup>
 
 </Project>

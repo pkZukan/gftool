@@ -29,7 +29,6 @@
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
-            glCtxt = new OpenTK.GLControl.GLControl();
             menuStrip1 = new MenuStrip();
             fileToolStripMenuItem = new ToolStripMenuItem();
             openToolStripMenuItem = new ToolStripMenuItem();
@@ -38,7 +37,6 @@
             wireframeToolStripMenuItem = new ToolStripMenuItem();
             messageListView = new ListView();
             columnHeader1 = new ColumnHeader();
-            keyTimer = new System.Windows.Forms.Timer(components);
             statusLbl = new Label();
             panel1 = new Panel();
             splitContainer1 = new SplitContainer();
@@ -62,6 +60,7 @@
             materialList = new ListView();
             sceneTreeCtxtMenu = new ContextMenuStrip(components);
             deleteToolStripMenuItem = new ToolStripMenuItem();
+            renderCtrl = new GFTool.RenderControl_WinForms.RenderControl();
             menuStrip1.SuspendLayout();
             panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
@@ -83,23 +82,6 @@
             tabPage2.SuspendLayout();
             sceneTreeCtxtMenu.SuspendLayout();
             SuspendLayout();
-            // 
-            // glCtxt
-            // 
-            glCtxt.API = OpenTK.Windowing.Common.ContextAPI.OpenGL;
-            glCtxt.APIVersion = new Version(4, 2, 0, 0);
-            glCtxt.Flags = OpenTK.Windowing.Common.ContextFlags.Default;
-            glCtxt.IsEventDriven = true;
-            glCtxt.Location = new Point(12, 27);
-            glCtxt.Name = "glCtxt";
-            glCtxt.Profile = OpenTK.Windowing.Common.ContextProfile.Core;
-            glCtxt.SharedContext = null;
-            glCtxt.Size = new Size(1080, 720);
-            glCtxt.TabIndex = 0;
-            glCtxt.Load += glCtxt_Load;
-            glCtxt.Paint += glCtxt_Paint;
-            glCtxt.MouseMove += glCtxt_MouseMove;
-            glCtxt.Resize += glCtxt_Resize;
             // 
             // menuStrip1
             // 
@@ -160,12 +142,6 @@
             // columnHeader1
             // 
             columnHeader1.Text = "Messages";
-            // 
-            // keyTimer
-            // 
-            keyTimer.Enabled = true;
-            keyTimer.Interval = 10;
-            keyTimer.Tick += keyTimer_Tick;
             // 
             // statusLbl
             // 
@@ -382,21 +358,36 @@
             deleteToolStripMenuItem.Text = "Delete";
             deleteToolStripMenuItem.Click += deleteToolStripMenuItem_Click;
             // 
+            // renderCtrl
+            // 
+            renderCtrl.API = OpenTK.Windowing.Common.ContextAPI.OpenGL;
+            renderCtrl.APIVersion = new Version(3, 3, 0, 0);
+            renderCtrl.Flags = OpenTK.Windowing.Common.ContextFlags.Default;
+            renderCtrl.IsEventDriven = true;
+            renderCtrl.Location = new Point(15, 27);
+            renderCtrl.Name = "renderCtrl";
+            renderCtrl.Profile = OpenTK.Windowing.Common.ContextProfile.Core;
+            renderCtrl.SharedContext = null;
+            renderCtrl.Size = new Size(1080, 720);
+            renderCtrl.TabIndex = 5;
+            renderCtrl.Load += glCtxt_Load;
+            renderCtrl.Paint += glCtxt_Paint;
+            renderCtrl.KeyDown += glCtxt_KeyDown;
+            renderCtrl.KeyUp += glCtxt_KeyUp;
+            // 
             // ModelViewerForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1474, 924);
+            Controls.Add(renderCtrl);
             Controls.Add(panel1);
             Controls.Add(statusLbl);
             Controls.Add(messageListView);
-            Controls.Add(glCtxt);
             Controls.Add(menuStrip1);
             MainMenuStrip = menuStrip1;
             Name = "ModelViewerForm";
             Text = "Trinity Model Viewer";
-            KeyDown += glCtxt_KeyDown;
-            KeyUp += glCtxt_KeyUp;
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
             panel1.ResumeLayout(false);
@@ -424,14 +415,11 @@
         }
 
         #endregion
-
-        private OpenTK.GLControl.GLControl glCtxt;
         private MenuStrip menuStrip1;
         private ToolStripMenuItem fileToolStripMenuItem;
         private ToolStripMenuItem openToolStripMenuItem;
         private ListView messageListView;
         private ColumnHeader columnHeader1;
-        private System.Windows.Forms.Timer keyTimer;
         private Label statusLbl;
         private Panel panel1;
         private SplitContainer splitContainer1;
@@ -458,5 +446,6 @@
         private GroupBox groupBox1;
         private ContextMenuStrip sceneTreeCtxtMenu;
         private ToolStripMenuItem deleteToolStripMenuItem;
+        private GFTool.RenderControl_WinForms.RenderControl renderCtrl;
     }
 }

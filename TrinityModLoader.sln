@@ -13,7 +13,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TrinityFileExplorer", "Trin
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GFTool.Renderer", "GFTool.Renderer\GFTool.Renderer.csproj", "{5F73D2AD-186B-4CA3-A8A1-F4F526BC6F8E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrinityModelViewer", "TrinityModelViewer\TrinityModelViewer.csproj", "{121D05D0-711B-4BB6-9735-76AEA43BDF20}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TrinityModelViewer", "TrinityModelViewer\TrinityModelViewer.csproj", "{121D05D0-711B-4BB6-9735-76AEA43BDF20}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GFTool.RenderControl_WinForms", "GFTool.RenderControl_WinForms\GFTool.RenderControl_WinForms.csproj", "{EBBF7A40-48E1-4636-827E-6A710D847ABC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +47,10 @@ Global
 		{121D05D0-711B-4BB6-9735-76AEA43BDF20}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{121D05D0-711B-4BB6-9735-76AEA43BDF20}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{121D05D0-711B-4BB6-9735-76AEA43BDF20}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EBBF7A40-48E1-4636-827E-6A710D847ABC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EBBF7A40-48E1-4636-827E-6A710D847ABC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EBBF7A40-48E1-4636-827E-6A710D847ABC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EBBF7A40-48E1-4636-827E-6A710D847ABC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
