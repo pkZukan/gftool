@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace TrinityModLoader
 {
-    public partial class TrinityMainWindow : Form
+    public partial class TrinityModLoaderWindow : Form
     {
         public static string titleText = "Trinity Mod Loader";
 
@@ -15,7 +15,7 @@ namespace TrinityModLoader
         public string modPackLocation = String.Empty;
         public ModPack? modPack = null;
 
-        public TrinityMainWindow()
+        public TrinityModLoaderWindow()
         {
             InitializeComponent();
             InitializeSettings();
@@ -202,14 +202,6 @@ namespace TrinityModLoader
             modPack.mods.Insert(toIndex, entry);
         }
 
-        void RemoveMod(IModEntry mod)
-        {
-            foreach (var f in mod.FetchFiles())
-            {
-                customFileDescriptor?.AddFile(GFFNV.Hash(f));
-            }
-        }
-
         void ApplyMod(IModEntry mod, string lfsDir)
         {
             mod.Extract(lfsDir);
@@ -237,7 +229,7 @@ namespace TrinityModLoader
 
             mod.IsEnabled = true;
             modPack.mods.Add(mod);
-            modList.Items.Add(mod.ModPath, true);
+            modList.Items.Add(mod.FetchToml().display_name, true);
         }
 
         void SerializeTRPFD(string fileOut)
@@ -254,25 +246,34 @@ namespace TrinityModLoader
             var mod = modPack.mods[modList.SelectedIndex];
             var toml = mod.FetchToml();
 
-            modPropertyGrid.SelectedObject = toml;
-            //if (toml.Count >= 3)
-            //{
-            //    modNameDataLbl.Text = toml["display_name"].ToString();
-            //    modDescriptionBox.Text = toml["description"].ToString();
-            //    versionDataLbl.Text = toml["version"].ToString();
-            //}
-            //else
-            //{
-            //    modNameDataLbl.Text = modList.Items[modList.SelectedIndex].ToString();
-            //    modDescriptionBox.Text = "None";
-            //    versionDataLbl.Text = "Unknown";
-            //}
-
+            if (toml != null)
+            {
+                if (toml.display_name != null)
+                    ModNameLabel.Text = toml.display_name.ToString();
+                if (toml.author_name != null)
+                    ModAuthorLabel.Text = toml.author_name.ToString();
+                if (toml.version != null)
+                    ModVersionLabel.Text = toml.version.ToString();
+                if (mod.ModPath != null)
+                    ModPathLabel.Text = mod.ModPath.ToString();
+                if (toml.description != null)
+                    ModDescriptionBox.Text = toml.description.ToString();
+            }
+            else
+            {
+                ModNameLabel.Text = modList.Items[modList.SelectedIndex].ToString();
+                ModAuthorLabel.Text = "";
+                ModDescriptionBox.Text = "";
+                ModVersionLabel.Text = "";
+            }
         }
 
         private void ClearMetaData()
         {
-            modPropertyGrid.SelectedObject = null;
+            ModAuthorLabel.Text = null;
+            ModNameLabel.Text = null;
+            ModPathLabel.Text = null;
+            ModDescriptionBox.Text = null;
         }
 
         #region UTIL
@@ -319,6 +320,20 @@ namespace TrinityModLoader
             if (modList.SelectedIndex >= 0)
             {
                 PopulateMetaData();
+                PopulateFileData();
+            }
+        }
+
+        private void PopulateFileData()
+        {
+            fileView.Items.Clear();
+
+            var mod = modPack.mods[modList.SelectedIndex];
+            var files = mod.FetchFiles();
+
+            foreach (string file in files)
+            {
+                fileView.Items.Add(file);
             }
         }
 
@@ -341,8 +356,6 @@ namespace TrinityModLoader
                 var mod = modPack.mods[i];
                 if (mod.IsEnabled)
                     ApplyMod(mod, layeredFSLocation);
-                else
-                    RemoveMod(mod);
             }
 
             SerializeTRPFD(Path.Join(layeredFSLocation, FilepathSettings.trpfdRel));
@@ -356,6 +369,7 @@ namespace TrinityModLoader
                 Process.Start("explorer.exe", string.Format("\"{0}\"", filePath));
             }
         }
+
         private void modOrderUp_Click(object sender, EventArgs e)
         {
             if (modList.SelectedIndex < 0 || modList.SelectedIndex == 0) return;
@@ -401,14 +415,8 @@ namespace TrinityModLoader
             {
                 var dialogResult = MessageBox.Show("A ModPack already exists in this folder, would you like to load it?", "ModPack found", MessageBoxButtons.YesNo);
 
-                if (dialogResult == DialogResult.Yes)
-                {
-                    LoadModPack(folderBrowserDialog.SelectedPath);
-                }
-                else
-                {
-                    return;
-                }
+                if (dialogResult != DialogResult.Yes) return;
+                LoadModPack(folderBrowserDialog.SelectedPath);
             }
 
             else
@@ -426,15 +434,8 @@ namespace TrinityModLoader
             if (!File.Exists(folderBrowserDialog.SelectedPath + ModPack.settingsRel))
             {
                 var dialogResult = MessageBox.Show("No ModPack exists in this folder, would you like to create one?", "No ModPack found", MessageBoxButtons.YesNo);
-
-                if (dialogResult == DialogResult.Yes)
-                {
-                    CreateModPack(folderBrowserDialog.SelectedPath);
-                }
-                else
-                {
-                    return;
-                }
+                if (dialogResult != DialogResult.Yes) return;
+                CreateModPack(folderBrowserDialog.SelectedPath);
             }
 
             LoadModPack(folderBrowserDialog.SelectedPath);
@@ -465,7 +466,7 @@ namespace TrinityModLoader
                 modList.SelectedIndex = modList.IndexFromPoint(e.Location);
                 if (modList.SelectedIndex != -1)
                 {
-                    basicContext.Show(modList, e.Location);
+                    listContext.Show(modList, e.Location);
                 }
             }
         }
@@ -473,6 +474,12 @@ namespace TrinityModLoader
         private void openModWindowMenuItem_Click(object sender, EventArgs e)
         {
             openModWindowMenuItem.Checked = !openModWindowMenuItem.Checked;
+        }
+
+        private void refreshModButton_Click(object sender, EventArgs e)
+        {
+            PopulateMetaData();
+            PopulateFileData();
         }
     }
     #endregion

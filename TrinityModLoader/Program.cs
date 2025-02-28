@@ -12,7 +12,7 @@ namespace TrinityModLoader
             // see https://aka.ms/applicationconfiguration.
 
             ApplicationConfiguration.Initialize();
-            Application.Run(new TrinityMainWindow());
+            Application.Run(new TrinityModLoaderWindow());
         }
     }
 }
