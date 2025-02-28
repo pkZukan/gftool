@@ -24,7 +24,15 @@ namespace TrinityModLoader
         [Category("Mod Data")]
         [DisplayName("Name")]
         public string display_name { get; set; }
-        public string description { get; set; }
+        [Category("Mod Data")]
+        [DisplayName("Author")]
+        public string author_name { get; set; }
+        [Category("Mod Data")]
+        [DisplayName("Version")]
         public string version { get; set; }
+        [Category("Mod Description")]
+        [DisplayName("Description")]
+        public string description { get; set; }
+
     }
 }

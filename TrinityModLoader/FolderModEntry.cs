@@ -1,4 +1,5 @@
-﻿using Tomlyn;
+﻿using SharpCompress.Common;
+using Tomlyn;
 
 namespace TrinityModLoader
 {
@@ -8,7 +9,7 @@ namespace TrinityModLoader
         public string URL { get; set; }
         public bool IsEnabled { get; set; }
 
-        static IEnumerable<string> WalkDirectory(string directoryPath)
+        public IEnumerable<string> WalkDirectory(string directoryPath)
         {
             foreach (var filePath in Directory.EnumerateFiles(directoryPath))
             {
@@ -45,7 +46,16 @@ namespace TrinityModLoader
 
         public string[] FetchFiles()
         {
-            return WalkDirectory(ModPath).ToArray();
+            var files = new List<string>();
+            var rawFiles = WalkDirectory(ModPath);
+
+            foreach (var filePath in rawFiles)
+            {
+                if (filePath.Contains("info.toml")) continue;
+                files.Add(filePath.Replace(ModPath + "\\", "").Replace("\\", "/"));
+            }
+
+            return files.ToArray();
         }
 
         public ModData FetchToml()
