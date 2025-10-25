@@ -82,6 +82,35 @@ namespace Trinity
             }
         }
 
+        public void PullLatestHashesZA()
+        {
+            string fileUrl = "https://raw.githubusercontent.com/pkZukan/PokeDocs/main/ZA/Hashlists/FileSystem/hashes_inside_fd.txt";
+            using var httpClient = new HttpClient();
+
+            HttpResponseMessage response = httpClient.GetAsync(fileUrl).GetAwaiter().GetResult();
+            if (response.IsSuccessStatusCode)
+            {
+                Stream fileStream = response.Content.ReadAsStreamAsync().GetAwaiter().GetResult();
+                string filePath = "hashes_inside_fd.txt";
+                using var fileOutput = File.Create(filePath);
+                fileStream.CopyTo(fileOutput);
+
+                MessageBox.Show("Latest hashes downloaded.\n\nTrinity must restart to use the new hashes.");
+                Application.Restart();
+                Environment.Exit(0);
+            }
+            else
+            {
+                var message_text = "Failed to download latest hashes.\n\nManually download the \"hashes_inside_fd.txt\" file into your Trinity folder.\n\nClick OK to copy the URL of the file to your clipboard.";
+
+                if (MessageBox.Show(message_text, "Failed to download", MessageBoxButtons.OKCancel) == DialogResult.OK)
+                {
+                    Clipboard.SetText(fileUrl);
+                }
+            }
+        }
+
+
         public void LoadSettings()
         {
             var file = "settings.json";
@@ -733,6 +762,11 @@ namespace Trinity
         private void getLatestHashes_Click(object sender, EventArgs e)
         {
             PullLatestHashes();
+        }
+
+        private void getLatestHashesZA_Click(object sender, EventArgs e)
+        {
+            PullLatestHashesZA();
         }
 
         private void addFolderMod_Click(object sender, EventArgs e)

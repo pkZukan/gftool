@@ -43,6 +43,7 @@
             helpToolStripMenuItem = new ToolStripMenuItem();
             aboutToolStripMenuItem = new ToolStripMenuItem();
             getLatestHashes = new ToolStripMenuItem();
+            getLatestHashesZA = new ToolStripMenuItem();
             fileView = new TreeView();
             helpProvider1 = new HelpProvider();
             progressBar1 = new ProgressBar();
@@ -161,7 +162,7 @@
             // 
             // helpToolStripMenuItem
             // 
-            helpToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { aboutToolStripMenuItem, getLatestHashes });
+            helpToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { aboutToolStripMenuItem, getLatestHashes, getLatestHashesZA });
             helpToolStripMenuItem.Name = "helpToolStripMenuItem";
             helpToolStripMenuItem.Size = new Size(65, 29);
             helpToolStripMenuItem.Text = "Help";
@@ -177,8 +178,15 @@
             // 
             getLatestHashes.Name = "getLatestHashes";
             getLatestHashes.Size = new Size(254, 34);
-            getLatestHashes.Text = "Get Latest Hashes";
+            getLatestHashes.Text = "Get Latest Hashes SV";
             getLatestHashes.Click += getLatestHashes_Click;
+            // 
+            // getLatestHashesZA
+            // 
+            getLatestHashesZA.Name = "getLatestHashesZA";
+            getLatestHashesZA.Size = new Size(254, 34);
+            getLatestHashesZA.Text = "Get Latest Hashes ZA";
+            getLatestHashesZA.Click += getLatestHashesZA_Click;
             // 
             // fileView
             // 
@@ -492,6 +500,7 @@
         private Label versionLbl;
         private Label label4;
         private ToolStripMenuItem getLatestHashes;
+        private ToolStripMenuItem getLatestHashesZA;
         private Button addFolderMod;
     }
 }
