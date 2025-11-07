@@ -32,26 +32,6 @@ namespace Trinity
         public TrinityMainWindow()
         {
             InitializeComponent();
-            hasOodleDll = File.Exists("oo2core_8_win64.dll");
-            if (!hasOodleDll)
-                MessageBox.Show("Liboodle dll missing. Exporting from TRPFS is disabled.");
-
-            if (!File.Exists("hashes_inside_fd.txt"))
-            {
-                DialogResult dialogResult = MessageBox.Show("Missing hash file hashes_inside_fd.txt.\n\nDownload from the PokeDocs GitHub repo?", "Missing Files", MessageBoxButtons.YesNo);
-                if (dialogResult == DialogResult.Yes)
-                {
-                    PullLatestHashes();
-                }
-            }
-
-            if (!File.Exists("GFPAKHashCache.bin"))
-            {
-                MessageBox.Show("Missing fallback GFPAKHashCache.bin");
-            }
-
-            LoadSettings();
-            LoadMods();
         }
 
         public void PullLatestHashes()
@@ -572,6 +552,29 @@ namespace Trinity
         #region UI_HANDLERS
         private void FileSystemForm_Load(object sender, EventArgs e)
         {
+            hasOodleDll = File.Exists("oo2core_8_win64.dll");
+            if (!hasOodleDll)
+            {
+                MessageBox.Show("Liboodle dll missing. Exporting from TRPFS is disabled.");
+            }
+
+            if (!File.Exists("hashes_inside_fd.txt"))
+            {
+                if (!File.Exists("GFPAKHashCache.bin"))
+                {
+                    MessageBox.Show("Missing fallback GFPAKHashCache.bin");
+                }
+
+                DialogResult dialogResult = MessageBox.Show("Missing hash file hashes_inside_fd.txt.\n\nDownload from the PokeDocs GitHub repo?", "Missing Files", MessageBoxButtons.YesNo);
+                if (dialogResult == DialogResult.Yes)
+                {
+                    PullLatestHashes();
+                }
+            }
+
+            LoadSettings();
+            LoadMods();
+
             if (File.Exists(settings.archiveDir + trpfsRel) && File.Exists(settings.archiveDir + trpfdRel) && settings.autoloadTrpfd)
                 ParseFileDescriptor();
             else
