@@ -21,11 +21,16 @@ jobs:
       run: dotnet build --no-restore --configuration Release
     - name: Test
       run: dotnet test --no-build --verbosity normal
-    - name: Zip output
+    - name: Zip TrinityModLoader
       uses: papeloto/action-zip@v1
       with:
-        files: TrinityModLoader/bin/Release/net8.0-windows
-        dest: TrinityModLoader/bin/Release/TrinityLoader.zip
+        files: TrinityModLoader/bin/Release/net8.0-windows7.0
+        dest: TrinityModLoader/bin/Release/TrinityModLoader.zip
+    - name: Zip TrinityFileExplorer
+      uses: papeloto/action-zip@v1
+      with:
+        files: TrinityFileExplorer/bin/Release/net8.0-windows7.0
+        dest: TrinityFileExplorer/bin/Release/TrinityFileExplorer.zip
     - name: Update nightly release
       uses: WebFreak001/deploy-nightly@v1.1.0
       env:
@@ -33,7 +38,18 @@ jobs:
       with:
         upload_url: https://uploads.github.com/repos/pkZukan/gftool/releases/84790057/assets{?name,label}
         release_id: 84790057
-        asset_path: TrinityModLoader/bin/Release/TrinityLoader.zip
-        asset_name: TrinityLoader-nightly-$$.zip
+        asset_path: TrinityModLoader/bin/Release/TrinityModLoader.zip
+        asset_name: TrinityModLoader-nightly-$$.zip
+        asset_content_type: application/zip
+        max_releases: 1
+    - name: Update nightly release
+      uses: WebFreak001/deploy-nightly@v1.1.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: https://uploads.github.com/repos/pkZukan/gftool/releases/84790057/assets{?name,label}
+        release_id: 84790057
+        asset_path: TrinityFileExplorer/bin/Release/TrinityFileExplorer.zip
+        asset_name: TrinityFileExplorer-nightly-$$.zip
         asset_content_type: application/zip
         max_releases: 1
