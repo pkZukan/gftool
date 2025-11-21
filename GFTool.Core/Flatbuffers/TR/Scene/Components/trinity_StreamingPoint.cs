@@ -1,5 +1,6 @@
 ﻿using FlatSharp.Attributes;
 using System.Drawing;
+using Trinity.Core.Flatbuffers.Utils;
 
 namespace GFTool.Core.Flatbuffers.TR.Scene.Components
 {
@@ -20,7 +21,7 @@ namespace GFTool.Core.Flatbuffers.TR.Scene.Components
         public string Name { get; set; }
 
         [FlatBufferItem(1)]
-        public Vec3f Position { get; set; }
+        public Vector3f Position { get; set; }
     }
 
     [FlatBufferTable]

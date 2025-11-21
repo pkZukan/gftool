@@ -1,35 +1,49 @@
 ﻿using FlatSharp.Attributes;
+using Trinity.Core.Flatbuffers.Utils;
 
 namespace GFTool.Core.Flatbuffers.TR.Scene.Components
 {
     [FlatBufferTable]
+    public class ObjectLayer
+    {
+        [FlatBufferItem(0)]
+        public int Priority { get; set; }
+
+        [FlatBufferItem(1)]
+        public string Name { get; set; }
+
+        [FlatBufferItem(2)]
+        public Transform Srt { get; set; }
+    }
+
+    [FlatBufferTable]
     public class trinity_SceneObject
     {
         [FlatBufferItem(0)]
-        public string object_name { get; set; }
+        public string Name { get; set; }
 
         [FlatBufferItem(1)]
-        public SRT object_SRT { get; set; }
+        public Transform Srt { get; set; }
 
         [FlatBufferItem(2)]
-        public uint res_2 { get; set; }
+        public bool KeepWorldSrt { get; set; }
 
         [FlatBufferItem(3)]
-        public uint res_3 { get; set; }
+        public bool AttachTransform { get; set; }
 
         [FlatBufferItem(4)]
-        public uint[] unk_4 { get; set; }
+        public string AttachJointName { get; set; }
 
         [FlatBufferItem(5)]
-        public byte unk_5 { get; set; }
+        public bool Scriptable { get; set; }
 
         [FlatBufferItem(6)]
-        public uint res_6 { get; set; }
+        public byte Priority { get; set; }
 
         [FlatBufferItem(7)]
-        public uint[] unk_7 { get; set; }
+        public ObjectLayer[] Layers { get; set; }
 
         [FlatBufferItem(8)]
-        public string[] unk_8 { get; set; }
+        public string[] TagList { get; set; }
     }
 }

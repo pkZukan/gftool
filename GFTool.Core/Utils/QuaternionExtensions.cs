@@ -77,7 +77,6 @@ namespace Trinity.Core.Utils
 
             if (isNegative == 1)
             {
-
                 for (int i = 0; i < 4; i++)
                 {
                     qc[i] *= -1.0f;

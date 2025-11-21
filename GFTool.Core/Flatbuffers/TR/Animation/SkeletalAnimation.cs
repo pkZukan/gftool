@@ -6,18 +6,25 @@ using System.Text.Json.Serialization;
 
 namespace Trinity.Core.Flatbuffers.TR.Animation
 {
+    [FlatBufferEnum(typeof(uint))]
+    public enum PlayType
+    {
+        Once = 0,
+        Looped
+    }
+
     [FlatBufferTable]
     public class FixedVectorTrack
     {
         [FlatBufferItem(0)]
-        public Vector3 Value { get; set; }
+        public Vector3f Value { get; set; }
     }
 
     [FlatBufferTable]
     public class FramedVectorTrack
     {
         [FlatBufferItem(0)]
-        public IList<Vector3> Values { get; set; }
+        public IList<Vector3f> Values { get; set; }
     }
 
     [FlatBufferTable]
@@ -26,7 +33,7 @@ namespace Trinity.Core.Flatbuffers.TR.Animation
         [FlatBufferItem(0)]
         public IList<UInt16> Keys { get; set; }
         [FlatBufferItem(1)]
-        public IList<Vector3> Values { get; set; }
+        public IList<Vector3f> Values { get; set; }
     }
 
     [FlatBufferTable]
@@ -35,7 +42,7 @@ namespace Trinity.Core.Flatbuffers.TR.Animation
         [FlatBufferItem(0)]
         public IList<Byte> Keys { get; set; }
         [FlatBufferItem(1)]
-        public IList<Vector3> Values { get; set; }
+        public IList<Vector3f> Values { get; set; }
     }
     [FlatBufferTable]
     public class FixedRotationTrack
@@ -93,7 +100,7 @@ namespace Trinity.Core.Flatbuffers.TR.Animation
     public class PlaybackInfo
     {
         [FlatBufferItem(0)]
-        public UInt32 IsLooped { get; set; }
+        public PlayType PlayType { get; set; }
         [FlatBufferItem(1)]
         public UInt32 FrameCount { get; set; }
         [FlatBufferItem(2)]

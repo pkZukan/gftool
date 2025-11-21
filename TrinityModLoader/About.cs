@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace Trinity
+namespace TrinityModLoader
 {
     public partial class About : Form
     {
@@ -21,6 +21,11 @@ namespace Trinity
                 FileName = "https://gamebanana.com/tuts/15508",
                 UseShellExecute = true
             });
+        }
+
+        private void label1_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

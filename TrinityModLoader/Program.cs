@@ -1,4 +1,4 @@
-namespace Trinity
+namespace TrinityModLoader
 {
     internal static class Program
     {
@@ -10,7 +10,7 @@ namespace Trinity
         {
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
-            Trinity.Core.Cache.GFPakHashCache.Init();
+
             ApplicationConfiguration.Initialize();
             Application.Run(new TrinityMainWindow());
         }

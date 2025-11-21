@@ -6,21 +6,21 @@ namespace GFTool.Core.Flatbuffers.TR.Scene.Components
     public class trinity_ScriptComponent
     {
         [FlatBufferItem(0)]
-        public string script_file { get; set; }
+        public string FilePath { get; set; }
 
         [FlatBufferItem(1)]
-        public string script_hash { get; set; }
+        public string PackageName { get; set; }
 
         [FlatBufferItem(2)]
-        public uint res_2 { get; set; }
+        public bool IsParallelized { get; set; }
 
         [FlatBufferItem(3)]
-        public uint res_3 { get; set; }
+        public float Priority { get; set; }
 
         [FlatBufferItem(4)]
-        public uint res_4 { get; set; }
+        public bool IsStatic { get; set; }
 
         [FlatBufferItem(5)]
-        public string class_name { get; set; }
+        public string ResName { get; set; }
     }
 }
