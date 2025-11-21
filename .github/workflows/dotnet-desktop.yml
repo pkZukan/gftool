@@ -24,7 +24,7 @@ jobs:
     - name: Zip output
       uses: papeloto/action-zip@v1
       with:
-        files: TrinityModLoader/bin/Release/net6.0-windows
+        files: TrinityModLoader/bin/Release/net8.0-windows
         dest: TrinityModLoader/bin/Release/TrinityLoader.zip
     - name: Update nightly release
       uses: WebFreak001/deploy-nightly@v1.1.0
