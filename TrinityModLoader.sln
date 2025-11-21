@@ -12,6 +12,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TrinityFileExplorer", "TrinityFileExplorer\TrinityFileExplorer.csproj", "{B85CA236-AA68-4205-9352-796B156F4AA7}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GFTool.Renderer", "GFTool.Renderer\GFTool.Renderer.csproj", "{5F73D2AD-186B-4CA3-A8A1-F4F526BC6F8E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{1EFF69CE-208E-BFD9-99DB-1063D3D7FAB2} = {1EFF69CE-208E-BFD9-99DB-1063D3D7FAB2}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TrinityModelViewer", "TrinityModelViewer\TrinityModelViewer.csproj", "{121D05D0-711B-4BB6-9735-76AEA43BDF20}"
 EndProject
@@ -22,6 +25,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrinityUikitEditor", "Trini
 		{437549E1-0E98-4543-AD15-45B1B29D977A} = {437549E1-0E98-4543-AD15-45B1B29D977A}
 		{EBBF7A40-48E1-4636-827E-6A710D847ABC} = {EBBF7A40-48E1-4636-827E-6A710D847ABC}
 	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BnTxx", "NxMiddleware\BnTxx\BnTxx.csproj", "{1EFF69CE-208E-BFD9-99DB-1063D3D7FAB2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Middleware", "Middleware", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -61,9 +68,16 @@ Global
 		{7866671F-B534-462C-A19D-AF64465D6912}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7866671F-B534-462C-A19D-AF64465D6912}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7866671F-B534-462C-A19D-AF64465D6912}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1EFF69CE-208E-BFD9-99DB-1063D3D7FAB2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1EFF69CE-208E-BFD9-99DB-1063D3D7FAB2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1EFF69CE-208E-BFD9-99DB-1063D3D7FAB2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1EFF69CE-208E-BFD9-99DB-1063D3D7FAB2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{1EFF69CE-208E-BFD9-99DB-1063D3D7FAB2} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CDA442A6-9AE4-4857-ABA3-2FC2A9E04BD9}
