@@ -17,6 +17,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TrinityModelViewer", "Trini
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GFTool.RenderControl_WinForms", "GFTool.RenderControl_WinForms\GFTool.RenderControl_WinForms.csproj", "{EBBF7A40-48E1-4636-827E-6A710D847ABC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TrinityUikitEditor", "TrinityUikitEditor\TrinityUikitEditor.csproj", "{7866671F-B534-462C-A19D-AF64465D6912}"
+	ProjectSection(ProjectDependencies) = postProject
+		{437549E1-0E98-4543-AD15-45B1B29D977A} = {437549E1-0E98-4543-AD15-45B1B29D977A}
+		{EBBF7A40-48E1-4636-827E-6A710D847ABC} = {EBBF7A40-48E1-4636-827E-6A710D847ABC}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +57,10 @@ Global
 		{EBBF7A40-48E1-4636-827E-6A710D847ABC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EBBF7A40-48E1-4636-827E-6A710D847ABC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EBBF7A40-48E1-4636-827E-6A710D847ABC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7866671F-B534-462C-A19D-AF64465D6912}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7866671F-B534-462C-A19D-AF64465D6912}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7866671F-B534-462C-A19D-AF64465D6912}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7866671F-B534-462C-A19D-AF64465D6912}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
