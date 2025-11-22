@@ -29,9 +29,14 @@ jobs:
     - name: Zip TrinityFileExplorer
       uses: papeloto/action-zip@v1
       with:
-        files: TrinityFileExplorer/bin/Release/net8.0-windows7.0
+        files: TrinityFileExplorer/bin/Release/net8.0-windows
         dest: TrinityFileExplorer/bin/Release/TrinityFileExplorer.zip
-    - name: Update nightly release
+    - name: Zip TrinityModelViewer
+      uses: papeloto/action-zip@v1
+      with:
+        files: TrinityModelViewer/bin/Release/net8.0-windows7.0
+        dest: TrinityModelViewer/bin/Release/TrinityModelViewer.zip
+    - name: Update TrinityModLoader nightly release
       uses: WebFreak001/deploy-nightly@v1.1.0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -42,7 +47,7 @@ jobs:
         asset_name: TrinityModLoader-nightly-$$.zip
         asset_content_type: application/zip
         max_releases: 1
-    - name: Update nightly release
+    - name: Update TrinityFileExplorer nightly release
       uses: WebFreak001/deploy-nightly@v1.1.0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -51,5 +56,16 @@ jobs:
         release_id: 84790057
         asset_path: TrinityFileExplorer/bin/Release/TrinityFileExplorer.zip
         asset_name: TrinityFileExplorer-nightly-$$.zip
+        asset_content_type: application/zip
+        max_releases: 1
+    - name: Update TrinityModelViewer nightly release
+      uses: WebFreak001/deploy-nightly@v1.1.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: https://uploads.github.com/repos/pkZukan/gftool/releases/84790057/assets{?name,label}
+        release_id: 84790057
+        asset_path: TrinityModelViewer/bin/Release/TrinityModelViewer.zip
+        asset_name: TrinityModelViewer-nightly-$$.zip
         asset_content_type: application/zip
         max_releases: 1
