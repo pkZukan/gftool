@@ -273,7 +273,6 @@ namespace TrinityFileExplorer
                     break;
                 }
             }
-
         }
 
         private PackedArchive GetPack(ulong fileHash)
@@ -407,6 +406,13 @@ namespace TrinityFileExplorer
                 e.Handled = true;
 
                 var path = rootPathTextbox.Text;
+
+                if (String.IsNullOrEmpty(path))
+                {
+                    NavigateTo();
+                    return;
+                }
+
                 path = path.Substring(path.IndexOf("://") + 3);
 
                 if (path.Last() == '/')
@@ -481,23 +487,26 @@ namespace TrinityFileExplorer
             var sfd = new FolderBrowserDialog();
             if (sfd.ShowDialog() != DialogResult.OK) return;
 
-            foreach (ulong hash in fileDescriptor.FileHashes)
-            {
-                SaveFile(hash, sfd.SelectedPath);
-            }
+            var export_window = new ExportProgressWindow(fileDescriptor, fileSystem);
+            
+            export_window.Show();
+            export_window.SaveFiles(fileDescriptor.FileHashes.ToArray(), sfd.SelectedPath);
+            export_window.Close();
         }
 
-        private void visibleFilesToolStripMenuItem_Click(object sender, EventArgs e)
+        private async void visibleFilesToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if (!hasOodleDll) return;
 
             var sfd = new FolderBrowserDialog();
             if (sfd.ShowDialog() != DialogResult.OK) return;
 
-            foreach (ulong hash in activeViewer.GetFiles())
-            {
-                SaveFile(hash, sfd.SelectedPath);
-            }
+            var export_window = new ExportProgressWindow(fileDescriptor, fileSystem);
+
+            export_window.Show();
+            export_window.SaveFiles(activeViewer.GetFiles().ToArray(), sfd.SelectedPath);
+            export_window.Close();
+
         }
 
         private void unhashedFilesToolStripMenuItem_Click(object sender, EventArgs e)
@@ -507,10 +516,11 @@ namespace TrinityFileExplorer
             var sfd = new FolderBrowserDialog();
             if (sfd.ShowDialog() != DialogResult.OK) return;
 
-            foreach (ulong hash in activeViewer.GetUnhashedFiles())
-            {
-                SaveFile(hash, sfd.SelectedPath);
-            }
+            var export_window = new ExportProgressWindow(fileDescriptor, fileSystem);
+
+            export_window.Show();
+            export_window.SaveFiles(activeViewer.GetUnhashedFiles().ToArray(), sfd.SelectedPath);
+            export_window.Close();
         }
 
         private void latestToolStripMenuItem_Click(object sender, EventArgs e)
