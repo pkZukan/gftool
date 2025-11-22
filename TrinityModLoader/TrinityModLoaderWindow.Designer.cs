@@ -104,7 +104,7 @@
             // newModPackMenuItem
             // 
             newModPackMenuItem.Name = "newModPackMenuItem";
-            newModPackMenuItem.Size = new Size(164, 22);
+            newModPackMenuItem.Size = new Size(163, 22);
             newModPackMenuItem.Text = "New Mod Pack";
             newModPackMenuItem.Click += newModPackMenuItem_Click;
             // 
@@ -112,7 +112,7 @@
             // 
             OpenModPackMenuItems.DropDownItems.AddRange(new ToolStripItem[] { ChooseModPackMenuItem, toolStripSeparator3 });
             OpenModPackMenuItems.Name = "OpenModPackMenuItems";
-            OpenModPackMenuItems.Size = new Size(164, 22);
+            OpenModPackMenuItems.Size = new Size(163, 22);
             OpenModPackMenuItems.Text = "Open Mod Pack";
             // 
             // ChooseModPackMenuItem
@@ -130,12 +130,12 @@
             // toolStripSeparator2
             // 
             toolStripSeparator2.Name = "toolStripSeparator2";
-            toolStripSeparator2.Size = new Size(161, 6);
+            toolStripSeparator2.Size = new Size(160, 6);
             // 
             // toolStripMenuItem6
             // 
             toolStripMenuItem6.Name = "toolStripMenuItem6";
-            toolStripMenuItem6.Size = new Size(164, 22);
+            toolStripMenuItem6.Size = new Size(163, 22);
             toolStripMenuItem6.Text = "Export Mod Pack";
             // 
             // helpToolStripMenuItem
@@ -149,32 +149,32 @@
             // 
             preferencesMenuItem.DropDownItems.AddRange(new ToolStripItem[] { romfsPathMenuItem, openModWindowMenuItem });
             preferencesMenuItem.Name = "preferencesMenuItem";
-            preferencesMenuItem.Size = new Size(209, 22);
+            preferencesMenuItem.Size = new Size(210, 22);
             preferencesMenuItem.Text = "Preferences";
             // 
             // romfsPathMenuItem
             // 
             romfsPathMenuItem.Name = "romfsPathMenuItem";
-            romfsPathMenuItem.Size = new Size(260, 22);
+            romfsPathMenuItem.Size = new Size(259, 22);
             romfsPathMenuItem.Text = "Change RomFS Path...";
             romfsPathMenuItem.Click += openRomFSFolderToolStripMenuItem_Click;
             // 
             // openModWindowMenuItem
             // 
             openModWindowMenuItem.Name = "openModWindowMenuItem";
-            openModWindowMenuItem.Size = new Size(260, 22);
+            openModWindowMenuItem.Size = new Size(259, 22);
             openModWindowMenuItem.Text = "Show Explorer after Applying Mods";
             openModWindowMenuItem.Click += openModWindowMenuItem_Click;
             // 
             // toolStripSeparator1
             // 
             toolStripSeparator1.Name = "toolStripSeparator1";
-            toolStripSeparator1.Size = new Size(206, 6);
+            toolStripSeparator1.Size = new Size(207, 6);
             // 
             // aboutToolStripMenuItem
             // 
             aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            aboutToolStripMenuItem.Size = new Size(209, 22);
+            aboutToolStripMenuItem.Size = new Size(210, 22);
             aboutToolStripMenuItem.Text = "About Trinity Mod Loader";
             aboutToolStripMenuItem.Click += aboutToolStripMenuItem_Click;
             // 
@@ -248,7 +248,7 @@
             // addPackedMod
             // 
             addPackedMod.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            addPackedMod.Image = (Image)resources.GetObject("addPackedMod.Image");
+            addPackedMod.Image = Properties.Resources.folder_archive;
             addPackedMod.ImageTransparentColor = Color.Magenta;
             addPackedMod.Name = "addPackedMod";
             addPackedMod.Size = new Size(23, 22);
@@ -258,7 +258,7 @@
             // addFolderMod
             // 
             addFolderMod.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            addFolderMod.Image = (Image)resources.GetObject("addFolderMod.Image");
+            addFolderMod.Image = Properties.Resources.folder_plus;
             addFolderMod.ImageTransparentColor = Color.Magenta;
             addFolderMod.Name = "addFolderMod";
             addFolderMod.Size = new Size(23, 22);
@@ -268,7 +268,7 @@
             // applyModsBut
             // 
             applyModsBut.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            applyModsBut.Image = (Image)resources.GetObject("applyModsBut.Image");
+            applyModsBut.Image = Properties.Resources.folder_down;
             applyModsBut.ImageTransparentColor = Color.Magenta;
             applyModsBut.Name = "applyModsBut";
             applyModsBut.Size = new Size(23, 22);
@@ -283,7 +283,7 @@
             // toolStripButton4
             // 
             toolStripButton4.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            toolStripButton4.Image = (Image)resources.GetObject("toolStripButton4.Image");
+            toolStripButton4.Image = Properties.Resources.list_check;
             toolStripButton4.ImageTransparentColor = Color.Magenta;
             toolStripButton4.Name = "toolStripButton4";
             toolStripButton4.Size = new Size(23, 22);
@@ -292,7 +292,7 @@
             // toolStripButton5
             // 
             toolStripButton5.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            toolStripButton5.Image = (Image)resources.GetObject("toolStripButton5.Image");
+            toolStripButton5.Image = Properties.Resources.list_x;
             toolStripButton5.ImageTransparentColor = Color.Magenta;
             toolStripButton5.Name = "toolStripButton5";
             toolStripButton5.Size = new Size(23, 22);
@@ -415,7 +415,7 @@
             // refreshModButton
             // 
             refreshModButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            refreshModButton.Image = (Image)resources.GetObject("refreshModButton.Image");
+            refreshModButton.Image = Properties.Resources.folder_sync;
             refreshModButton.ImageTransparentColor = Color.Magenta;
             refreshModButton.Name = "refreshModButton";
             refreshModButton.Size = new Size(23, 22);
