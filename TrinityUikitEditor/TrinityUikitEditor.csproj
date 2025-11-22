@@ -2,15 +2,11 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows7.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="opentk.glcontrol" Version="4.0.1" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\GFTool.Core\GFTool.Core.csproj" />

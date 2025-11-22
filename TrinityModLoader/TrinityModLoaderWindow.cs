@@ -17,7 +17,6 @@ namespace TrinityModLoader
 
         public TrinityModLoaderWindow()
         {
-            InitializeComponent();
             InitializeSettings();
             InitializeLastModpacks();
         }

@@ -1,0 +1,3 @@
+[submodule "NxMiddleware"]
+	path = NxMiddleware
+	url = https://github.com/Reisyukaku/NxMiddleware
