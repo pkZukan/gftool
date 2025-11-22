@@ -19,6 +19,8 @@ namespace TrinityModLoader
         {
             InitializeSettings();
             InitializeLastModpacks();
+            InitializeComponent();
+            openModWindowMenuItem.Checked = ModLoaderSettings.GetOpenModWindow();
         }
 
         private void NoValidRomFS()
@@ -58,8 +60,6 @@ namespace TrinityModLoader
                     NoValidRomFS();
                 };
             }
-
-            openModWindowMenuItem.Checked = ModLoaderSettings.GetOpenModWindow();
         }
 
         private void InitializeLastModpacks()
