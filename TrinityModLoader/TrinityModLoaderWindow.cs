@@ -1,65 +1,100 @@
 using Trinity.Core.Utils;
 using Trinity.Core.Math.Hash;
-using Trinity.Core.Cache;
 using Trinity.Core.Flatbuffers.TR.ResourceDictionary;
 using System.Diagnostics;
 using System.Text.Json;
+using TrinityModLoader.Models.ModEntry;
+using TrinityModLoader.Models.Settings;
+using TrinityModLoader.Models.ModPack;
 
 namespace TrinityModLoader
 {
     public partial class TrinityModLoaderWindow : Form
     {
         public static string titleText = "Trinity Mod Loader";
-
-        public CustomFileDescriptor? customFileDescriptor = null;
         public string modPackLocation = String.Empty;
-        public ModPack? modPack = null;
+
+        #region Window Logic
 
         public TrinityModLoaderWindow()
         {
             InitializeSettings();
-            InitializeLastModpacks();
             InitializeComponent();
+        }
+
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            InitializeLastModpacks();
             openModWindowMenuItem.Checked = ModLoaderSettings.GetOpenModWindow();
         }
 
-        private void NoValidRomFS()
+        private void TrinityMainWindow_FormClosing(object sender, FormClosingEventArgs e)
         {
-            MessageBox.Show("Trinity Mod Loader requires a valid RomFS path to function.");
-            Environment.Exit(0);
+            if (modList.ModPack != null)
+            {
+                modList.SaveModPack(modPackLocation);
+                ModLoaderSettings.AddRecentModPack(modPackLocation);
+            }
+            ModLoaderSettings.SetOpenModWindow(openModWindowMenuItem.Checked);
+            ModLoaderSettings.Save();
         }
+
         private void InitializeSettings()
         {
             ModLoaderSettings.Open();
 
             var romfsDir = ModLoaderSettings.GetRomFSPath();
 
-            if (romfsDir == "" || !Directory.Exists(romfsDir))
+            if (string.IsNullOrEmpty(romfsDir) && Directory.Exists(romfsDir) && CheckRomFS())
             {
-                MessageBox.Show("Please set your RomFS path.", "Missing RomFS");
-
-                var folderBrowser = new FolderBrowserDialog();
-                if (folderBrowser.ShowDialog() != DialogResult.OK)
-                {
-                    NoValidRomFS();
-                }
-
-                ModLoaderSettings.SetRomFSPath(folderBrowser.SelectedPath);
-
-                if (ParseFileDescriptor(Path.Join(ModLoaderSettings.GetRomFSPath(), FilepathSettings.trpfdRel)) != DialogResult.OK)
-                {
-                    NoValidRomFS();
-                }
-
-                ModLoaderSettings.Save();
+                return;
             }
-            else
+
+            MessageBox.Show("Please set your RomFS path.", "Missing RomFS");
+
+            var folderBrowser = new FolderBrowserDialog();
+            if (folderBrowser.ShowDialog() != DialogResult.OK)
             {
-                if (!TryLoadFileDescriptor(Path.Join(romfsDir, FilepathSettings.trpfdRel), out customFileDescriptor))
-                {
-                    NoValidRomFS();
-                };
+                NoValidRomFS();
+                return;
             }
+
+            ModLoaderSettings.SetRomFSPath(folderBrowser.SelectedPath);
+
+            if (!CheckRomFS())
+            {
+                NoValidRomFS();
+            }
+                
+            ModLoaderSettings.Save();
+
+        }
+
+        private bool CheckRomFS()
+        {
+            var trpfd_dir = Path.Join(ModLoaderSettings.GetRomFSPath(), FilepathSettings.trpfdRel);
+            if (!File.Exists(trpfd_dir))
+            {
+                MessageBox.Show("No TRPFD found in RomFS folder.");
+                return false;
+            }
+
+            CustomFileDescriptor? customFileDescriptor = null;
+
+            if (TryLoadFileDescriptor(trpfd_dir, out customFileDescriptor) == false)
+            {
+                MessageBox.Show("Invalid TRPFD found in RomFS folder.\n");
+                return false;
+            }
+
+            if (customFileDescriptor.HasUnusedFiles())
+            {
+                MessageBox.Show("This is a modified TRPFD.\n Please provide an unmodified TRPFD.");
+                return false;
+            }
+
+            return true;
         }
 
         private void InitializeLastModpacks()
@@ -69,12 +104,9 @@ namespace TrinityModLoader
             if (recentModPacks == null || recentModPacks.Count == 0)
             {
                 this.Text = $"{titleText} - No Modpack Loaded";
+                RefreshUIState();
                 return;
             }
-
-            //We do a reverse for-loop here in case a user deletes a recent folder
-            //I'd much rather remove these than have the user click on one and
-            //then display a pop-up telling them the mod can't be found
 
             for (int i = recentModPacks.Count - 1; i > -1; i--)
             {
@@ -92,46 +124,96 @@ namespace TrinityModLoader
                         LoadModPack(modPackPath);
                     };
 
-                    OpenModPackMenuItems.DropDownItems.Add(modMenuItem);
+                    openModPackMenuItems.DropDownItems.Add(modMenuItem);
                 }
             }
 
             if (recentModPacks == null || recentModPacks.Count == 0)
             {
                 this.Text = $"{titleText} - No Modpack Loaded";
+                RefreshUIState();
                 return;
             }
 
             LoadModPack(recentModPacks.Last());
+        }
 
+        private void DisableUIState()
+        {
+            modList.Enabled = false;
+            addFolderMod.Enabled = false;
+            addPackedMod.Enabled = false;
+            applyModsBut.Enabled = false;
+            enableAllButton.Enabled = false;
+            disableAllButton.Enabled = false;
+            modOrderUpButton.Enabled = false;
+            modOrderDownButton.Enabled = false;
+            refreshModButton.Enabled = false;
+        }
+ 
+        private void RefreshUIState()
+        {
+            DisableUIState();
+
+            if (modList.ModPack == null)
+            {
+                return;
+            }
+
+            modList.Enabled = true;
+            addFolderMod.Enabled = true;
+            addPackedMod.Enabled = true;
+
+            if (modList.ModPack.mods.Count > 0)
+            {
+                applyModsBut.Enabled = true;
+                enableAllButton.Enabled = true;
+                disableAllButton.Enabled = true;
+                modOrderUpButton.Enabled = true;
+                modOrderDownButton.Enabled = true;
+            }
+
+            if (modList.SelectedIndex >= 0)
+            {
+                refreshModButton.Enabled = true;
+            }
+        }
+
+        #endregion
+
+        #region Utils
+
+        private void NoValidRomFS()
+        {
+            MessageBox.Show("Trinity Mod Loader requires a valid RomFS path to function.");
+            this.Close();
         }
 
         private void LoadModPack(string path)
         {
-            if (modPackLocation != null || modPackLocation != String.Empty)
-            {
-                ModLoaderSettings.AddRecentModPack(path);
-
-            }
-
-            modList.Items.Clear();
             modPackLocation = path;
-
-            modPack = JsonSerializer.Deserialize<ModPack>(File.ReadAllText(Path.Join(path, ModPack.settingsRel)));
-
-            addFolderMod.Enabled = true;
-            addPackedMod.Enabled = true;
-
-            modPack.mods = modPack.mods.Where(x => x.Exists()).ToList();
-            if (modPack.mods.Count > 0) applyModsBut.Enabled = true;
-
-            foreach (var mod in modPack.mods)
+            if (string.IsNullOrEmpty(modPackLocation))
             {
-                var name = Path.GetFileName(mod.ModPath);
-                var ind = modList.Items.Add(mod.ModPath);
-                modList.SetItemChecked(ind, mod.IsEnabled);
+                MessageBox.Show("Failed to load ModPack settings.");
+                return;
             }
 
+            ModPack modPack;
+            try
+            {
+                modPack = JsonSerializer.Deserialize<ModPack>(File.ReadAllText(Path.Join(path, ModPack.settingsRel)));
+            }
+            catch
+            {
+                MessageBox.Show("Failed to load ModPack settings.");
+                return;
+            }
+
+            modList.ModPack = modPack;
+
+            ModLoaderSettings.AddRecentModPack(path);
+
+            RefreshUIState();
             this.Text = $"{titleText} - {modPackLocation}";
         }
 
@@ -139,36 +221,15 @@ namespace TrinityModLoader
         {
             modPackLocation = path;
 
-            modPack = new ModPack()
+            ModPack modPack = new ModPack()
             {
                 mods = new List<IModEntry>(),
             };
 
-            modList.Items.Clear();
-
-            addFolderMod.Enabled = true;
-            addPackedMod.Enabled = true;
-            applyModsBut.Enabled = false;
+            modList.ModPack = modPack;
+            modList.SaveModPack(path);
 
             this.Text = $"{titleText} - {modPackLocation}";
-
-            modPack.Save(path);
-        }
-
-        private DialogResult ParseFileDescriptor(string file = "")
-        {
-            if (!TryLoadFileDescriptor(file, out customFileDescriptor))
-            {
-                return DialogResult.Abort;
-            }
-
-            if (customFileDescriptor.HasUnusedFiles())
-            {
-                MessageBox.Show("This is a modified TRPFD.\n Please provide an unmodified TRPFD.");
-                return DialogResult.Abort;
-            }
-
-            return DialogResult.OK;
         }
 
         private bool TryLoadFileDescriptor(string file, out CustomFileDescriptor customFileDescriptor)
@@ -190,48 +251,61 @@ namespace TrinityModLoader
             return true;
         }
 
-        private void MoveMod(int modIndex, int toIndex)
-        {
-            var item = modList.Items[modIndex];
-            var entry = modPack.mods[modIndex];
-
-            modList.Items.RemoveAt(modIndex);
-            modList.Items.Insert(toIndex, item);
-            modPack.mods.RemoveAt(modIndex);
-            modPack.mods.Insert(toIndex, entry);
-        }
-
-        void ApplyMod(IModEntry mod, string lfsDir)
-        {
-            mod.Extract(lfsDir);
-
-            foreach (var f in mod.FetchFiles())
-            {
-                var fhash = GFFNV.Hash(f);
-                customFileDescriptor?.RemoveFile(fhash);
-            }
-        }
-
         private void AddModToList(IModEntry mod)
         {
             if (modList.Items.Contains(mod.ModPath))
             {
                 var ow = MessageBox.Show("Mod already exists, do you want to overwrite?", "Mod exists", MessageBoxButtons.YesNo);
                 if (ow == DialogResult.No) return;
-
-                var oldMod = modPack.mods.Where(modPack => modPack.ModPath == mod.ModPath).FirstOrDefault();
-                modPack.mods.Remove(oldMod);
-                modList.Items.Remove(mod.ModPath);
+                modList.DeleteMod(modList.Items.IndexOf(mod.ModPath));
             }
-
-            if (applyModsBut.Enabled == false) applyModsBut.Enabled = true;
-
-            mod.IsEnabled = true;
-            modPack.mods.Add(mod);
-            modList.Items.Add(mod.FetchToml().display_name, true);
+            modList.AddMod(mod);
         }
 
-        void SerializeTRPFD(string fileOut)
+        private void ApplyMod(IModEntry mod, string lfsDir, CustomFileDescriptor customFileDescriptor)
+        {
+            mod.Extract(lfsDir);
+
+            foreach (var f in mod.FetchFiles())
+            {
+                var fhash = GFFNV.Hash(f);
+                lock (customFileDescriptor)
+                {
+                    customFileDescriptor?.RemoveFile(fhash);
+                }
+            }
+        }
+
+        private bool ApplyMods()
+        {
+            CustomFileDescriptor? customFileDescriptor = null;
+
+            if (TryLoadFileDescriptor(Path.Join(ModLoaderSettings.GetRomFSPath(), FilepathSettings.trpfdRel), out customFileDescriptor) == false)
+            {
+                return false;
+            }
+
+            string layeredFSLocation = Path.Join(modPackLocation, ModPack.romfsRel);
+
+            if (Directory.Exists(layeredFSLocation))
+                Directory.Delete(layeredFSLocation, true);
+
+            Directory.CreateDirectory(layeredFSLocation);
+
+            foreach (int i in modList.CheckedIndices)
+            {
+                IModEntry mod = modList.ModPack.mods[i];
+                if (mod == null) continue;
+                ApplyMod(mod, layeredFSLocation, customFileDescriptor);
+
+            }
+
+            SerializeTRPFD(Path.Join(layeredFSLocation, FilepathSettings.trpfdRel), customFileDescriptor);
+
+            return true;
+        }
+
+        void SerializeTRPFD(string fileOut, CustomFileDescriptor customFileDescriptor)
         {
             var file = new System.IO.FileInfo(fileOut);
             if (!file.Directory.Exists) file.Directory.Create();
@@ -240,30 +314,33 @@ namespace TrinityModLoader
             File.WriteAllBytes(fileOut, trpfd);
         }
 
-        private void PopulateMetaData()
+        private void RefreshModView()
         {
-            var mod = modPack.mods[modList.SelectedIndex];
-            var toml = mod.FetchToml();
-
-            if (toml != null)
+            if (modList.SelectedIndex < 0 || modList.SelectedIndex >= modList.Items.Count)
             {
-                if (toml.display_name != null)
-                    ModNameLabel.Text = toml.display_name.ToString();
-                if (toml.author_name != null)
-                    ModAuthorLabel.Text = toml.author_name.ToString();
-                if (toml.version != null)
-                    ModVersionLabel.Text = toml.version.ToString();
-                if (mod.ModPath != null)
-                    ModPathLabel.Text = mod.ModPath.ToString();
-                if (toml.description != null)
-                    ModDescriptionBox.Text = toml.description.ToString();
+                ClearMetaData();
+                fileView.Items.Clear();
             }
             else
             {
-                ModNameLabel.Text = modList.Items[modList.SelectedIndex].ToString();
-                ModAuthorLabel.Text = "";
-                ModDescriptionBox.Text = "";
-                ModVersionLabel.Text = "";
+                PopulateMetaData();
+                PopulateFileData();
+            }
+            RefreshUIState();
+        }
+
+        private void PopulateMetaData()
+        {
+            var mod = modList.ModPack.mods[modList.SelectedIndex];
+            var modData = mod.FetchModData();
+
+            if (modData != null)
+            {
+                ModNameLabel.Text = modData.display_name.ToString();
+                ModAuthorLabel.Text = modData.author_name.ToString();
+                ModVersionLabel.Text = modData.version.ToString();
+                ModPathLabel.Text = mod.ModPath.ToString();
+                ModDescriptionBox.Text = modData.description.ToString();
             }
         }
 
@@ -273,21 +350,76 @@ namespace TrinityModLoader
             ModNameLabel.Text = null;
             ModPathLabel.Text = null;
             ModDescriptionBox.Text = null;
+            ModVersionLabel.Text = null; // Added clearing version label
         }
 
-        #region UTIL
-        private void ThreadSafe(MethodInvoker method)
+        private void PopulateFileData()
         {
-            if (InvokeRequired)
-                Invoke(method);
-            else
-                method();
+
+            fileView.BeginUpdate();
+            fileView.Items.Clear();
+
+            var mod = modList.ModPack.mods[modList.SelectedIndex];
+            var files = mod.FetchFiles();
+
+            foreach (string file in files)
+            {
+                fileView.Items.Add(file);
+            }
+            fileView.EndUpdate();
         }
+
         #endregion
 
-        #region UI_HANDLERS
+        #region UI/Event Handlers
+
+        private async void applyModsBut_Click(object sender, EventArgs e)
+        {
+            if (modList.ModPack == null)
+            {
+                MessageBox.Show("No Modpack Loaded");
+                return;
+            }
+
+            DisableUIState();
+
+            try
+            {
+                bool success = await Task.Run(() => ApplyMods());
+
+                if (!success)
+                {
+                    MessageBox.Show("Mods could not be applied.");
+                }
+                else
+                {
+                    MessageBox.Show("Mods Applied!");
+
+                    if (openModWindowMenuItem.Checked)
+                    {
+                        var filePath = Path.GetFullPath(modPackLocation);
+                        Process.Start("explorer.exe", string.Format("\"{0}\"", filePath));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"An error occurred: {ex.Message}");
+            }
+            finally
+            {
+                RefreshUIState();
+            }
+        }
+
         private void addPackedMod_Click(object sender, EventArgs e)
         {
+            if (modList.ModPack == null)
+            {
+                MessageBox.Show("No Modpack Loaded");
+                return;
+            }
+
             var openFileDialog = new OpenFileDialog()
             {
                 Filter = "Zip Files (*.zip)|*.zip|Rar Files (*.rar)|*.rar|All (*.*)|*.*"
@@ -301,8 +433,15 @@ namespace TrinityModLoader
 
             AddModToList(mod);
         }
+
         private void addFolderMod_Click(object sender, EventArgs e)
         {
+            if (modList.ModPack == null)
+            {
+                MessageBox.Show("No Modpack Loaded");
+                return;
+            }
+
             var folderBrowserDialog = new FolderBrowserDialog();
             if (folderBrowserDialog.ShowDialog() != DialogResult.OK) return;
 
@@ -314,148 +453,30 @@ namespace TrinityModLoader
             AddModToList(mod);
         }
 
-        private void modList_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (modList.SelectedIndex >= 0)
-            {
-                PopulateMetaData();
-                PopulateFileData();
-            }
-        }
-
-        private void PopulateFileData()
-        {
-            fileView.Items.Clear();
-
-            var mod = modPack.mods[modList.SelectedIndex];
-            var files = mod.FetchFiles();
-
-            foreach (string file in files)
-            {
-                fileView.Items.Add(file);
-            }
-        }
-
-        private void applyModsBut_Click(object sender, EventArgs e)
-        {
-            if (modPack == null)
-            {
-                MessageBox.Show("No Modpack Loaded");
-            }
-
-            string layeredFSLocation = Path.Join(modPackLocation, ModPack.romfsRel);
-
-            if (Directory.Exists(layeredFSLocation))
-                Directory.Delete(layeredFSLocation, true);
-
-            Directory.CreateDirectory(layeredFSLocation);
-
-            for (int i = 0; i < modList.Items.Count; i++)
-            {
-                var mod = modPack.mods[i];
-                if (mod.IsEnabled)
-                    ApplyMod(mod, layeredFSLocation);
-            }
-
-            SerializeTRPFD(Path.Join(layeredFSLocation, FilepathSettings.trpfdRel));
-
-            //TODO: Make a Mod Merger class that enumerates file conflicts/merges
-            MessageBox.Show("Mods Applied!");
-
-            if (openModWindowMenuItem.Checked == true)
-            {
-                var filePath = Path.GetFullPath(modPackLocation);
-                Process.Start("explorer.exe", string.Format("\"{0}\"", filePath));
-            }
-        }
-
         private void modOrderUp_Click(object sender, EventArgs e)
         {
-            if (modList.SelectedIndex < 0 || modList.SelectedIndex == 0) return;
-            MoveMod(modList.SelectedIndex, modList.SelectedIndex - 1);
+            if (modList.SelectedIndex <= 0) return;
+            modList.MoveMod(modList.SelectedIndex, modList.SelectedIndex - 1);
+            RefreshModView();
         }
+
         private void modOrderDown_Click(object sender, EventArgs e)
         {
             if (modList.SelectedIndex < 0 || modList.SelectedIndex >= modList.Items.Count - 1) return;
-            MoveMod(modList.SelectedIndex, modList.SelectedIndex + 1);
+            modList.MoveMod(modList.SelectedIndex, modList.SelectedIndex + 1);
+            RefreshModView();
         }
+
         private void deleteModButton_Click(object sender, EventArgs e)
         {
-            modPack.mods.RemoveAt(modList.SelectedIndex);
-            modList.Items.Remove(modList.Items[modList.SelectedIndex]);
-            ClearMetaData();
-        }
-        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            new About().ShowDialog();
+            if (modList.SelectedIndex < 0) return;
+            modList.DeleteMod(modList.SelectedIndex);
+            RefreshModView();
         }
 
-        private void openRomFSFolderToolStripMenuItem_Click(object sender, EventArgs e)
+        private void modList_SelectedIndexChanged(object sender, EventArgs e)
         {
-            var folderBrowser = new FolderBrowserDialog();
-            if (folderBrowser.ShowDialog() != DialogResult.OK) return;
-
-            ModLoaderSettings.SetRomFSPath(folderBrowser.SelectedPath);
-
-            if (ParseFileDescriptor(Path.Join(ModLoaderSettings.GetRomFSPath(), FilepathSettings.trpfdRel)) != DialogResult.OK)
-            {
-                return;
-            }
-
-            ModLoaderSettings.Save();
-        }
-
-        private void newModPackMenuItem_Click(object sender, EventArgs e)
-        {
-            var folderBrowserDialog = new FolderBrowserDialog() { ShowNewFolderButton = true };
-            if (folderBrowserDialog.ShowDialog() != DialogResult.OK) return;
-
-            if (File.Exists(folderBrowserDialog.SelectedPath + ModPack.settingsRel))
-            {
-                var dialogResult = MessageBox.Show("A ModPack already exists in this folder, would you like to load it?", "ModPack found", MessageBoxButtons.YesNo);
-
-                if (dialogResult != DialogResult.Yes) return;
-                LoadModPack(folderBrowserDialog.SelectedPath);
-            }
-
-            else
-            {
-                CreateModPack(folderBrowserDialog.SelectedPath);
-            }
-
-        }
-
-        private void ChooseModPackMenuItem_Click(object sender, EventArgs e)
-        {
-            var folderBrowserDialog = new FolderBrowserDialog();
-            if (folderBrowserDialog.ShowDialog() != DialogResult.OK) return;
-
-            if (!File.Exists(folderBrowserDialog.SelectedPath + ModPack.settingsRel))
-            {
-                var dialogResult = MessageBox.Show("No ModPack exists in this folder, would you like to create one?", "No ModPack found", MessageBoxButtons.YesNo);
-                if (dialogResult != DialogResult.Yes) return;
-                CreateModPack(folderBrowserDialog.SelectedPath);
-            }
-
-            LoadModPack(folderBrowserDialog.SelectedPath);
-        }
-
-        private void TrinityMainWindow_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            if (modPack != null)
-            {
-                modPack.Save(modPackLocation);
-                ModLoaderSettings.AddRecentModPack(modPackLocation);
-            }
-            ModLoaderSettings.SetOpenModWindow(openModWindowMenuItem.Checked);
-            ModLoaderSettings.Save();
-
-        }
-
-        private void modList_ItemCheck(object sender, ItemCheckEventArgs e)
-        {
-            var itemCheck = !modList.GetItemChecked(e.Index);
-            modPack.mods[e.Index].IsEnabled = itemCheck;
+            RefreshModView();
         }
 
         private void modList_MouseUp(object sender, MouseEventArgs e)
@@ -470,6 +491,53 @@ namespace TrinityModLoader
             }
         }
 
+        private void newModPackMenuItem_Click(object sender, EventArgs e)
+        {
+            var folderBrowserDialog = new FolderBrowserDialog() { ShowNewFolderButton = true };
+            if (folderBrowserDialog.ShowDialog() != DialogResult.OK) return;
+
+            if (File.Exists(Path.Join(folderBrowserDialog.SelectedPath, ModPack.settingsRel)))
+            {
+                var dialogResult = MessageBox.Show("A ModPack already exists in this folder, would you like to load it?", "ModPack found", MessageBoxButtons.YesNo);
+                if (dialogResult != DialogResult.Yes) return;
+                LoadModPack(folderBrowserDialog.SelectedPath);
+                return;
+            }
+
+            CreateModPack(folderBrowserDialog.SelectedPath);
+        }
+
+        private void chooseModPackMenuItem_Click(object sender, EventArgs e)
+        {
+            var folderBrowserDialog = new FolderBrowserDialog();
+            if (folderBrowserDialog.ShowDialog() != DialogResult.OK) return;
+
+            if (!File.Exists(Path.Join(folderBrowserDialog.SelectedPath, ModPack.settingsRel)))
+            {
+                var dialogResult = MessageBox.Show("No ModPack exists in this folder, would you like to create one?", "No ModPack found", MessageBoxButtons.YesNo);
+                if (dialogResult != DialogResult.Yes) return;
+                CreateModPack(folderBrowserDialog.SelectedPath);
+            }
+
+            LoadModPack(folderBrowserDialog.SelectedPath);
+        }
+
+        private void openRomFSFolderToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var folderBrowser = new FolderBrowserDialog();
+            if (folderBrowser.ShowDialog() != DialogResult.OK) return;
+
+            ModLoaderSettings.SetRomFSPath(folderBrowser.SelectedPath);
+
+            if (!CheckRomFS())
+            {
+                NoValidRomFS();
+                return;
+            }
+
+            ModLoaderSettings.Save();
+        }
+
         private void openModWindowMenuItem_Click(object sender, EventArgs e)
         {
             openModWindowMenuItem.Checked = !openModWindowMenuItem.Checked;
@@ -477,9 +545,24 @@ namespace TrinityModLoader
 
         private void refreshModButton_Click(object sender, EventArgs e)
         {
-            PopulateMetaData();
-            PopulateFileData();
+            RefreshModView();
         }
+
+        private void enableAllButton_Click(object sender, EventArgs e)
+        {
+            modList.EnableAll(true);
+        }
+
+        private void disableAllButton_Click(object sender, EventArgs e)
+        {
+            modList.EnableAll(false);
+        }
+
+        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            new About().ShowDialog();
+        }
+
+        #endregion
     }
-    #endregion
 }

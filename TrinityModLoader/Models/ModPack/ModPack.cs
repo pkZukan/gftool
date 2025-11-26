@@ -1,7 +1,8 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+using TrinityModLoader.Models.ModEntry;
 
-namespace TrinityModLoader
+namespace TrinityModLoader.Models.ModPack
 {
     public class ModPack
     {
@@ -10,11 +11,11 @@ namespace TrinityModLoader
         public const string romfsRel = @"\romfs\";
         public const string settingsRel = @"\settings.json";
 
-        public ModPack(){}
+        public ModPack() { }
 
         public void Save(string path)
         {
-            var json = JsonSerializer.Serialize<ModPack>(this, new JsonSerializerOptions { WriteIndented = true});
+            var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(Path.Join(path, settingsRel), json);
         }
     }

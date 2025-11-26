@@ -83,6 +83,26 @@ namespace TrinityModLoader.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap folder_git_2 {
+            get {
+                object obj = ResourceManager.GetObject("folder-git-2", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap folder_pen {
+            get {
+                object obj = ResourceManager.GetObject("folder-pen", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap folder_plus {
             get {
                 object obj = ResourceManager.GetObject("folder-plus", resourceCulture);
@@ -96,6 +116,16 @@ namespace TrinityModLoader.Properties {
         internal static System.Drawing.Bitmap folder_sync {
             get {
                 object obj = ResourceManager.GetObject("folder-sync", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap folder_up {
+            get {
+                object obj = ResourceManager.GetObject("folder-up", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

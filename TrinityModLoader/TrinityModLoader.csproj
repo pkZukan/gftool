@@ -18,9 +18,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="ExplorerModelFileViewer.cs">
-      <SubType>Component</SubType>
-    </Compile>
     <Compile Update="Properties\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -31,9 +28,7 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
-    <Compile Update="TrinityModelExplorerWindow.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Update="UI\CheckedModListBox.cs" />
   </ItemGroup>
 
   <ItemGroup>

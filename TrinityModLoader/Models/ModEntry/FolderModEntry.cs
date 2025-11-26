@@ -1,7 +1,7 @@
 ﻿using SharpCompress.Common;
 using Tomlyn;
 
-namespace TrinityModLoader
+namespace TrinityModLoader.Models.ModEntry
 {
     public class FolderModEntry : IModEntry
     {
@@ -58,16 +58,21 @@ namespace TrinityModLoader
             return files.ToArray();
         }
 
-        public ModData FetchToml()
+        public ModData FetchModData()
         {
             var toml = "";
 
             var tomlInfoPath = $"{ModPath}/info.toml";
-            if (File.Exists(tomlInfoPath))
+
+            if (!File.Exists(tomlInfoPath))
             {
-                toml = File.ReadAllText(tomlInfoPath);
+                return new ModData
+                {
+                    description = "No info.toml found."
+                };
             }
 
+            toml = File.ReadAllText(tomlInfoPath);
             return Toml.ToModel<ModData>(toml);
         }
     }

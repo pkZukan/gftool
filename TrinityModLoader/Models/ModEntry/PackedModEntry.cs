@@ -2,7 +2,7 @@
 using Tomlyn;
 using SharpCompress.Common;
 
-namespace TrinityModLoader
+namespace TrinityModLoader.Models.ModEntry
 {
     public class PackedModEntry : IModEntry
     {
@@ -49,12 +49,13 @@ namespace TrinityModLoader
             return list.ToArray();
         }
 
-        public ModData FetchToml()
+        public ModData FetchModData()
         {
             var toml = "";
 
             using Stream stream = File.OpenRead(Path.Join(ModPath));
             using var reader = ReaderFactory.Open(stream);
+
             while (reader.MoveToNextEntry())
             {
                 if (!reader.Entry.IsDirectory)
@@ -68,6 +69,15 @@ namespace TrinityModLoader
                     }
                 }
             }
+
+            if (string.IsNullOrWhiteSpace(toml))
+            {
+                return new ModData
+                {
+                    description = "No info.toml found."
+                };
+            }
+
             return Toml.ToModel<ModData>(toml);
         }
     }

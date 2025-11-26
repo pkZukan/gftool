@@ -1,4 +1,6 @@
-﻿namespace TrinityModLoader
+﻿using TrinityModLoader.UI;
+
+namespace TrinityModLoader
 {
     partial class TrinityModLoaderWindow
     {
@@ -33,8 +35,8 @@
             modLoaderMenuStrip = new MenuStrip();
             fileToolStripMenuItem = new ToolStripMenuItem();
             newModPackMenuItem = new ToolStripMenuItem();
-            OpenModPackMenuItems = new ToolStripMenuItem();
-            ChooseModPackMenuItem = new ToolStripMenuItem();
+            openModPackMenuItems = new ToolStripMenuItem();
+            chooseModPackMenuItem = new ToolStripMenuItem();
             toolStripSeparator3 = new ToolStripSeparator();
             toolStripSeparator2 = new ToolStripSeparator();
             toolStripMenuItem6 = new ToolStripMenuItem();
@@ -49,18 +51,17 @@
             markForLayeredFSToolStripMenuItem = new ToolStripMenuItem();
             listContext = new ContextMenuStrip(components);
             deleteModBut = new ToolStripMenuItem();
-            modList = new CheckedListBox();
             splitContainer1 = new SplitContainer();
             modListToolStrip = new ToolStrip();
             addPackedMod = new ToolStripButton();
             addFolderMod = new ToolStripButton();
             applyModsBut = new ToolStripButton();
             toolStripSeparator4 = new ToolStripSeparator();
-            toolStripButton4 = new ToolStripButton();
-            toolStripButton5 = new ToolStripButton();
+            enableAllButton = new ToolStripButton();
+            disableAllButton = new ToolStripButton();
             toolStripSeparator6 = new ToolStripSeparator();
-            toolStripButton2 = new ToolStripButton();
-            toolStripButton1 = new ToolStripButton();
+            modOrderDownButton = new ToolStripButton();
+            modOrderUpButton = new ToolStripButton();
             splitContainer2 = new SplitContainer();
             ModDescriptionBox = new RichTextBox();
             ModNameLabel = new Label();
@@ -69,7 +70,9 @@
             ModPathLabel = new Label();
             modToolStrip = new ToolStrip();
             refreshModButton = new ToolStripButton();
+            toolStripSeparator5 = new ToolStripSeparator();
             fileView = new ListBox();
+            modList = new CheckedModListBox();
             modLoaderMenuStrip.SuspendLayout();
             listContext.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
@@ -96,7 +99,7 @@
             // 
             // fileToolStripMenuItem
             // 
-            fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { newModPackMenuItem, OpenModPackMenuItems, toolStripSeparator2, toolStripMenuItem6 });
+            fileToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { newModPackMenuItem, openModPackMenuItems, toolStripSeparator2, toolStripMenuItem6 });
             fileToolStripMenuItem.Name = "fileToolStripMenuItem";
             fileToolStripMenuItem.Size = new Size(37, 20);
             fileToolStripMenuItem.Text = "File";
@@ -110,17 +113,17 @@
             // 
             // OpenModPackMenuItems
             // 
-            OpenModPackMenuItems.DropDownItems.AddRange(new ToolStripItem[] { ChooseModPackMenuItem, toolStripSeparator3 });
-            OpenModPackMenuItems.Name = "OpenModPackMenuItems";
-            OpenModPackMenuItems.Size = new Size(163, 22);
-            OpenModPackMenuItems.Text = "Open Mod Pack";
+            openModPackMenuItems.DropDownItems.AddRange(new ToolStripItem[] { chooseModPackMenuItem, toolStripSeparator3 });
+            openModPackMenuItems.Name = "OpenModPackMenuItems";
+            openModPackMenuItems.Size = new Size(163, 22);
+            openModPackMenuItems.Text = "Open Mod Pack";
             // 
             // ChooseModPackMenuItem
             // 
-            ChooseModPackMenuItem.Name = "ChooseModPackMenuItem";
-            ChooseModPackMenuItem.Size = new Size(123, 22);
-            ChooseModPackMenuItem.Text = "Choose...";
-            ChooseModPackMenuItem.Click += ChooseModPackMenuItem_Click;
+            chooseModPackMenuItem.Name = "ChooseModPackMenuItem";
+            chooseModPackMenuItem.Size = new Size(123, 22);
+            chooseModPackMenuItem.Text = "Choose...";
+            chooseModPackMenuItem.Click += chooseModPackMenuItem_Click;
             // 
             // toolStripSeparator3
             // 
@@ -202,19 +205,6 @@
             deleteModBut.Text = "Remove Mod";
             deleteModBut.Click += deleteModButton_Click;
             // 
-            // modList
-            // 
-            modList.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            modList.FormattingEnabled = true;
-            modList.IntegralHeight = false;
-            modList.Location = new Point(0, 28);
-            modList.Name = "modList";
-            modList.Size = new Size(274, 652);
-            modList.TabIndex = 4;
-            modList.ItemCheck += modList_ItemCheck;
-            modList.SelectedIndexChanged += modList_SelectedIndexChanged;
-            modList.MouseUp += modList_MouseUp;
-            // 
             // splitContainer1
             // 
             splitContainer1.Dock = DockStyle.Fill;
@@ -238,7 +228,7 @@
             modListToolStrip.BackColor = SystemColors.Control;
             modListToolStrip.GripStyle = ToolStripGripStyle.Hidden;
             modListToolStrip.ImeMode = ImeMode.NoControl;
-            modListToolStrip.Items.AddRange(new ToolStripItem[] { addPackedMod, addFolderMod, applyModsBut, toolStripSeparator4, toolStripButton4, toolStripButton5, toolStripSeparator6, toolStripButton2, toolStripButton1 });
+            modListToolStrip.Items.AddRange(new ToolStripItem[] { addPackedMod, addFolderMod, applyModsBut, toolStripSeparator4, enableAllButton, disableAllButton, toolStripSeparator6, modOrderDownButton, modOrderUpButton });
             modListToolStrip.Location = new Point(0, 0);
             modListToolStrip.Name = "modListToolStrip";
             modListToolStrip.Size = new Size(274, 25);
@@ -280,50 +270,52 @@
             toolStripSeparator4.Name = "toolStripSeparator4";
             toolStripSeparator4.Size = new Size(6, 25);
             // 
-            // toolStripButton4
+            // enableAllButton
             // 
-            toolStripButton4.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            toolStripButton4.Image = Properties.Resources.list_check;
-            toolStripButton4.ImageTransparentColor = Color.Magenta;
-            toolStripButton4.Name = "toolStripButton4";
-            toolStripButton4.Size = new Size(23, 22);
-            toolStripButton4.Text = "Check All";
+            enableAllButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            enableAllButton.Image = Properties.Resources.list_check;
+            enableAllButton.ImageTransparentColor = Color.Magenta;
+            enableAllButton.Name = "enableAllButton";
+            enableAllButton.Size = new Size(23, 22);
+            enableAllButton.Text = "Check All";
+            enableAllButton.Click += enableAllButton_Click;
             // 
-            // toolStripButton5
+            // disableAllButton
             // 
-            toolStripButton5.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            toolStripButton5.Image = Properties.Resources.list_x;
-            toolStripButton5.ImageTransparentColor = Color.Magenta;
-            toolStripButton5.Name = "toolStripButton5";
-            toolStripButton5.Size = new Size(23, 22);
-            toolStripButton5.Text = "Uncheck All";
+            disableAllButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            disableAllButton.Image = Properties.Resources.list_x;
+            disableAllButton.ImageTransparentColor = Color.Magenta;
+            disableAllButton.Name = "disableAllButton";
+            disableAllButton.Size = new Size(23, 22);
+            disableAllButton.Text = "Uncheck All";
+            disableAllButton.Click += disableAllButton_Click;
             // 
             // toolStripSeparator6
             // 
             toolStripSeparator6.Name = "toolStripSeparator6";
             toolStripSeparator6.Size = new Size(6, 25);
             // 
-            // toolStripButton2
+            // modOrderDownButton
             // 
-            toolStripButton2.DisplayStyle = ToolStripItemDisplayStyle.Text;
-            toolStripButton2.Image = (Image)resources.GetObject("toolStripButton2.Image");
-            toolStripButton2.ImageTransparentColor = Color.Magenta;
-            toolStripButton2.Name = "toolStripButton2";
-            toolStripButton2.Size = new Size(23, 22);
-            toolStripButton2.Text = "↓";
-            toolStripButton2.ToolTipText = "Move Down";
-            toolStripButton2.Click += modOrderDown_Click;
+            modOrderDownButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            modOrderDownButton.Image = (Image)resources.GetObject("modOrderDownButton.Image");
+            modOrderDownButton.ImageTransparentColor = Color.Magenta;
+            modOrderDownButton.Name = "modOrderDownButton";
+            modOrderDownButton.Size = new Size(23, 22);
+            modOrderDownButton.Text = "↓";
+            modOrderDownButton.ToolTipText = "Move Down";
+            modOrderDownButton.Click += modOrderDown_Click;
             // 
-            // toolStripButton1
+            // modOrderUpButton
             // 
-            toolStripButton1.DisplayStyle = ToolStripItemDisplayStyle.Text;
-            toolStripButton1.Image = (Image)resources.GetObject("toolStripButton1.Image");
-            toolStripButton1.ImageTransparentColor = Color.Magenta;
-            toolStripButton1.Name = "toolStripButton1";
-            toolStripButton1.Size = new Size(23, 22);
-            toolStripButton1.Text = "↑";
-            toolStripButton1.ToolTipText = "Move Up";
-            toolStripButton1.Click += modOrderUp_Click;
+            modOrderUpButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            modOrderUpButton.Image = (Image)resources.GetObject("modOrderUpButton.Image");
+            modOrderUpButton.ImageTransparentColor = Color.Magenta;
+            modOrderUpButton.Name = "modOrderUpButton";
+            modOrderUpButton.Size = new Size(23, 22);
+            modOrderUpButton.Text = "↑";
+            modOrderUpButton.ToolTipText = "Move Up";
+            modOrderUpButton.Click += modOrderUp_Click;
             // 
             // splitContainer2
             // 
@@ -405,7 +397,7 @@
             // modToolStrip
             // 
             modToolStrip.GripStyle = ToolStripGripStyle.Hidden;
-            modToolStrip.Items.AddRange(new ToolStripItem[] { refreshModButton });
+            modToolStrip.Items.AddRange(new ToolStripItem[] { refreshModButton, toolStripSeparator5 });
             modToolStrip.Location = new Point(0, 0);
             modToolStrip.Name = "modToolStrip";
             modToolStrip.Size = new Size(540, 25);
@@ -422,6 +414,11 @@
             refreshModButton.Text = "Refresh Mod";
             refreshModButton.Click += refreshModButton_Click;
             // 
+            // toolStripSeparator5
+            // 
+            toolStripSeparator5.Name = "toolStripSeparator5";
+            toolStripSeparator5.Size = new Size(6, 25);
+            // 
             // fileView
             // 
             fileView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
@@ -433,6 +430,18 @@
             fileView.Name = "fileView";
             fileView.Size = new Size(540, 307);
             fileView.TabIndex = 0;
+            // 
+            // modList
+            // 
+            modList.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            modList.FormattingEnabled = true;
+            modList.IntegralHeight = false;
+            modList.Location = new Point(0, 28);
+            modList.Name = "modList";
+            modList.Size = new Size(274, 652);
+            modList.TabIndex = 4;
+            modList.SelectedIndexChanged += modList_SelectedIndexChanged;
+            modList.MouseUp += modList_MouseUp;
             // 
             // TrinityModLoaderWindow
             // 
@@ -483,16 +492,15 @@
         private ToolStripMenuItem newModPackMenuItem;
         private ToolStripMenuItem toolStripMenuItem6;
         private ToolStripSeparator toolStripSeparator2;
-        private ToolStripMenuItem OpenModPackMenuItems;
-        private ToolStripMenuItem ChooseModPackMenuItem;
+        private ToolStripMenuItem openModPackMenuItems;
+        private ToolStripMenuItem chooseModPackMenuItem;
         private ToolStripSeparator toolStripSeparator3;
-        private CheckedListBox modList;
         private SplitContainer splitContainer1;
         private ToolStripMenuItem openModWindowMenuItem;
         private ToolStrip modListToolStrip;
         private ToolStripSeparator toolStripSeparator4;
-        private ToolStripButton toolStripButton1;
-        private ToolStripButton toolStripButton2;
+        private ToolStripButton modOrderUpButton;
+        private ToolStripButton modOrderDownButton;
         private ToolStripButton addPackedMod;
         private ToolStripButton addFolderMod;
         private ToolStripButton applyModsBut;
@@ -501,12 +509,14 @@
         private ListBox fileView;
         private ToolStrip modToolStrip;
         private ToolStripButton refreshModButton;
-        private ToolStripButton toolStripButton4;
-        private ToolStripButton toolStripButton5;
+        private ToolStripButton enableAllButton;
+        private ToolStripButton disableAllButton;
         private Label ModNameLabel;
         private Label ModAuthorLabel;
         private Label ModPathLabel;
         private RichTextBox ModDescriptionBox;
         private Label ModVersionLabel;
+        private ToolStripSeparator toolStripSeparator5;
+        private CheckedModListBox modList;
     }
 }
