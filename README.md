@@ -1,31 +1,25 @@
-# Trinity Mod Loader
-Trinity Mod Loader is a small utility to make and manage mods, while also providing file extraction utilities.
+# GFTool Monorepo
+Tools and libraries for working with gflib games
 
-## Initial Usage
-Trinity Mod Loader requires the oo2core_8_win64.dll and an up-to-date GFPAKHashCache.bin.
-On initial boot it will ask for your romfs path, once specified the tool will load.
+## Tools
 
-Trinity Mod Loader will also check if the hashes_inside_fd.txt exists.
-If it does not find this file you will be asked if you want to download the latest hashes.
+### Trinity Mod Loader
+A small utility to make and manage mods for games that use the TRPFS/TRPFD virtual file system (Pokemon Scarlet/Violet and Pokemon Legends Arceus).
 
-## Updating to the Latest Hashes
-If you need update your hashes you can either delete the existing hashes_inside_fd.txt file and restart Trinity Mod Loader or do the following:
-1. Click ``Help > Get Latest Hashes``
+### Trinity File Explorer
+A small utility to explore files inside TRPFS/TRPFD file systems.
 
-## Adding a Mod
-1. Add as many mod archive files using the "Add Mod" button. (make sure the contents represent how they would on the romfs)
-2. When you're done adding mods, simply hit the "Apply Mods" button. This will generate files either in a LayeredFS folder in the same directory as the program, or a directory of your choice if you set an output directory.
-3. Drag and drop the generated files in the output folder into your atmosphere layeredfs directory or your emulator of choice's mod folder.
+### Trinity Model Viewer
+A work in progress utility to view, export and import models.
 
-## Creating a Mod
-1. Extract files to modify using ``View > Tree View``.
-2. Mark the modified files by right clicking on them to modify your trpfd for testing.
-3. Once you've tested your mod, zip the modified files in their place in romfs and ship it!
+### Trinity Scene Viewer
+A work in progress utility to view and modify Trinity scenes and object templates.
 
-Note: We'll be adding a way to add some mod metadata to keep better track of your mods soon.
+### Trinity UIKit Editor
+No dragons here!
 
 ## Source Code
-The canonical repository for this tool and the GFTool.Core which provies serializers for Trinity files can be found at [https://github.com/pkZukan/gftool/](https://github.com/pkZukan/gftool/).
+The canonical repository for GFTool.Core which provies serializers for Trinity files can be found at [https://github.com/pkZukan/gftool/](https://github.com/pkZukan/gftool/).
 
 ## Feature Suggestions
 Please discuss feature suggestions on the [pokemodding discord.](http://discord.gg/A99eGRF) Our aim is to make a stable and user friendly tool, so please understand if your dream feature isn't developed immediately.
