@@ -71,7 +71,7 @@ namespace TrinityFileExplorer
             //Add config to prefer last viewer
             activeViewer = explorerFileViewer;
             activeViewer.Enable();
-            
+
             NavigateTo();
         }
 
@@ -145,7 +145,7 @@ namespace TrinityFileExplorer
                 fileSystem = null;
                 return false;
             }
-            
+
             if (!File.Exists(trpfs))
             {
                 MessageBox.Show("data.trpfs file not found.");
@@ -160,7 +160,7 @@ namespace TrinityFileExplorer
                 MessageBox.Show("Failed to load TRPFS.");
                 return false;
             }
-            
+
             return true;
 
         }
@@ -343,8 +343,28 @@ namespace TrinityFileExplorer
 
         private void SaveFolder(string? v, string selectedPath)
         {
+            if (string.IsNullOrEmpty(v) || fileDescriptor == null || fileSystem == null)
+            {
+                return;
+            }
 
-            throw new NotImplementedException();
+            var cwd = explorerFileViewer.GetCwd();
+            var diskPath = explorerFileViewer.GetDiskPath();
+            var relativeCwd = cwd.StartsWith(diskPath, StringComparison.Ordinal)
+                ? cwd.Substring(diskPath.Length)
+                : cwd;
+            var folderPath = $"{relativeCwd}{v}/";
+            var hashes = explorerFileViewer.GetFolderPaths(folderPath).Distinct().ToArray();
+
+            if (hashes.Length == 0)
+            {
+                return;
+            }
+
+            var exportWindow = new ExportProgressWindow(fileDescriptor, fileSystem);
+            exportWindow.Show();
+            exportWindow.SaveFiles(hashes, selectedPath);
+            exportWindow.Close();
         }
 
         private void RemoveFromLayeredFSMenuItem_Click(object sender, EventArgs e)
@@ -488,7 +508,7 @@ namespace TrinityFileExplorer
             if (sfd.ShowDialog() != DialogResult.OK) return;
 
             var export_window = new ExportProgressWindow(fileDescriptor, fileSystem);
-            
+
             export_window.Show();
             export_window.SaveFiles(fileDescriptor.FileHashes.ToArray(), sfd.SelectedPath);
             export_window.Close();

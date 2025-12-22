@@ -25,7 +25,7 @@ namespace TrinityFileExplorer
 
         public bool SaveFiles(ulong[] fileHashes, string outFolder)
         {
-            foreach (ulong hash in fileDescriptor.FileHashes)
+            foreach (ulong hash in fileHashes)
             {
                 if (isClosing) { break; }
                 SaveFile(hash, outFolder);
