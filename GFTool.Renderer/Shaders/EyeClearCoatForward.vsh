@@ -57,11 +57,8 @@ void main()
         localBinormal = normalize(skinMat3 * aBinormal);
     }
 
-    //World space position for lighting calculations
-    vec4 worldPos = model * localPos;
-    FragPos = worldPos.xyz;
+    FragPos = vec3(model * localPos);
 
-    // Transform normal to world space
     mat3 normalMatrix = transpose(inverse(mat3(model)));
     Normal = normalize(normalMatrix * localNormal);
     vec3 tangent = normalize(normalMatrix * localTangent);
@@ -73,6 +70,5 @@ void main()
     TexCoord = aTexCoord;
     Color = aColor;
 
-    // Clip space position - this is the same as forward rendering
     gl_Position = projection * view * vec4(FragPos, 1.0);
 }
