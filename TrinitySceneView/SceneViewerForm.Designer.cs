@@ -49,9 +49,15 @@
             propertiesGroup = new GroupBox();
             InfoBox = new TextBox();
             renderCtrl = new GFTool.RenderControl_WinForms.RenderControl();
+            tableLayoutPanel1 = new TableLayoutPanel();
+            tableLayoutPanel2 = new TableLayoutPanel();
+            tableLayoutPanel3 = new TableLayoutPanel();
             menuStrip1.SuspendLayout();
             sceneContext.SuspendLayout();
             propertiesGroup.SuspendLayout();
+            tableLayoutPanel1.SuspendLayout();
+            tableLayoutPanel2.SuspendLayout();
+            tableLayoutPanel3.SuspendLayout();
             SuspendLayout();
             // 
             // menuStrip1
@@ -59,7 +65,7 @@
             menuStrip1.Items.AddRange(new ToolStripItem[] { fileToolStripMenuItem, viewToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
-            menuStrip1.Size = new Size(1659, 24);
+            menuStrip1.Size = new Size(1705, 24);
             menuStrip1.TabIndex = 0;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -137,9 +143,10 @@
             // sceneView
             // 
             sceneView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            sceneView.Location = new Point(12, 27);
+            sceneView.BorderStyle = BorderStyle.FixedSingle;
+            sceneView.Location = new Point(3, 3);
             sceneView.Name = "sceneView";
-            sceneView.Size = new Size(241, 868);
+            sceneView.Size = new Size(296, 907);
             sceneView.TabIndex = 1;
             sceneView.MouseUp += sceneView_MouseUp;
             // 
@@ -158,8 +165,8 @@
             // 
             // statusLbl
             // 
-            statusLbl.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            statusLbl.Location = new Point(259, 898);
+            statusLbl.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            statusLbl.Location = new Point(12, 943);
             statusLbl.Name = "statusLbl";
             statusLbl.Size = new Size(1080, 14);
             statusLbl.TabIndex = 3;
@@ -167,14 +174,15 @@
             // 
             // messageListView
             // 
-            messageListView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right;
+            messageListView.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            messageListView.BorderStyle = BorderStyle.FixedSingle;
             messageListView.Columns.AddRange(new ColumnHeader[] { columnHeader1 });
             messageListView.FullRowSelect = true;
             messageListView.GridLines = true;
             messageListView.LabelWrap = false;
-            messageListView.Location = new Point(259, 753);
+            messageListView.Location = new Point(3, 729);
             messageListView.Name = "messageListView";
-            messageListView.Size = new Size(1388, 142);
+            messageListView.Size = new Size(1373, 181);
             messageListView.TabIndex = 4;
             messageListView.UseCompatibleStateImageBehavior = false;
             messageListView.View = View.Details;
@@ -186,11 +194,11 @@
             // 
             // propertiesGroup
             // 
-            propertiesGroup.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            propertiesGroup.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             propertiesGroup.Controls.Add(InfoBox);
-            propertiesGroup.Location = new Point(1345, 27);
+            propertiesGroup.Location = new Point(1089, 3);
             propertiesGroup.Name = "propertiesGroup";
-            propertiesGroup.Size = new Size(302, 720);
+            propertiesGroup.Size = new Size(287, 720);
             propertiesGroup.TabIndex = 5;
             propertiesGroup.TabStop = false;
             propertiesGroup.Text = "Properties";
@@ -199,38 +207,86 @@
             // 
             InfoBox.BackColor = SystemColors.Control;
             InfoBox.BorderStyle = BorderStyle.None;
-            InfoBox.Location = new Point(6, 22);
+            InfoBox.Dock = DockStyle.Fill;
+            InfoBox.Location = new Point(3, 19);
             InfoBox.Multiline = true;
             InfoBox.Name = "InfoBox";
             InfoBox.ReadOnly = true;
-            InfoBox.Size = new Size(290, 190);
+            InfoBox.Size = new Size(281, 698);
             InfoBox.TabIndex = 0;
             // 
             // renderCtrl
             // 
             renderCtrl.API = OpenTK.Windowing.Common.ContextAPI.OpenGL;
             renderCtrl.APIVersion = new Version(3, 3, 0, 0);
+            renderCtrl.Dock = DockStyle.Fill;
             renderCtrl.Flags = OpenTK.Windowing.Common.ContextFlags.Default;
             renderCtrl.IsEventDriven = true;
-            renderCtrl.Location = new Point(259, 27);
+            renderCtrl.Location = new Point(3, 3);
             renderCtrl.Name = "renderCtrl";
             renderCtrl.Profile = OpenTK.Windowing.Common.ContextProfile.Core;
             renderCtrl.SharedContext = null;
             renderCtrl.Size = new Size(1080, 720);
             renderCtrl.TabIndex = 6;
             renderCtrl.Load += glCtxt_Load;
+            renderCtrl.Click += renderCtrl_Click;
             renderCtrl.Paint += glCtxt_Paint;
+            // 
+            // tableLayoutPanel1
+            // 
+            tableLayoutPanel1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            tableLayoutPanel1.ColumnCount = 2;
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18.00487F));
+            tableLayoutPanel1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 81.99513F));
+            tableLayoutPanel1.Controls.Add(sceneView, 0, 0);
+            tableLayoutPanel1.Controls.Add(tableLayoutPanel2, 1, 0);
+            tableLayoutPanel1.Location = new Point(12, 27);
+            tableLayoutPanel1.Margin = new Padding(0);
+            tableLayoutPanel1.Name = "tableLayoutPanel1";
+            tableLayoutPanel1.RowCount = 1;
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            tableLayoutPanel1.Size = new Size(1681, 913);
+            tableLayoutPanel1.TabIndex = 7;
+            // 
+            // tableLayoutPanel2
+            // 
+            tableLayoutPanel2.ColumnCount = 1;
+            tableLayoutPanel2.ColumnStyles.Add(new ColumnStyle());
+            tableLayoutPanel2.Controls.Add(messageListView, 0, 1);
+            tableLayoutPanel2.Controls.Add(tableLayoutPanel3, 0, 0);
+            tableLayoutPanel2.Dock = DockStyle.Fill;
+            tableLayoutPanel2.Location = new Point(302, 0);
+            tableLayoutPanel2.Margin = new Padding(0);
+            tableLayoutPanel2.Name = "tableLayoutPanel2";
+            tableLayoutPanel2.RowCount = 2;
+            tableLayoutPanel2.RowStyles.Add(new RowStyle(SizeType.Absolute, 726F));
+            tableLayoutPanel2.RowStyles.Add(new RowStyle());
+            tableLayoutPanel2.Size = new Size(1379, 913);
+            tableLayoutPanel2.TabIndex = 2;
+            // 
+            // tableLayoutPanel3
+            // 
+            tableLayoutPanel3.ColumnCount = 2;
+            tableLayoutPanel3.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 1086F));
+            tableLayoutPanel3.ColumnStyles.Add(new ColumnStyle());
+            tableLayoutPanel3.Controls.Add(renderCtrl, 0, 0);
+            tableLayoutPanel3.Controls.Add(propertiesGroup, 1, 0);
+            tableLayoutPanel3.Dock = DockStyle.Fill;
+            tableLayoutPanel3.Location = new Point(0, 0);
+            tableLayoutPanel3.Margin = new Padding(0);
+            tableLayoutPanel3.Name = "tableLayoutPanel3";
+            tableLayoutPanel3.RowCount = 1;
+            tableLayoutPanel3.RowStyles.Add(new RowStyle());
+            tableLayoutPanel3.Size = new Size(1379, 726);
+            tableLayoutPanel3.TabIndex = 0;
             // 
             // SceneViewerForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1659, 921);
-            Controls.Add(renderCtrl);
-            Controls.Add(propertiesGroup);
-            Controls.Add(messageListView);
+            ClientSize = new Size(1705, 966);
+            Controls.Add(tableLayoutPanel1);
             Controls.Add(statusLbl);
-            Controls.Add(sceneView);
             Controls.Add(menuStrip1);
             KeyPreview = true;
             MainMenuStrip = menuStrip1;
@@ -241,6 +297,9 @@
             sceneContext.ResumeLayout(false);
             propertiesGroup.ResumeLayout(false);
             propertiesGroup.PerformLayout();
+            tableLayoutPanel1.ResumeLayout(false);
+            tableLayoutPanel2.ResumeLayout(false);
+            tableLayoutPanel3.ResumeLayout(false);
             ResumeLayout(false);
             PerformLayout();
         }
@@ -267,5 +326,8 @@
         private GroupBox propertiesGroup;
         private TextBox InfoBox;
         private GFTool.RenderControl_WinForms.RenderControl renderCtrl;
+        private TableLayoutPanel tableLayoutPanel1;
+        private TableLayoutPanel tableLayoutPanel2;
+        private TableLayoutPanel tableLayoutPanel3;
     }
 }

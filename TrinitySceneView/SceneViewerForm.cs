@@ -10,7 +10,7 @@ namespace TrinitySceneView
 {
     public partial class SceneViewerForm : Form
     {
-        
+
         Point prevMousePos;
 
         private TRSceneTree sceneTree;
@@ -138,6 +138,11 @@ namespace TrinitySceneView
                 messageListView.Items.Add(item);
                 messageListView.EnsureVisible(messageListView.Items.Count - 1);
             }
+        }
+
+        private void renderCtrl_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

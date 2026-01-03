@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\NxMiddleware\SarcLib\SarcLib.csproj" />
     <ProjectReference Include="..\GFTool.Core\GFTool.Core.csproj" />
     <ProjectReference Include="..\GFTool.RenderControl_WinForms\GFTool.RenderControl_WinForms.csproj" />
   </ItemGroup>

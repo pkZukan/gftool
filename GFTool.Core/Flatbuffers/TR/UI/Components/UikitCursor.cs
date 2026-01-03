@@ -12,5 +12,11 @@ namespace GFTool.Core.Flatbuffers.TR.UI.Components
     {
         [FlatBufferItem(0)]
         public string Name { get; set; }
+
+        [FlatBufferItem(1)]
+        public string ControlName { get; set; }
+
+        [FlatBufferItem(2)]
+        public int ControlIndex { get; set; }
     }
 }

@@ -1,110 +1,95 @@
 ﻿using GFTool.Core.Flatbuffers.TR.Scene.Components;
+using System.Collections;
+using System.Reflection;
 using System.Text;
 
 namespace TrinitySceneView
 {
     public static class TRSceneProperties
     {
-        private static string CameraEntity(object objData)
+        public static string GetProperties(string sceneComponent, object objData)
         {
-            StringBuilder sb = new StringBuilder();
+            if (objData == null) return string.Empty;
 
-            var data = (trinity_CameraEntity)objData;
-            sb.AppendLine("Name: " + data.Name);
-            sb.AppendLine("Target: " + data.TargetName);
+            var sb = new StringBuilder();
+            var type = objData.GetType();
 
-            return sb.ToString();
-        }
+            var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
-        private static string SceneObject(object objData)
-        {
-            StringBuilder sb = new StringBuilder();
-
-            var data = (trinity_SceneObject)objData;
-            sb.AppendLine("Name: " + data.Name);
-            if (data.AttachJointName != string.Empty)
-                sb.AppendLine("Attach joint name: " + data.AttachJointName);
-            sb.AppendLine(string.Format("Tags: ({0})", data.TagList.Length));
-
-            foreach (var tag in data.TagList)
+            foreach (var prop in properties)
             {
-                sb.AppendLine(string.Format("  {0}" + Environment.NewLine, tag == string.Empty ? "(Blank)" : tag));
-            }
+                var value = prop.GetValue(objData);
 
-            if (data.Layers.Length > 0)
-            {
-                sb.AppendLine(string.Format("Layers: ({0})", data.Layers.Length));
-                foreach (var layer in data.Layers)
+                if (value == null)
                 {
-                    sb.AppendLine(string.Format("  {0}" + Environment.NewLine, layer.Name));
+                    sb.AppendLine($"{prop.Name}: null");
+                }
+                else if (value is IEnumerable enumerable && !(value is string))
+                {
+                    sb.AppendLine($"{prop.Name}:");
+                    foreach (var item in enumerable)
+                    {
+                        sb.AppendLine($"\t{item}");
+                    }
+                }
+                else if (IsComplexType(value))
+                {
+                    sb.AppendLine($"{prop.Name}: {FormatComplexValue(value)}");
+                }
+                else
+                {
+                    sb.AppendLine($"{prop.Name}: {value}");
                 }
             }
 
             return sb.ToString();
         }
 
-        private static string OverrideSensorData(object objData)
+        private static bool IsComplexType(object value)
         {
-            StringBuilder sb = new StringBuilder();
+            if (value == null) return false;
 
-            var data = (trinity_OverrideSensorData)objData;
-            sb.AppendLine("Realizing Dist: " + data.RealizingDistance);
-            sb.AppendLine("Unrealizing Dist: " + data.UnrealizingDistance);
-            sb.AppendLine("Loading Dist: " + data.LoadingDistance);
-            sb.AppendLine("Unloading Dist: " + data.UnloadingDistance);
+            var type = value.GetType();
 
-            return sb.ToString();
+            if (type.Namespace?.StartsWith("Generated.") == true)
+                return false;
+
+            return !type.IsPrimitive
+                && !type.IsEnum
+                && type != typeof(string)
+                && type != typeof(decimal);
         }
 
-        private static string ScriptComponent(object objData)
+        private static string FormatComplexValue(object value)
         {
-            StringBuilder sb = new StringBuilder();
+            if (value == null) return "null";
 
-            var data = (trinity_ScriptComponent)objData;
-            sb.AppendLine("File: " + data.FilePath);
-            sb.AppendLine("Package: " + data.PackageName);
-            sb.AppendLine("Is static: " + (data.IsStatic ? "True" : "False"));
+            var type = value.GetType();
 
-            return sb.ToString();
-        }
+            if (type.Namespace?.StartsWith("Generated.") == true)
+                return value.ToString();
 
-        private static string TextComponent(object objData)
-        {
-            StringBuilder sb = new StringBuilder();
+            var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => p.CanRead && p.GetIndexParameters().Length == 0)
+                .ToArray();
 
-            var data = (pe_TextComponent)objData;
-            sb.AppendLine("File: " + data.FilePath);
+            if (properties.Length == 0)
+                return value.ToString();
 
-            return sb.ToString();
-        }
-
-        private static string InputEventTriggerComponent(object objData)
-        {
-            StringBuilder sb = new StringBuilder();
-
-            var data = (pe_InputEventTriggerComponent)objData;
-            sb.AppendLine("Input name: " + data.InputName);
-            sb.AppendLine("Resource name: " + data.ResourceName);
-
-            return sb.ToString();
-        }
-
-        public static string GetProperties(string sceneComponent, object objData)
-        { 
-            string ret = string.Empty;
-
-            switch (sceneComponent)
+            if (properties.Length <= 4)
             {
-                case "trinity_CameraEntity": ret = CameraEntity(objData); break;
-                case "trinity_SceneObject": ret = SceneObject(objData); break;
-                case "trinity_OverrideSensorData": ret = OverrideSensorData(objData); break;
-                case "trinity_ScriptComponent": ret = ScriptComponent(objData); break;
-                case "pe_TextComponent": ret = TextComponent(objData); break;
-                case "pe_InputEventTriggerComponent": ret = InputEventTriggerComponent(objData); break;
-
+                var parts = properties.Select(p => $"{p.Name}={p.GetValue(value)}");
+                return $"{{{string.Join(", ", parts)}}}";
             }
 
-            return ret;
+            var sb = new StringBuilder();
+            sb.AppendLine("{");
+            foreach (var prop in properties)
+            {
+                sb.AppendLine($"\t\t{prop.Name}: {prop.GetValue(value)}");
+            }
+            sb.Append("\t}");
+            return sb.ToString();
         }
     }
 }
