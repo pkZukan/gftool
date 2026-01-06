@@ -1,4 +1,4 @@
-﻿
+
 using System.Xml.Linq;
 
 namespace GFTool.Renderer.Core.Graphics

@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace Trinity.Core.Flatbuffers.TR.Animation
 {
-    [FlatBufferEnum(typeof(uint))]
+    [FlatBufferEnum(typeof(int))]
     public enum PlayType
     {
         Once = 0,
@@ -81,7 +81,7 @@ namespace Trinity.Core.Flatbuffers.TR.Animation
     {
         [FlatBufferItem(0)]
         public string BoneName { get; set; }
-        
+
         [JsonConverter(typeof(VectorTrackUnionConverter))]
         [FlatBufferItem(1)]
         public FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack> ScaleChannel { get; set; }

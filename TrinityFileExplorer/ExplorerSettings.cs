@@ -1,4 +1,4 @@
-﻿using System.Configuration;
+using System.Configuration;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Trinity.Core.Flatbuffers.TR.ResourceDictionary;
@@ -9,6 +9,7 @@ namespace TrinityFileExplorer
     {
         public string romfsDir { get; set; } = "";
         public string lastPath { get; set; } = "";
+        public string modelViewerExePath { get; set; } = "";
         public const string trpfdRel = @"\arc\data.trpfd";
         public const string trpfsRel = @"\arc\data.trpfs";
 
@@ -53,7 +54,7 @@ namespace TrinityFileExplorer
         }
 
         public static void SetLastPath(string path)
-        { _filePathSettings.lastPath = path;}
+        { _filePathSettings.lastPath = path; }
 
         public static string GetLastPath()
         {
@@ -64,6 +65,16 @@ namespace TrinityFileExplorer
         {
             if (_filePathSettings == null) return;
             _filePathSettings.Save(_settingsPath);
+        }
+
+        public static string GetModelViewerExePath()
+        {
+            return _filePathSettings.modelViewerExePath;
+        }
+
+        public static void SetModelViewerExePath(string path)
+        {
+            _filePathSettings.modelViewerExePath = path;
         }
     }
 }

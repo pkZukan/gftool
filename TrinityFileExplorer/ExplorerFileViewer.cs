@@ -192,7 +192,7 @@ namespace TrinityFileExplorer
                     files.Add(Convert.ToUInt64(rowHash.ToString(), 16));
                 }
             }
-            
+
             return files;
         }
 
@@ -216,7 +216,11 @@ namespace TrinityFileExplorer
 
         public IEnumerable<ulong> GetFolderPaths(string path)
         {
-            return romfs_paths.Where(x => x.StartsWith(path)).Select(x => Convert.ToUInt64(x.ToString(), 16));
+            return romfs_paths
+                .Concat(layeredfs_paths)
+                .Where(x => x.StartsWith(path, StringComparison.Ordinal))
+                .Select(x => GFFNV.Hash(x))
+                .Distinct();
         }
 
         public string GetDiskPath()

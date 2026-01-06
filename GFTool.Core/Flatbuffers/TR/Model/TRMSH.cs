@@ -1,4 +1,4 @@
-﻿using FlatSharp.Attributes;
+using FlatSharp.Attributes;
 using Trinity.Core.Flatbuffers.Utils;
 
 namespace Trinity.Core.Flatbuffers.TR.Model
@@ -32,6 +32,9 @@ namespace Trinity.Core.Flatbuffers.TR.Model
         NONE = 0,
         R8_G8_B8_A8_UNSIGNED_NORMALIZED = 20,
         W8_X8_Y8_Z8_UNSIGNED = 22,
+        // Observed in TRMSH/TRMBF: format code 0x34 (52) used for BLEND_INDEX as 4x uint32.
+        // Tooling references this as "4UINTS32".
+        W32_X32_Y32_Z32_UNSIGNED = 52,
         W16_X16_Y16_Z16_UNSIGNED_NORMALIZED = 39,
         W16_X16_Y16_Z16_FLOAT = 43,
         X32_Y32_FLOAT = 48,
@@ -71,7 +74,7 @@ namespace Trinity.Core.Flatbuffers.TR.Model
         [FlatBufferItem(3)] public string MaterialName { get; set; }
         [FlatBufferItem(4)] public int vertexDeclarationIndex { get; set; }
     }
-    
+
     [FlatBufferTable]
     public class TRBoneWeight
     {

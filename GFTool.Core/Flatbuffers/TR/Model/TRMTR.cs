@@ -90,6 +90,7 @@ namespace Trinity.Core.Flatbuffers.TR.Model
         [FlatBufferItem(4)] public TRFloatParameter[] FloatParams { get; set; }
         [FlatBufferItem(5)] public TRVec2fParameter[] Vec2fParams { get; set; }
         [FlatBufferItem(6)] public TRVec3fParameter[] Vec3fParams { get; set; }
+        [FlatBufferItem(7)] public TRVec4fParameter[] Vec4fParams { get; set; }
     }
 
     [FlatBufferTable]

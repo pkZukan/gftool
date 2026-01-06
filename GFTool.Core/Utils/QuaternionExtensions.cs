@@ -1,124 +1,134 @@
-﻿using Trinity.Core.Flatbuffers.Utils;
+using Trinity.Core.Flatbuffers.Utils;
+using System.Collections.Generic;
 using System.Numerics;
 
 namespace Trinity.Core.Utils
 {
     public static class QuaternionExtensions
     {
-        public const float PI_DIVISOR = (float)(System.Math.PI / UInt16.MaxValue);
+        public const float PI_DIVISOR = (float)(System.Math.PI / 65536.0);
         public const float PI_ADDEND = (float)(System.Math.PI / 4.0);
+        private const float PI_HALF = (float)(System.Math.PI / 2.0);
+        private const float SCALE = 0x7FFF;
 
-        public static float ExpandFloat(ulong i)
+        private static float ExpandFloat(ulong i)
         {
-            return i * PI_DIVISOR - PI_ADDEND;
+            return (float)(i * (PI_HALF / SCALE) - PI_ADDEND);
         }
 
-        public static ulong QuantizeFloat(float i)
+        private static int QuantizeFloat(float f)
         {
-            short result = Convert.ToInt16((i + PI_ADDEND) / PI_DIVISOR);
-            return Convert.ToUInt64(result & 0x7FFF);
+            int result = (int)((f + PI_ADDEND) / PI_DIVISOR);
+            return result & 0x7FFF;
         }
 
         public static Quaternion Unpack(this PackedQuaternion pq)
         {
-            ulong pack = (ulong)((pq.Z << 32) | (pq.Y << 16) | (pq.X));
-            uint missingComponent = (uint)(pack & 3);
-            bool isNegative = (pack & 4) == 0;
-            Console.WriteLine(pack);
+            ulong pack = (ulong)(((ulong)pq.Z << 32) | ((ulong)pq.Y << 16) | pq.X);
+            float q1 = ExpandFloat((pack >> 3) & 0x7FFF);
+            float q2 = ExpandFloat((pack >> 18) & 0x7FFF);
+            float q3 = ExpandFloat((pack >> 33) & 0x7FFF);
 
-            float tx = ExpandFloat((pack >> 3) & 0x7FFF);
-            float ty = ExpandFloat((pack >> (15 + 3)) & 0x7FFF);
-            float tz = ExpandFloat((pack >> (30 + 3)) & 0x7FFF);
-            float tw = 1.0f - (tx * tx + ty * ty + tz * tz);
-
-            if (tw < 0.0f)
+            float sum = q1 * q1 + q2 * q2 + q3 * q3;
+            float maxComponent = 1.0f - sum;
+            if (maxComponent < 0.0f)
             {
-                tw = 0.0f;
+                maxComponent = 0.0f;
             }
+            maxComponent = (float)System.Math.Sqrt(maxComponent);
 
-            tw = (float)System.Math.Sqrt(tw);
-            var result = missingComponent switch
-            {
-                0 => new Quaternion(tw, ty, tz, tx),
-                1 => new Quaternion(ty, tw, tz, tx),
-                2 => new Quaternion(ty, tz, tw, tx),
-                _ => new Quaternion(tx, ty, tz, tw),
-            };
+            int missingComponent = (int)(pack & 0x3);
+            bool isNegative = (pack & 0x4) != 0;
 
+            var values = new List<float> { q1, q2, q3 };
+            values.Insert(missingComponent, maxComponent);
+
+            float w = values[3];
+            float x = values[0];
+            float y = values[1];
+            float z = values[2];
             if (isNegative)
             {
-                result *= -1.0f;
+                x = -x;
+                y = -y;
+                z = -z;
+                w = -w;
             }
 
-            return result;
+            return new Quaternion(x, y, z, w);
         }
 
         public static PackedQuaternion Pack(this Quaternion q)
         {
             q = Quaternion.Normalize(q);
 
-            List<float> qc = new List<float> { q.X, q.Y, q.Z, q.W };
-
-            float maxVal = qc.Max();
-            float minVal = qc.Min();
-            uint isNegative = 0;
-
+            List<float> qList = new List<float> { q.W, q.X, q.Y, q.Z };
+            float maxVal = qList.Max();
+            float minVal = qList.Min();
+            int isNegative = 0;
             if (System.Math.Abs(minVal) > maxVal)
             {
                 maxVal = minVal;
                 isNegative = 1;
             }
 
-            uint maxIndex = Convert.ToUInt16(qc.IndexOf(maxVal));
-
-            ulong tx = 0;
-            ulong ty = 0;
-            ulong tz = 0;
-
+            int maxIndex = qList.IndexOf(maxVal);
             if (isNegative == 1)
             {
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < qList.Count; i++)
                 {
-                    qc[i] *= -1.0f;
+                    qList[i] = -qList[i];
                 }
             }
 
+            int tx;
+            int ty;
+            int tz;
             switch (maxIndex)
             {
                 case 0:
-                    tx = QuantizeFloat(qc[2]);
-                    ty = QuantizeFloat(qc[1]);
-                    tz = QuantizeFloat(qc[3]);
+                    tx = QuantizeFloat(qList[1]);
+                    ty = QuantizeFloat(qList[2]);
+                    tz = QuantizeFloat(qList[3]);
                     break;
                 case 1:
-                    tx = QuantizeFloat(qc[0]);
-                    ty = QuantizeFloat(qc[2]);
-                    tz = QuantizeFloat(qc[3]);
+                    tx = QuantizeFloat(qList[2]);
+                    ty = QuantizeFloat(qList[3]);
+                    tz = QuantizeFloat(qList[0]);
                     break;
                 case 2:
-                    tx = QuantizeFloat(qc[0]);
-                    ty = QuantizeFloat(qc[1]);
-                    tz = QuantizeFloat(qc[3]);
+                    tx = QuantizeFloat(qList[1]);
+                    ty = QuantizeFloat(qList[3]);
+                    tz = QuantizeFloat(qList[0]);
                     break;
-                case 3:
-                    tx = QuantizeFloat(qc[0]);
-                    ty = QuantizeFloat(qc[1]);
-                    tz = QuantizeFloat(qc[2]);
+                default:
+                    tx = QuantizeFloat(qList[1]);
+                    ty = QuantizeFloat(qList[2]);
+                    tz = QuantizeFloat(qList[0]);
                     break;
             }
 
-            ulong pack = ((tz << 30) | (ty << 15) | (tx));
-            pack = (pack << 3) | ((isNegative << 2) | maxIndex);
+            ulong pack = ((ulong)tz << 30) | ((ulong)ty << 15) | (ulong)tx;
+            pack = (pack << 3) | ((ulong)(isNegative << 2) | (ulong)maxIndex);
+            uint x = (uint)(pack & 0xFFFF);
+            uint y = (uint)((pack >> 16) & 0xFFFF);
+            uint z = (uint)((pack >> 32) & 0xFFFF);
 
-            PackedQuaternion packed = new PackedQuaternion()
+            if (maxIndex == 0)
             {
-                X = Convert.ToUInt16(pack & UInt16.MaxValue),
-                Y = Convert.ToUInt16((pack >> 16) & UInt16.MaxValue),
-                Z = Convert.ToUInt16((pack >> 32) & UInt16.MaxValue)
+                x = System.Math.Min(65535u, x + 3);
+            }
+            else if (x > 0)
+            {
+                x -= 1;
+            }
 
+            return new PackedQuaternion
+            {
+                X = Convert.ToUInt16(x),
+                Y = Convert.ToUInt16(y),
+                Z = Convert.ToUInt16(z)
             };
-
-            return packed;
         }
 
 
