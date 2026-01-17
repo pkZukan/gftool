@@ -30,9 +30,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BnTxx", "NxMiddleware\BnTxx
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Middleware", "Middleware", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LayoutLibrary", "..\NxMiddleware\LayoutLibrary\LayoutLibrary.csproj", "{8A4C03C3-620E-99DF-E729-10C9B33ED354}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LayoutLibrary", "NxMiddleware\LayoutLibrary\LayoutLibrary.csproj", "{8A4C03C3-620E-99DF-E729-10C9B33ED354}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SarcLib", "..\NxMiddleware\SarcLib\SarcLib.csproj", "{78689344-6441-0C58-1483-EFFFBD46122D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SarcLib", "NxMiddleware\SarcLib\SarcLib.csproj", "{78689344-6441-0C58-1483-EFFFBD46122D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

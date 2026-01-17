@@ -47,17 +47,22 @@
             messageListView = new ListView();
             columnHeader1 = new ColumnHeader();
             propertiesGroup = new GroupBox();
-            InfoBox = new TextBox();
+            PropertiesBox = new TextBox();
             renderCtrl = new GFTool.RenderControl_WinForms.RenderControl();
             tableLayoutPanel1 = new TableLayoutPanel();
             tableLayoutPanel2 = new TableLayoutPanel();
             tableLayoutPanel3 = new TableLayoutPanel();
+            panel1 = new Panel();
+            groupBox1 = new GroupBox();
+            AttribBox = new TextBox();
             menuStrip1.SuspendLayout();
             sceneContext.SuspendLayout();
             propertiesGroup.SuspendLayout();
             tableLayoutPanel1.SuspendLayout();
             tableLayoutPanel2.SuspendLayout();
             tableLayoutPanel3.SuspendLayout();
+            panel1.SuspendLayout();
+            groupBox1.SuspendLayout();
             SuspendLayout();
             // 
             // menuStrip1
@@ -195,25 +200,25 @@
             // propertiesGroup
             // 
             propertiesGroup.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            propertiesGroup.Controls.Add(InfoBox);
-            propertiesGroup.Location = new Point(1089, 3);
+            propertiesGroup.Controls.Add(PropertiesBox);
+            propertiesGroup.Location = new Point(3, 3);
             propertiesGroup.Name = "propertiesGroup";
-            propertiesGroup.Size = new Size(287, 720);
+            propertiesGroup.Size = new Size(287, 220);
             propertiesGroup.TabIndex = 5;
             propertiesGroup.TabStop = false;
             propertiesGroup.Text = "Properties";
             // 
-            // InfoBox
+            // PropertiesBox
             // 
-            InfoBox.BackColor = SystemColors.Control;
-            InfoBox.BorderStyle = BorderStyle.None;
-            InfoBox.Dock = DockStyle.Fill;
-            InfoBox.Location = new Point(3, 19);
-            InfoBox.Multiline = true;
-            InfoBox.Name = "InfoBox";
-            InfoBox.ReadOnly = true;
-            InfoBox.Size = new Size(281, 698);
-            InfoBox.TabIndex = 0;
+            PropertiesBox.BackColor = SystemColors.Control;
+            PropertiesBox.BorderStyle = BorderStyle.None;
+            PropertiesBox.Dock = DockStyle.Fill;
+            PropertiesBox.Location = new Point(3, 19);
+            PropertiesBox.Multiline = true;
+            PropertiesBox.Name = "PropertiesBox";
+            PropertiesBox.ReadOnly = true;
+            PropertiesBox.Size = new Size(281, 198);
+            PropertiesBox.TabIndex = 0;
             // 
             // renderCtrl
             // 
@@ -270,7 +275,7 @@
             tableLayoutPanel3.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 1086F));
             tableLayoutPanel3.ColumnStyles.Add(new ColumnStyle());
             tableLayoutPanel3.Controls.Add(renderCtrl, 0, 0);
-            tableLayoutPanel3.Controls.Add(propertiesGroup, 1, 0);
+            tableLayoutPanel3.Controls.Add(panel1, 1, 0);
             tableLayoutPanel3.Dock = DockStyle.Fill;
             tableLayoutPanel3.Location = new Point(0, 0);
             tableLayoutPanel3.Margin = new Padding(0);
@@ -279,6 +284,40 @@
             tableLayoutPanel3.RowStyles.Add(new RowStyle());
             tableLayoutPanel3.Size = new Size(1379, 726);
             tableLayoutPanel3.TabIndex = 0;
+            // 
+            // panel1
+            // 
+            panel1.Controls.Add(groupBox1);
+            panel1.Controls.Add(propertiesGroup);
+            panel1.Dock = DockStyle.Fill;
+            panel1.Location = new Point(1086, 0);
+            panel1.Margin = new Padding(0);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(293, 726);
+            panel1.TabIndex = 7;
+            // 
+            // groupBox1
+            // 
+            groupBox1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            groupBox1.Controls.Add(AttribBox);
+            groupBox1.Location = new Point(3, 229);
+            groupBox1.Name = "groupBox1";
+            groupBox1.Size = new Size(287, 494);
+            groupBox1.TabIndex = 6;
+            groupBox1.TabStop = false;
+            groupBox1.Text = "Attributes";
+            // 
+            // AttribBox
+            // 
+            AttribBox.BackColor = SystemColors.Control;
+            AttribBox.BorderStyle = BorderStyle.None;
+            AttribBox.Dock = DockStyle.Fill;
+            AttribBox.Location = new Point(3, 19);
+            AttribBox.Multiline = true;
+            AttribBox.Name = "AttribBox";
+            AttribBox.ReadOnly = true;
+            AttribBox.Size = new Size(281, 472);
+            AttribBox.TabIndex = 0;
             // 
             // SceneViewerForm
             // 
@@ -300,6 +339,9 @@
             tableLayoutPanel1.ResumeLayout(false);
             tableLayoutPanel2.ResumeLayout(false);
             tableLayoutPanel3.ResumeLayout(false);
+            panel1.ResumeLayout(false);
+            groupBox1.ResumeLayout(false);
+            groupBox1.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -324,10 +366,13 @@
         private ListView messageListView;
         private ColumnHeader columnHeader1;
         private GroupBox propertiesGroup;
-        private TextBox InfoBox;
+        private TextBox PropertiesBox;
         private GFTool.RenderControl_WinForms.RenderControl renderCtrl;
         private TableLayoutPanel tableLayoutPanel1;
         private TableLayoutPanel tableLayoutPanel2;
         private TableLayoutPanel tableLayoutPanel3;
+        private Panel panel1;
+        private GroupBox groupBox1;
+        private TextBox AttribBox;
     }
 }

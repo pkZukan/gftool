@@ -8,34 +8,58 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
-        submodules: true
+        submodules: recursive
+        fetch-depth: 0
+    
+    - name: Initialize submodules
+      run: |
+        git submodule update --init --recursive
+        git submodule status
+    
+    - name: Verify NxMiddleware
+      run: |
+        if (Test-Path NxMiddleware) { 
+          Write-Host "NxMiddleware found"
+          dir NxMiddleware -Recurse -Directory
+        } else { 
+          Write-Host "ERROR: NxMiddleware not found"
+          exit 1
+        }
+    
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 8.0.x
+    
     - name: Restore dependencies
       run: dotnet restore
+    
     - name: Build
       run: dotnet build --no-restore --configuration Release
+    
     - name: Test
       run: dotnet test --no-build --verbosity normal
+    
     - name: Zip TrinityModLoader
       uses: papeloto/action-zip@v1
       with:
         files: TrinityModLoader/bin/Release/net8.0-windows7.0
         dest: TrinityModLoader/bin/Release/TrinityModLoader.zip
+    
     - name: Zip TrinityFileExplorer
       uses: papeloto/action-zip@v1
       with:
         files: TrinityFileExplorer/bin/Release/net8.0-windows
         dest: TrinityFileExplorer/bin/Release/TrinityFileExplorer.zip
+    
     - name: Zip TrinityModelViewer
       uses: papeloto/action-zip@v1
       with:
         files: TrinityModelViewer/bin/Release/net8.0-windows7.0
         dest: TrinityModelViewer/bin/Release/TrinityModelViewer.zip
+    
     - name: Update TrinityModLoader nightly release
       uses: WebFreak001/deploy-nightly@v1.1.0
       env:
@@ -47,6 +71,7 @@ jobs:
         asset_name: TrinityModLoader-nightly-$$.zip
         asset_content_type: application/zip
         max_releases: 1
+    
     - name: Update TrinityFileExplorer nightly release
       uses: WebFreak001/deploy-nightly@v1.1.0
       env:
@@ -58,6 +83,7 @@ jobs:
         asset_name: TrinityFileExplorer-nightly-$$.zip
         asset_content_type: application/zip
         max_releases: 1
+    
     - name: Update TrinityModelViewer nightly release
       uses: WebFreak001/deploy-nightly@v1.1.0
       env:

@@ -7,7 +7,14 @@ namespace TrinitySceneView
 {
     public static class TRSceneProperties
     {
-        public static string GetProperties(string sceneComponent, object objData)
+        public static string GetProperties(SceneMetaData meta)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"ID: {meta.ID.ToString("X")}");
+            return sb.ToString();
+        }
+
+        public static string GetAttributes(string sceneComponent, object objData)
         {
             if (objData == null) return string.Empty;
 
