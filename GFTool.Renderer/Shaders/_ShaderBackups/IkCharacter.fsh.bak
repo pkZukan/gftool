@@ -373,7 +373,7 @@ mat3 CotangentFrame(vec3 n, vec3 p, vec2 uv)
     return mat3(t * invMax, b * invMax, n);
 }
 
-bool HasLayerMaskUvTransform
+bool HasLayerMaskUvTransform()
 {
     return any(notEqual(UVScaleOffsetLayerMask, vec4(1.0, 1.0, 0.0, 0.0))) ||
            any(notEqual(UVCenterRotationLayerMask, vec4(0.0)));
@@ -531,7 +531,7 @@ vec4 SGHolocastEffect(vec3 base_color, vec3 normal_vec, vec3 view_dir, vec3 worl
     return base_luma * scanline * HolocastColor;
 }
 
-void main
+void main()
 {
     vec2 rawUv0 = UV01.xy;
     vec2 rawUv1 = UV01.zw;
@@ -722,7 +722,7 @@ void main
         int index = HasUVIndexLayerMask ? UVIndexLayerMask : -1;
 
         vec2 maskUv;
-        if (HasLayerMaskUvTransform)
+        if (HasLayerMaskUvTransform())
         {
             // special case: when using the parallax adjusted primary uv, it applies FlipV before the layer mask transform
             vec2 baseUv = (index < 0) ? FlipV(uvParallax) : ((index == 0) ? rawUv0 : rawUv1Safe);
