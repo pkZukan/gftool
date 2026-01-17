@@ -1,0 +1,1185 @@
+#version 420 core
+
+uniform sampler2D BaseColorMap;
+uniform sampler2D LayerMaskMap;
+uniform sampler2D NormalMap;
+uniform sampler2D ParallaxMap;
+uniform sampler2D DiscardMaskMap;
+uniform sampler2D ShadowingColorMap;
+uniform sampler2D ShadowingColorMaskMap;
+uniform sampler2D ColorTableMap;
+uniform sampler2D AOMap;
+uniform sampler2D SpecularMaskMap;
+uniform sampler2D IkLayerMaskMap1;
+uniform sampler2D IkLayerMaskMap2;
+uniform sampler2D IkLayerMaskMap3;
+uniform sampler2D LocalReflectionMap;
+uniform sampler2D RimLightMaskMap;
+uniform sampler2D HighlightMaskMap;
+uniform sampler2D EyelidShadowMaskMap;
+uniform sampler2D UpperEyelidColorMap;
+uniform sampler2D LowerEyelidColorMap;
+uniform sampler2D NoiseSourceMap;
+uniform sampler2D AuraColorMap;
+uniform sampler2D AuraNoiseMap;
+
+uniform vec4 UVScaleOffset;
+uniform vec4 UVCenter0;
+uniform int UVTransformMode; // 0=SRT, 1=T
+uniform float UVRotation;
+uniform vec4 UVScaleOffsetLayerMask;
+uniform vec4 UVCenterRotationLayerMask;
+uniform vec4 UVScaleOffset1;
+uniform vec4 UVScaleOffset2;
+uniform vec4 UVScaleOffset3;
+uniform vec4 UVScaleOffset4;
+uniform vec4 UVScaleOffsetNormal;
+uniform float UVRotationNormal;
+uniform bool EnableUVScaleOffsetNormal;
+uniform float UVRotation1;
+uniform float UVRotation2;
+uniform float UVRotation3;
+uniform float UVRotation4;
+uniform vec4 UVCenter1;
+
+uniform bool EnableBaseColorMap;
+uniform bool EnableAlphaTest;
+uniform bool EnableNormalMap;
+uniform bool EnableParallaxMap;
+uniform bool EnableEyeOptions;
+// 0=None, 1=Ng, 2=Ncc ( naming)
+uniform int EnableIrisRefraction;
+uniform float ParallaxHeight;
+uniform float ParallaxIOR;
+uniform bool EnableHairSpecular;
+uniform bool EnableEmissionFresnelLayer;
+uniform bool EnableEmissionColorMap;
+
+uniform vec4 FresnelColor1;
+uniform vec4 FresnelColor2;
+uniform vec4 FresnelColor3;
+uniform vec4 FresnelColor4;
+uniform vec4 FresnelColor5;
+uniform float FresnelPower1;
+uniform float FresnelPower2;
+uniform float FresnelPower3;
+uniform float FresnelPower4;
+uniform float FresnelPower5;
+uniform float FresnelAngleBias1;
+uniform float FresnelAngleBias2;
+uniform float FresnelAngleBias3;
+uniform float FresnelAngleBias4;
+uniform float FresnelAngleBias5;
+uniform float FresnelAlphaMin1;
+uniform float FresnelAlphaMin2;
+uniform float FresnelAlphaMin3;
+uniform float FresnelAlphaMin4;
+uniform float FresnelAlphaMin5;
+uniform float FresnelAlphaMax1;
+uniform float FresnelAlphaMax2;
+uniform float FresnelAlphaMax3;
+uniform float FresnelAlphaMax4;
+uniform float FresnelAlphaMax5;
+uniform bool EnableDiscardMaskMap;
+uniform float DiscardValue;
+uniform float DiscardValue_R;
+uniform float DiscardValue_G;
+uniform float DiscardValue_B;
+uniform float DiscardValue_A;
+uniform bool EnableLayerMaskMap;
+uniform bool BaseColorMultiply;
+uniform int NumMaterialLayer;
+uniform int UVIndexLayerMask;
+uniform bool HasUVIndexLayerMask;
+uniform float LayerMaskScale1;
+uniform float LayerMaskScale2;
+uniform float LayerMaskScale3;
+uniform float LayerMaskScale4;
+uniform bool EnableRimLightMaskMap;
+uniform vec4 BaseColor;
+uniform vec4 BaseColorLayer1;
+uniform vec4 BaseColorLayer2;
+uniform vec4 BaseColorLayer3;
+uniform vec4 BaseColorLayer4;
+uniform vec4 BaseColorLayer5;
+uniform vec4 BaseColorLayer6;
+uniform vec4 BaseColorLayer7;
+uniform vec4 BaseColorLayer8;
+uniform vec4 BaseColorLayer9;
+uniform vec4 BaseColorLayer10;
+uniform vec4 ShadowingColor;
+uniform vec4 ShadowingColorLayer1;
+uniform vec4 ShadowingColorLayer2;
+uniform vec4 ShadowingColorLayer3;
+uniform vec4 ShadowingColorLayer4;
+uniform bool EnableShadowingColorMap;
+uniform bool EnableShadowingColorMaskMap;
+uniform float ShadowingColorMaskMapValue;
+
+uniform bool EnableColorTableMap;
+uniform int ColorTableDivideNumber;
+uniform float BaseColorIndex1;
+uniform float BaseColorIndex2;
+uniform float BaseColorIndex3;
+uniform float BaseColorIndex4;
+uniform float BaseColorIndex6;
+uniform float BaseColorIndex7;
+uniform float BaseColorIndex8;
+uniform bool EnableVertexSubLayer;
+uniform float SubLayerMaskScale1;
+uniform float SubLayerMaskScale2;
+uniform float SubLayerMaskScale3;
+uniform float SubLayerMaskScale4;
+uniform vec4 BaseColorSubLayer1;
+uniform vec4 BaseColorSubLayer2;
+uniform vec4 BaseColorSubLayer3;
+uniform vec4 BaseColorSubLayer4;
+uniform bool EnableCustomLayer;
+
+uniform bool EnableAOMap;
+uniform int UVIndexAO;
+uniform bool HasUVIndexAO;
+uniform float OcclusionStrength;
+
+uniform bool EnableSpecularMaskMap;
+uniform float SpecularOffset;
+uniform float SpecularContrast;
+uniform float SpecularIntensity;
+uniform float SpecularLayer1Offset;
+uniform float SpecularLayer1Contrast;
+uniform float SpecularLayer1Intensity;
+uniform float SpecularLayer2Offset;
+uniform float SpecularLayer2Contrast;
+uniform float SpecularLayer2Intensity;
+uniform float SpecularLayer3Offset;
+uniform float SpecularLayer3Contrast;
+uniform float SpecularLayer3Intensity;
+uniform float SpecularLayer4Offset;
+uniform float SpecularLayer4Contrast;
+uniform float SpecularLayer4Intensity;
+
+uniform bool EnableMetallicMap;
+uniform sampler2D MetallicMap;
+uniform float Metallic;
+uniform float MetallicLayer1;
+uniform float MetallicLayer2;
+uniform float MetallicLayer3;
+uniform float MetallicLayer4;
+uniform float MetallicLayer7;
+uniform float MetallicLayer8;
+
+uniform bool EnableRoughnessMap;
+uniform sampler2D RoughnessMap;
+uniform float Roughness;
+uniform float RoughnessLayer1;
+uniform float RoughnessLayer2;
+uniform float RoughnessLayer3;
+uniform float RoughnessLayer4;
+uniform float RoughnessLayer7;
+uniform float RoughnessLayer8;
+
+uniform bool EnableEmissionLayer;
+uniform vec4 EmissionColor;
+uniform vec4 EmissionColorLayer1;
+uniform vec4 EmissionColorLayer2;
+uniform vec4 EmissionColorLayer3;
+uniform vec4 EmissionColorLayer4;
+uniform vec4 EmissionColorLayer5;
+uniform float EmissionIntensity;
+uniform float EmissionIntensityLayer1;
+uniform float EmissionIntensityLayer2;
+uniform float EmissionIntensityLayer3;
+uniform float EmissionIntensityLayer4;
+uniform float EmissionIntensityLayer5;
+uniform bool EnableLerpBaseColorEmission;
+
+uniform vec3 LightDirection;
+uniform vec3 LightColor;
+uniform vec3 AmbientColor;
+uniform vec3 CameraPos;
+uniform float LightWrap;
+uniform float SpecularScale;
+uniform float ShadowingBias;
+uniform float ShadingBias;
+uniform float HalfLambertBias;
+uniform float ShadowingGIGain;
+uniform float ShadowStrength;
+uniform float ShadowingShift;
+uniform float ShadowingContrast;
+uniform float MidAreaShift;
+uniform float MidAreaContrast;
+uniform float MidAreaHueOffset;
+uniform float DarkAreaShift;
+uniform float DarkAreaContrast;
+uniform float DarkAreaHueOffset;
+uniform float HueShiftAreaValue;
+uniform float HueShiftBias;
+uniform bool TransparentPass;
+
+uniform float RimLightOffset;
+uniform float RimLightContrast;
+uniform float RimLightIntensity;
+uniform float BackRimLightIntensity;
+
+uniform float ReflectionsBlur;
+uniform float DiffusionLevels;
+uniform float BaseColorDarkness;
+uniform float SaturationPower;
+
+uniform bool EnableHighlight;
+uniform bool EnableHighlightMaskMap;
+
+// Eyelid layer type: 0=None, 1=Upper, 2=Lower, 3=All
+uniform int EyelidType;
+uniform bool RequireEyelidShadowMap;
+uniform float EnableJewelMode;
+
+// Optional effects (Phase 15)
+uniform bool EnableHolocastEffect;
+uniform vec4 HolocastColor;
+uniform float ScanlineSpeed;
+uniform float ScanGradationTiling;
+uniform float ScanlineTiling;
+uniform float ScanlineDepth;
+
+uniform bool EnableMgUpwordNoise;
+uniform int MgUpwordNoiseProjectType; // 0=world, 1=object
+uniform int MgUpwordNoiseBottomCap;   // 0=no cap, 1=cap
+uniform int MgUpwordNoiseOutputType;  // 0=emission, 1=lit
+uniform float NoiseScale;
+uniform float NoiseScrollSpeed;
+uniform float NoiseIntensity;
+uniform float NoiseFadeStart;
+uniform float NoiseFadeEnd;
+uniform vec4 NoiseBaseColor;
+uniform float NoiseLightMin;
+
+uniform bool EnableAuraEffect;
+uniform float AuraIntensity;
+uniform float AuraColorScrollSpeed;
+uniform float AuraNoiseScrollSpeed;
+uniform float AuraColorScale;
+uniform float AuraNoiseScale;
+uniform float AuraRimPower;
+
+uniform vec4 time_params;
+
+uniform bool EnableVertexColor;
+uniform bool HasTangents;
+uniform bool HasBinormals;
+uniform bool HasUv1;
+uniform bool FlipNormalY;
+uniform bool ReconstructNormalZ;
+uniform float NormalHeight;
+
+uniform int DebugShaderMode;
+
+layout (location = 0) out vec4 gAlbedo;
+layout (location = 1) out vec4 gNormal;
+layout (location = 2) out vec4 gSpecular;
+layout (location = 3) out vec4 gAO;
+
+in vec3 FragPos;
+in vec3 Normal;
+in vec4 UV01;
+in vec4 Color;
+in vec4 WorldTangent;
+in vec3 ObjectNormal;
+in vec3 ObjectPos;
+in vec4 FragCoord;
+
+vec2 FlipV(vec2 uv)
+{
+    return vec2(uv.x, 1.0 - uv.y);
+}
+
+vec2 TransformUvFd(vec2 uv, vec4 scaleOffset, vec2 center)
+{
+    vec2 stuv = scaleOffset.xy * (uv - center - scaleOffset.zw) + center;
+    return FlipV(stuv);
+}
+
+vec2 TransformUvFd(vec2 uv, vec4 scaleOffset)
+{
+    return TransformUvFd(uv, scaleOffset, vec2(0.5));
+}
+
+vec2 TransformUvFd(vec2 uv, vec4 scaleOffset, float rotationRad, vec2 center)
+{
+    float s = sin(rotationRad);
+    float c = cos(rotationRad);
+    mat2 rotationMat = mat2(c, s, -s, c);
+    vec2 srtuv = scaleOffset.xy * ((uv - center) * rotationMat - scaleOffset.zw) + center;
+    return FlipV(srtuv);
+}
+
+vec2 ApplyUvTransformFd(vec2 uv, vec4 scaleOffset, float rotationRad, int mode, vec2 center)
+{
+    // 0=SRT, 1=T (translate only)
+    if (mode == 1)
+    {
+        return FlipV(uv - scaleOffset.zw);
+    }
+
+    // convention: subtract offset, apply rotation around center, flip V after transform
+    if (abs(rotationRad) > 0.000001)
+    {
+        return TransformUvFd(uv, scaleOffset, rotationRad, center);
+    }
+    return TransformUvFd(uv, scaleOffset, center);
+}
+
+vec3 DecodeNormalTs(vec4 nm)
+{
+    if (ReconstructNormalZ)
+    {
+        vec2 rg = nm.rg * 2.0 - 1.0;
+        rg *= NormalHeight;
+        float nz = sqrt(max(0.0, 1.0 - dot(rg, rg)));
+        vec3 n = vec3(rg, nz);
+        if (FlipNormalY)
+        {
+            n.y = -n.y;
+        }
+        return n;
+    }
+
+    vec3 n = vec3(nm.r, nm.g, nm.a) * 2.0 - 1.0;
+    n.xy *= NormalHeight;
+    if (n.z == 0.0)
+    {
+        n.z = 1.0;
+    }
+    if (FlipNormalY)
+    {
+        n.y = -n.y;
+    }
+    return normalize(n);
+}
+
+mat3 CotangentFrame(vec3 n, vec3 p, vec2 uv)
+{
+    vec3 dp1 = dFdx(p);
+    vec3 dp2 = dFdy(p);
+    vec2 duv1 = dFdx(uv);
+    vec2 duv2 = dFdy(uv);
+
+    vec3 dp2perp = cross(dp2, n);
+    vec3 dp1perp = cross(n, dp1);
+    vec3 t = dp2perp * duv1.x + dp1perp * duv2.x;
+    vec3 b = dp2perp * duv1.y + dp1perp * duv2.y;
+
+    float invMax = inversesqrt(max(dot(t, t), dot(b, b)));
+    return mat3(t * invMax, b * invMax, n);
+}
+
+bool HasLayerMaskUvTransform
+{
+    return any(notEqual(UVScaleOffsetLayerMask, vec4(1.0, 1.0, 0.0, 0.0))) ||
+           any(notEqual(UVCenterRotationLayerMask, vec4(0.0)));
+}
+
+vec4 SampleColorTable(float index1Based, float row)
+{
+    // : index is 1 start
+    if (ColorTableDivideNumber <= 0 || index1Based <= 0.0)
+    {
+        return vec4(1.0);
+    }
+
+    float x = (index1Based - 0.5) / float(ColorTableDivideNumber);
+    float y = (row + 0.5) * 0.5; // 0: Base, 1: Shadowing
+    return textureLod(ColorTableMap, vec2(x, y), 0.0);
+}
+
+float SGCheapContrast(float inputValue, float contrast)
+{
+    return clamp(mix(0.0 - contrast, contrast + 1.0, inputValue), 0.0, 1.0);
+}
+
+float SGSpecularParam(float specularOffset, float phongSpecular, float specularContrast, float specularIntensity)
+{
+    float specular = smoothstep(0.0 + specularOffset, 1.0 + specularOffset, phongSpecular);
+    specular = SGCheapContrast(specular, specularContrast);
+    return specular * specularIntensity;
+}
+
+float Remap(float value, vec2 inMinMax, vec2 outMinMax)
+{
+    return outMinMax.x + (value - inMinMax.x) * (outMinMax.y - outMinMax.x) / max(inMinMax.y - inMinMax.x, 0.00001);
+}
+
+vec3 Saturation(vec3 inputColor, float saturation)
+{
+    float luma = dot(inputColor, vec3(0.2126729, 0.7151522, 0.0721750));
+    return vec3(luma) + vec3(saturation) * (inputColor - vec3(luma));
+}
+
+vec3 HueDegrees(vec3 inputColor, float offsetDegrees)
+{
+    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    vec4 P = mix(vec4(inputColor.bg, K.wz), vec4(inputColor.gb, K.xy), step(inputColor.b, inputColor.g));
+    vec4 Q = mix(vec4(P.xyw, inputColor.r), vec4(inputColor.r, P.yzx), step(P.x, inputColor.r));
+    float D = Q.x - min(Q.w, Q.y);
+    float E = 1e-10;
+    float V = (D == 0.0) ? Q.x : (Q.x + E);
+    vec3 hsv = vec3(abs(Q.z + (Q.w - Q.y) / (6.0 * D + E)), D / (Q.x + E), V);
+
+    float hue = hsv.x + offsetDegrees / 360.0;
+    hsv.x = (hue < 0.0) ? hue + 1.0 : ((hue > 1.0) ? hue - 1.0 : hue);
+
+    vec4 K2 = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 P2 = abs(fract(hsv.xxx + K2.xyz) * 6.0 - K2.www);
+    return hsv.z * mix(K2.xxx, clamp(P2 - K2.xxx, 0.0, 1.0), hsv.y);
+}
+
+float FresnelEffect(vec3 normalVec, vec3 viewDir, float power)
+{
+    return pow(1.0 - clamp(dot(normalize(normalVec), normalize(viewDir)), 0.0, 1.0), power);
+}
+
+float FresnelGeneral(float f0, float f90, float u, float exponent)
+{
+    float t = pow(clamp(1.0 - u, 0.0, 1.0), max(exponent, 0.00001));
+    return mix(f0, f90, t);
+}
+
+vec2 EnvLatLongUv(vec3 dir)
+{
+    vec3 d = normalize(dir);
+    float u = atan(d.z, d.x) * (0.5 / 3.14159265359) + 0.5;
+    float v = acos(clamp(d.y, -1.0, 1.0)) * (1.0 / 3.14159265359);
+    return vec2(u, v);
+}
+
+float WrapNdotL(float nDotL, float wrap)
+{
+    float w = max(wrap, 0.0);
+    return clamp((nDotL + w) / (1.0 + w), 0.0, 1.0);
+}
+
+vec2 GetUvLayerSrt(vec2 baseUv, vec4 scaleOffset, float rotationRad)
+{
+    return ApplyUvTransformFd(baseUv, scaleOffset, rotationRad, UVTransformMode, vec2(0.5));
+}
+
+vec2 GetUvLayerSt(vec2 baseUv, vec4 scaleOffset, vec2 center)
+{
+    return ApplyUvTransformFd(baseUv, scaleOffset, 0.0, UVTransformMode, center);
+}
+
+vec4 TriplanarTextureFetch(sampler2D tex, vec4 uv_st, vec3 base_normal, vec3 world_pos)
+{
+    vec4 color_xz = texture(tex, world_pos.xz * uv_st.xy + uv_st.zw);
+    vec4 color_yz = texture(tex, world_pos.yz * uv_st.xy + uv_st.zw);
+    vec4 color_xy = texture(tex, world_pos.xy * uv_st.xy + uv_st.zw);
+    return base_normal.x * base_normal.x * color_yz +
+           base_normal.y * base_normal.y * color_xz +
+           base_normal.z * base_normal.z * color_xy;
+}
+
+vec4 AuraTriplanarTextureFetch(sampler2D tex, vec4 uv_st, vec3 base_normal, vec3 input_pos, vec3 scroll)
+{
+    vec4 color_xz = texture(tex, ((input_pos.xz + scroll.xz) * uv_st.xy + uv_st.zw) * vec2(-1.0, -1.0));
+    vec4 color_yz = texture(tex, ((input_pos.zy + scroll.yz) * uv_st.xy + uv_st.zw) * vec2(-1.0, -1.0));
+    vec4 color_xy = texture(tex, ((input_pos.xy + scroll.xy) * uv_st.xy + uv_st.zw) * vec2(1.0, -1.0));
+    return base_normal.x * base_normal.x * color_yz +
+           base_normal.y * base_normal.y * color_xz +
+           base_normal.z * base_normal.z * color_xy;
+}
+
+vec4 AuraEmission(vec3 input_pos, vec3 normal_vec, vec3 view_vec)
+{
+    vec3 color = vec3(0.0);
+    float intensity = AuraIntensity;
+    float color_scroll = time_params.x * AuraColorScrollSpeed;
+    float noise_scroll = time_params.x * AuraNoiseScrollSpeed;
+    vec4 color_scale_offset = vec4(AuraColorScale, AuraColorScale, 0.0, 0.0);
+    vec4 noise_scale_offset = vec4(AuraNoiseScale, AuraNoiseScale, 0.0, 0.0);
+
+    const mat3 triplanar_matrix = mat3(
+         0.788675,  0.577350, -0.211325,
+        -0.577350,  0.577350, -0.577350,
+        -0.211325,  0.577350,  0.788675
+    );
+
+    vec3 trip_pos = input_pos * triplanar_matrix;
+    vec3 trip_norm = normal_vec * triplanar_matrix;
+    vec3 scrollDir = vec3(-0.577350);
+
+    color = AuraTriplanarTextureFetch(AuraColorMap, color_scale_offset, trip_norm, trip_pos, scrollDir * color_scroll).rgb;
+    intensity *= AuraTriplanarTextureFetch(AuraNoiseMap, noise_scale_offset, trip_norm, trip_pos, scrollDir * noise_scroll).r;
+
+    intensity *= pow(max(1e-4, 1.0 - abs(dot(normal_vec, view_vec))), AuraRimPower);
+    return vec4(color, 1.0) * intensity;
+}
+
+vec4 SGHolocastEffect(vec3 base_color, vec3 normal_vec, vec3 view_dir, vec3 world_pos)
+{
+    float fresnel = FresnelEffect(normal_vec, view_dir, 3.0);
+    float base_luma = max(dot(base_color, vec3(0.2126729, 0.7151522, 0.0721750)), fresnel);
+    float scan_scroll = time_params.x * ScanlineSpeed * -1.0;
+
+    vec4 scan_v = world_pos.yyyy * vec2(ScanGradationTiling, ScanlineTiling).xxyy;
+    vec4 scan_seed = sin(sin(scan_v + vec4(0.5, 0.75, 4.0, 7.8) * scan_scroll) * vec4(20.0, 25.0, 2.1, 3.3));
+
+    scan_seed.xy = ceil(scan_seed.xy);
+    float scan_gradation = Remap(scan_seed.x + scan_seed.y, vec2(0.0, 1.0), vec2(ScanlineDepth, 1.0));
+    float scanline = 1.0 - clamp((scan_seed.z + scan_seed.w * 2.0 - 1.0), 0.0, 1.0);
+    scanline = mix(scan_gradation, scan_gradation * scanline, 0.5);
+
+    return base_luma * scanline * HolocastColor;
+}
+
+void main
+{
+    vec2 rawUv0 = UV01.xy;
+    vec2 rawUv1 = UV01.zw;
+    vec2 rawUv1Safe = HasUv1 ? rawUv1 : rawUv0;
+    bool useEyeCenter = EnableParallaxMap || EnableEyeOptions;
+    // ZA :
+    // When eye/parallax is enabled: TransformUV(uv0, UVScaleOffset, UVCenter0.xy)
+    // Otherwise: TransformUV(uv0, UVScaleOffset) (equivalent to using center=vec2(0.0) in our helper)
+    vec2 primaryUv = ApplyUvTransformFd(rawUv0, UVScaleOffset, 0.0, UVTransformMode, useEyeCenter ? UVCenter0.xy : vec2(0.0));
+
+    vec2 normalUv = primaryUv;
+    if (EnableUVScaleOffsetNormal)
+    {
+        // ZA uses TransformUV(uv0, UVScaleOffsetNormal) (no rotation / no transform mode)
+        normalUv = TransformUvFd(rawUv0, UVScaleOffsetNormal, vec2(0.0));
+    }
+
+    vec3 baseNormalWs = normalize(Normal);
+    vec3 viewDirWs = normalize(CameraPos - FragPos);
+
+    // Build TBN even when normal mapping is disabled so parallax can use it
+    mat3 tbn;
+    if (HasTangents)
+    {
+        vec3 t = normalize(WorldTangent.xyz);
+        vec3 b = WorldTangent.w * normalize(cross(baseNormalWs, t));
+        tbn = mat3(t, b, baseNormalWs);
+    }
+    else
+    {
+        tbn = CotangentFrame(baseNormalWs, FragPos, normalUv);
+    }
+
+    // Sample tangent space normal (used for normal mapping and iris refraction mode 2)
+    vec3 tangentNormalTs = vec3(0.0, 0.0, 1.0);
+    if (EnableNormalMap)
+    {
+        tangentNormalTs = DecodeNormalTs(texture(NormalMap, normalUv));
+    }
+
+    // Parallax (used heavily on eyes)
+    vec2 uvParallax = primaryUv;
+    vec2 parallaxOffset = vec2(0.0);
+    if (EnableParallaxMap && ParallaxHeight != 0.0)
+    {
+        vec3 parallaxRay = -normalize(transpose(tbn) * viewDirWs);
+
+        if (EnableIrisRefraction >= 1)
+        {
+            vec3 parallaxNormalTs = vec3(0.0, 0.0, 1.0);
+            if (EnableIrisRefraction == 2)
+            {
+                parallaxNormalTs = tangentNormalTs;
+            }
+            float invIor = 1.0 / max(ParallaxIOR, 0.0001);
+            parallaxRay = refract(parallaxRay, parallaxNormalTs, invIor);
+            parallaxRay = normalize(parallaxRay);
+        }
+
+        float denomZ = max(abs(parallaxRay.z), 0.0001);
+        vec2 primaryUvDdx = dFdx(primaryUv);
+        vec2 primaryUvDdy = dFdy(primaryUv);
+
+        const float parallaxMinStep = 2.0;
+        const float parallaxMaxStep = 12.0;
+        float stepBias = clamp(abs(dot(viewDirWs, baseNormalWs)), 0.0, 1.0);
+        float steps = mix(parallaxMaxStep, parallaxMinStep, stepBias);
+        float stepSize = 1.0 / steps;
+
+        vec2 stepUv = parallaxRay.xy * vec2(-1.0, 1.0) / denomZ * ParallaxHeight * stepSize;
+        stepUv *= normalize(max(abs(primaryUvDdx + primaryUvDdy), vec2(0.00001)));
+        stepUv *= 1.0 - pow(1.0 - stepBias, 5.0);
+
+        vec2 cur = vec2(1.0);       // x: height map, y: ray height
+        vec2 prev = vec2(1.0, 1.1); // avoid divide by zero
+        vec2 offset = vec2(0.0);
+
+        int stepCount = int(floor(steps) + 2.0);
+        for (int i = 0; i < stepCount; i++)
+        {
+            cur.x = texture(ParallaxMap, primaryUv + offset).r;
+            if (cur.x >= cur.y)
+            {
+                float dh0 = cur.x - cur.y;
+                float dh1 = prev.x - prev.y;
+                float ratio = dh0 / max(dh0 - dh1, 0.00001);
+                offset -= stepUv * ratio;
+                break;
+            }
+
+            prev = cur;
+            cur.y -= stepSize;
+            offset += stepUv;
+        }
+
+        parallaxOffset = offset;
+        uvParallax = primaryUv + offset;
+    }
+
+    // BaseColorMap is sampled after parallax adjusts the primary UVs
+    vec4 baseSample = EnableBaseColorMap ? texture(BaseColorMap, uvParallax) : vec4(1.0);
+    float alpha = baseSample.a;
+
+    // Apply normal mapping (after parallax has determined the primary sampling UVs)
+    vec3 n = baseNormalWs;
+    if (EnableNormalMap)
+    {
+        n = normalize(tbn * tangentNormalTs);
+    }
+
+    // Flip backfaces after normal mapping
+    n *= gl_FrontFacing ? 1.0 : -1.0;
+
+    if (DebugShaderMode != 0)
+    {
+        if (DebugShaderMode == 1)
+        {
+            gAlbedo = vec4(baseSample.rgb, 1.0);
+            gNormal = vec4(vec3(0.5), 1.0);
+            gSpecular = vec4(baseSample.a, 0.0, 0.0, 0.0);
+            gAO = vec4(0.0, 0.0, 0.0, 1.0);
+            return;
+        }
+        if (DebugShaderMode == 3)
+        {
+            gAlbedo = vec4(vec3(fract(uvParallax), 0.0), 1.0);
+            gNormal = vec4(vec3(0.5), 1.0);
+            gSpecular = vec4(0.0);
+            gAO = vec4(0.0, 0.0, 0.0, 1.0);
+            return;
+        }
+        if (DebugShaderMode == 11)
+        {
+            // Parallax offset visualization (scaled for readability)
+            vec2 o = parallaxOffset * 25.0;
+            gAlbedo = vec4(vec3(fract(o), 0.0), 1.0);
+            gNormal = vec4(vec3(0.5), 1.0);
+            gSpecular = vec4(0.0);
+            gAO = vec4(0.0, 0.0, 0.0, 1.0);
+            return;
+        }
+    }
+
+    // layer mask + layer blending 
+    // Build base + shadowing colors now; lighting/shadowing application happens in later phases
+    vec4 baseColor = BaseColor * baseSample;
+    vec4 shadowingColor = ShadowingColor;
+    if (EnableShadowingColorMap)
+    {
+        vec4 sampleShadowingColor = texture(ShadowingColorMap, uvParallax);
+        vec4 sampleShadowingMask = EnableShadowingColorMaskMap ? texture(ShadowingColorMaskMap, uvParallax) : vec4(0.0);
+        float t = sampleShadowingMask.r * ShadowingColorMaskMapValue;
+        shadowingColor = mix(ShadowingColor, sampleShadowingColor, t);
+    }
+
+    vec3 baseLayer1 = EnableColorTableMap ? SampleColorTable(BaseColorIndex1, 0.0).rgb : BaseColorLayer1.rgb;
+    vec3 baseLayer2 = EnableColorTableMap ? SampleColorTable(BaseColorIndex2, 0.0).rgb : BaseColorLayer2.rgb;
+    vec3 baseLayer3 = EnableColorTableMap ? SampleColorTable(BaseColorIndex3, 0.0).rgb : BaseColorLayer3.rgb;
+    vec3 baseLayer4 = EnableColorTableMap ? SampleColorTable(BaseColorIndex4, 0.0).rgb : BaseColorLayer4.rgb;
+
+    vec3 shadowLayer1 = EnableColorTableMap ? SampleColorTable(BaseColorIndex1, 1.0).rgb : ShadowingColorLayer1.rgb;
+    vec3 shadowLayer2 = EnableColorTableMap ? SampleColorTable(BaseColorIndex2, 1.0).rgb : ShadowingColorLayer2.rgb;
+    vec3 shadowLayer3 = EnableColorTableMap ? SampleColorTable(BaseColorIndex3, 1.0).rgb : ShadowingColorLayer3.rgb;
+    vec3 shadowLayer4 = EnableColorTableMap ? SampleColorTable(BaseColorIndex4, 1.0).rgb : ShadowingColorLayer4.rgb;
+
+    if (BaseColorMultiply)
+    {
+        baseLayer1 *= baseSample.rgb;
+        baseLayer2 *= baseSample.rgb;
+        baseLayer3 *= baseSample.rgb;
+        baseLayer4 *= baseSample.rgb;
+    }
+
+    // vertex sub layer ( : modifies layer3 base colors using vertex color mask scales)
+    if (EnableVertexSubLayer)
+    {
+        vec4 subMaskScale = vec4(SubLayerMaskScale1, SubLayerMaskScale2, SubLayerMaskScale3, SubLayerMaskScale4) * Color;
+        baseLayer3 = mix(baseLayer3, BaseColorSubLayer1.rgb, subMaskScale.r);
+        baseLayer3 = mix(baseLayer3, BaseColorSubLayer2.rgb, subMaskScale.g);
+        baseLayer3 = mix(baseLayer3, BaseColorSubLayer3.rgb, subMaskScale.b);
+        baseLayer3 = mix(baseLayer3, BaseColorSubLayer4.rgb, subMaskScale.a);
+    }
+
+    vec4 layerMask = vec4(0.0);
+    bool useLayerMask = EnableLayerMaskMap && (NumMaterialLayer > 0);
+    if (useLayerMask)
+    {
+        int index = HasUVIndexLayerMask ? UVIndexLayerMask : -1;
+
+        vec2 maskUv;
+        if (HasLayerMaskUvTransform)
+        {
+            // special case: when using the parallax adjusted primary uv, it applies FlipV before the layer mask transform
+            vec2 baseUv = (index < 0) ? FlipV(uvParallax) : ((index == 0) ? rawUv0 : rawUv1Safe);
+            maskUv = TransformUvFd(baseUv, UVScaleOffsetLayerMask, radians(UVCenterRotationLayerMask.z), UVCenterRotationLayerMask.xy);
+        }
+        else
+        {
+            // Non transform path uses the already transformed primary UV (including parallax) directly
+            maskUv = (index < 0) ? uvParallax : FlipV((index == 0) ? rawUv0 : rawUv1Safe);
+        }
+
+        layerMask = texture(LayerMaskMap, maskUv);
+        layerMask = mix(vec4(0.0), layerMask, vec4(LayerMaskScale1, LayerMaskScale2, LayerMaskScale3, LayerMaskScale4));
+
+        // zeroes layer channels when the corresponding layer colors are effectively unused
+        if (dot(baseLayer2, baseLayer2) < 0.000001) layerMask.g = 0.0;
+        if (dot(baseLayer3, baseLayer3) < 0.000001) layerMask.b = 0.0;
+        if (dot(baseLayer4, baseLayer4) < 0.000001) layerMask.a = 0.0;
+    }
+
+    if (DebugShaderMode == 2)
+    {
+        gAlbedo = vec4(layerMask.rgb, 1.0);
+        gNormal = vec4(vec3(0.5), 1.0);
+        gSpecular = vec4(layerMask.a, 0.0, 0.0, 0.0);
+        gAO = vec4(0.0, 0.0, 0.0, 1.0);
+        return;
+    }
+    if (DebugShaderMode >= 20 && DebugShaderMode <= 23)
+    {
+        float m = (DebugShaderMode == 20) ? layerMask.r :
+                  (DebugShaderMode == 21) ? layerMask.g :
+                  (DebugShaderMode == 22) ? layerMask.b :
+                                            layerMask.a;
+        gAlbedo = vec4(vec3(m), 1.0);
+        gNormal = vec4(vec3(0.5), 1.0);
+        gSpecular = vec4(m, 0.0, 0.0, 0.0);
+        gAO = vec4(0.0, 0.0, 0.0, 1.0);
+        return;
+    }
+
+    // emission driven base color lerp 
+    // This happens before layer blending: it attenuates base/shadowing and per layer colors by (1 emissionIntensity)
+    float reflectance = 1.0;
+    if (EnableLerpBaseColorEmission)
+    {
+        float invEmission = max(1.0 - EmissionIntensity, 0.0);
+        baseColor.rgb *= invEmission;
+        shadowingColor.rgb *= invEmission;
+        reflectance *= invEmission;
+
+        if (EnableEmissionLayer && useLayerMask)
+        {
+            float inv1 = max(1.0 - (EmissionIntensityLayer1 * layerMask.r), 0.0);
+            float inv2 = max(1.0 - (EmissionIntensityLayer2 * layerMask.g), 0.0);
+            float inv3 = max(1.0 - (EmissionIntensityLayer3 * layerMask.b), 0.0);
+            float inv4 = max(1.0 - (EmissionIntensityLayer4 * layerMask.a), 0.0);
+
+            baseLayer1 *= inv1;
+            baseLayer2 *= inv2;
+            baseLayer3 *= inv3;
+            baseLayer4 *= inv4;
+
+            shadowLayer1 *= inv1;
+            shadowLayer2 *= inv2;
+            shadowLayer3 *= inv3;
+            shadowLayer4 *= inv4;
+
+            reflectance = mix(reflectance, inv1, layerMask.r);
+            reflectance = mix(reflectance, inv2, layerMask.g);
+            reflectance = mix(reflectance, inv3, layerMask.b);
+            reflectance = mix(reflectance, inv4, layerMask.a);
+        }
+    }
+
+    // Base weight is "whatever is left after the layers" 
+    float weightBase = clamp(1.0 - dot(vec4(1.0), layerMask), 0.0, 1.0);
+    baseColor.rgb *= weightBase;
+    shadowingColor.rgb *= weightBase;
+
+    baseColor.rgb = mix(baseColor.rgb, baseLayer1, layerMask.r);
+    baseColor.rgb = mix(baseColor.rgb, baseLayer2, layerMask.g);
+    baseColor.rgb = mix(baseColor.rgb, baseLayer3, layerMask.b);
+    baseColor.rgb = mix(baseColor.rgb, baseLayer4, layerMask.a);
+
+    shadowingColor.rgb = mix(shadowingColor.rgb, shadowLayer1, layerMask.r);
+    shadowingColor.rgb = mix(shadowingColor.rgb, shadowLayer2, layerMask.g);
+    shadowingColor.rgb = mix(shadowingColor.rgb, shadowLayer3, layerMask.b);
+    shadowingColor.rgb = mix(shadowingColor.rgb, shadowLayer4, layerMask.a);
+
+    // custom layers (IkLayerMaskMap1..3) using UVScaleOffset1..3 and BaseColorLayer5..7
+    if (EnableCustomLayer)
+    {
+        vec2 uvCustom1 = TransformUvFd(rawUv0, UVScaleOffset1);
+        vec2 uvCustom2 = TransformUvFd(rawUv0, UVScaleOffset2);
+        vec2 uvCustom3 = TransformUvFd(rawUv0, UVScaleOffset3);
+
+        float w1 = texture(IkLayerMaskMap1, uvCustom1).r;
+        float w2 = texture(IkLayerMaskMap2, uvCustom2).r;
+        float w3 = texture(IkLayerMaskMap3, uvCustom3).r;
+
+        baseColor.rgb = mix(baseColor.rgb, BaseColorLayer5.rgb, w1);
+        baseColor.rgb = mix(baseColor.rgb, BaseColorLayer6.rgb, w2);
+        baseColor.rgb = mix(baseColor.rgb, BaseColorLayer7.rgb, w3);
+    }
+
+    // surface parameters (AO / metallic / roughness / spec mask + per layer param mixing)
+    float ao = 1.0;
+    if (EnableAOMap)
+    {
+        int aoIndex = HasUVIndexAO ? UVIndexAO : -1;
+        vec2 occUv = (aoIndex < 0) ? uvParallax : FlipV((aoIndex == 0) ? rawUv0 : rawUv1Safe);
+        float occ = texture(AOMap, occUv).r;
+        ao = pow(occ, OcclusionStrength);
+    }
+
+    float metallic = EnableMetallicMap ? texture(MetallicMap, uvParallax).r : Metallic;
+    metallic = mix(metallic, MetallicLayer1, layerMask.r);
+    metallic = mix(metallic, MetallicLayer2, layerMask.g);
+    metallic = mix(metallic, MetallicLayer3, layerMask.b);
+    metallic = mix(metallic, MetallicLayer4, layerMask.a);
+
+    float roughness = EnableRoughnessMap ? texture(RoughnessMap, uvParallax).r : Roughness;
+    roughness = mix(roughness, RoughnessLayer1, layerMask.r);
+    roughness = mix(roughness, RoughnessLayer2, layerMask.g);
+    roughness = mix(roughness, RoughnessLayer3, layerMask.b);
+    roughness = mix(roughness, RoughnessLayer4, layerMask.a);
+
+    vec3 specParams = vec3(SpecularOffset, SpecularContrast, SpecularIntensity);
+    specParams = mix(specParams, vec3(SpecularLayer1Offset, SpecularLayer1Contrast, SpecularLayer1Intensity), layerMask.r);
+    specParams = mix(specParams, vec3(SpecularLayer2Offset, SpecularLayer2Contrast, SpecularLayer2Intensity), layerMask.g);
+    specParams = mix(specParams, vec3(SpecularLayer3Offset, SpecularLayer3Contrast, SpecularLayer3Intensity), layerMask.b);
+    specParams = mix(specParams, vec3(SpecularLayer4Offset, SpecularLayer4Contrast, SpecularLayer4Intensity), layerMask.a);
+
+    float specMask = EnableSpecularMaskMap ? texture(SpecularMaskMap, uvParallax).r : 1.0;
+
+    // emission (base + per layer)
+    vec3 emission = EmissionColor.rgb * EmissionIntensity;
+    float emissionIntensity = EmissionIntensity;
+    if (EnableEmissionLayer && useLayerMask)
+    {
+        emission = mix(emission, EmissionColorLayer1.rgb * EmissionIntensityLayer1, layerMask.r);
+        emission = mix(emission, EmissionColorLayer2.rgb * EmissionIntensityLayer2, layerMask.g);
+        emission = mix(emission, EmissionColorLayer3.rgb * EmissionIntensityLayer3, layerMask.b);
+        emission = mix(emission, EmissionColorLayer4.rgb * EmissionIntensityLayer4, layerMask.a);
+        emissionIntensity = mix(emissionIntensity, EmissionIntensityLayer1, layerMask.r);
+        emissionIntensity = mix(emissionIntensity, EmissionIntensityLayer2, layerMask.g);
+        emissionIntensity = mix(emissionIntensity, EmissionIntensityLayer3, layerMask.b);
+        emissionIntensity = mix(emissionIntensity, EmissionIntensityLayer4, layerMask.a);
+    }
+
+    if (EnableEmissionFresnelLayer && useLayerMask)
+    {
+        float nv = clamp(dot(n, viewDirWs), 0.00001, 1.0);
+        float vertexBias = EnableVertexColor ? Color.r : 1.0;
+
+        float f1 = FresnelGeneral(FresnelAlphaMin1, FresnelAlphaMax1, max(nv - FresnelAngleBias1 * vertexBias, 0.0), FresnelPower1) * weightBase;
+        float f2 = FresnelGeneral(FresnelAlphaMin2, FresnelAlphaMax2, max(nv - FresnelAngleBias2 * vertexBias, 0.0), FresnelPower2) * layerMask.r;
+        float f3 = FresnelGeneral(FresnelAlphaMin3, FresnelAlphaMax3, max(nv - FresnelAngleBias3 * vertexBias, 0.0), FresnelPower3) * layerMask.g;
+        float f4 = FresnelGeneral(FresnelAlphaMin4, FresnelAlphaMax4, max(nv - FresnelAngleBias4 * vertexBias, 0.0), FresnelPower4) * layerMask.b;
+        float f5 = FresnelGeneral(FresnelAlphaMin5, FresnelAlphaMax5, max(nv - FresnelAngleBias5 * vertexBias, 0.0), FresnelPower5) * layerMask.a;
+
+        vec3 fresnelEmission =
+            FresnelColor1.rgb * (FresnelColor1.a * f1) +
+            FresnelColor2.rgb * (FresnelColor2.a * f2) +
+            FresnelColor3.rgb * (FresnelColor3.a * f3) +
+            FresnelColor4.rgb * (FresnelColor4.a * f4) +
+            FresnelColor5.rgb * (FresnelColor5.a * f5);
+
+        if (EnableEmissionColorMap)
+        {
+            fresnelEmission *= baseSample.rgb;
+        }
+
+        emission += fresnelEmission;
+    }
+
+    // Base color post process 
+    baseColor.rgb = mix(baseColor.rgb, vec3(0.0), BaseColorDarkness);
+    baseColor.rgb = Saturation(baseColor.rgb, SaturationPower);
+
+    // eyelids + highlight + jewel mode 
+    bool hasUpperEyelid = (EyelidType == 1) || (EyelidType == 3);
+    bool hasLowerEyelid = (EyelidType == 2) || (EyelidType == 3);
+
+    if (hasUpperEyelid || RequireEyelidShadowMap)
+    {
+        vec2 eyelidShadowUv = GetUvLayerSrt(rawUv0, UVScaleOffset2, UVRotation2);
+        float eyelidShadowMask = texture(EyelidShadowMaskMap, eyelidShadowUv).r;
+
+        vec3 eyelidShadowBase = EnableColorTableMap ? SampleColorTable(BaseColorIndex6, 0.0).rgb : BaseColorLayer6.rgb;
+        vec3 eyelidShadowShadowing = EnableColorTableMap ? SampleColorTable(BaseColorIndex6, 1.0).rgb : eyelidShadowBase;
+
+        baseColor.rgb *= mix(vec3(1.0), eyelidShadowBase, eyelidShadowMask);
+        shadowingColor.rgb *= mix(vec3(1.0), eyelidShadowShadowing, eyelidShadowMask);
+    }
+
+    float eyelidMask = 0.0;
+    if (hasUpperEyelid)
+    {
+        vec2 upperUv = GetUvLayerSrt(rawUv0, UVScaleOffset3, UVRotation3);
+        vec4 upper = texture(UpperEyelidColorMap, upperUv);
+
+        vec3 upperBase = upper.rgb * (EnableColorTableMap ? SampleColorTable(BaseColorIndex7, 0.0).rgb : BaseColorLayer7.rgb);
+        vec3 upperShadow = upper.rgb * (EnableColorTableMap ? SampleColorTable(BaseColorIndex7, 1.0).rgb : BaseColorLayer9.rgb);
+
+        baseColor.rgb = mix(baseColor.rgb, upperBase, upper.a);
+        shadowingColor.rgb = mix(shadowingColor.rgb, upperShadow, upper.a);
+        metallic = mix(metallic, MetallicLayer7, upper.a);
+        roughness = mix(roughness, RoughnessLayer7, upper.a);
+        eyelidMask = max(eyelidMask, upper.a);
+    }
+
+    if (hasLowerEyelid)
+    {
+        vec2 lowerUv = GetUvLayerSrt(rawUv0, UVScaleOffset4, UVRotation4);
+        vec4 lower = texture(LowerEyelidColorMap, lowerUv);
+
+        vec3 lowerBase = lower.rgb * (EnableColorTableMap ? SampleColorTable(BaseColorIndex8, 0.0).rgb : BaseColorLayer8.rgb);
+        vec3 lowerShadow = lower.rgb * (EnableColorTableMap ? SampleColorTable(BaseColorIndex8, 1.0).rgb : BaseColorLayer10.rgb);
+
+        baseColor.rgb = mix(baseColor.rgb, lowerBase, lower.a);
+        shadowingColor.rgb = mix(shadowingColor.rgb, lowerShadow, lower.a);
+        metallic = mix(metallic, MetallicLayer8, lower.a);
+        roughness = mix(roughness, RoughnessLayer8, lower.a);
+        eyelidMask = max(eyelidMask, lower.a);
+    }
+
+    if ((hasUpperEyelid || hasLowerEyelid) && eyelidMask >= 1.0 && EnableJewelMode >= 1.0)
+    {
+        discard;
+    }
+
+    if (EnableHighlight && EnableHighlightMaskMap)
+    {
+        vec2 center = useEyeCenter ? UVCenter1.xy : vec2(0.5);
+        vec2 highlightUv = GetUvLayerSt(rawUv0, UVScaleOffset1, center);
+        vec3 highlight = EmissionIntensityLayer5 * EmissionColorLayer5.rgb;
+        float highlightMask = texture(HighlightMaskMap, highlightUv).r * clamp(1.0 - eyelidMask, 0.0, 1.0);
+        baseColor.rgb = mix(baseColor.rgb, highlight, highlightMask);
+        shadowingColor.rgb = mix(shadowingColor.rgb, highlight, highlightMask);
+    }
+
+    if (DebugShaderMode == 6)
+    {
+        gAlbedo = vec4(vec3(ao), 1.0);
+        gNormal = vec4(vec3(0.5), 1.0);
+        gSpecular = vec4(ao, 0.0, 0.0, 0.0);
+        gAO = vec4(0.0, 0.0, 0.0, 1.0);
+        return;
+    }
+    if (DebugShaderMode == 7)
+    {
+        gAlbedo = vec4(vec3(metallic), 1.0);
+        gNormal = vec4(vec3(0.5), 1.0);
+        gSpecular = vec4(ao, metallic, 0.0, 0.0);
+        gAO = vec4(0.0, 0.0, 0.0, 1.0);
+        return;
+    }
+    if (DebugShaderMode == 12)
+    {
+        // Spec mask in albedo, spec intensity in specular, roughness in AO
+        gAlbedo = vec4(vec3(specMask), 1.0);
+        gNormal = vec4(vec3(0.5), 1.0);
+        gSpecular = vec4(ao, metallic, 0.0, 0.0);
+        gAO = vec4(0.0, 0.0, 0.0, 1.0);
+        return;
+    }
+    if (DebugShaderMode == 10)
+    {
+        gAlbedo = vec4(emission, 1.0);
+        gNormal = vec4(vec3(0.5), 1.0);
+        gSpecular = vec4(1.0, 0.0, 0.0, 0.0);
+        gAO = vec4(emission, 1.0);
+        return;
+    }
+
+    // alpha/discard behavior 
+    // Hair specular variant always uses DiscardMaskMap sampled from UV1 + per channel weights (DiscardValue_*), then thresholds at 0.5
+    // Non hair alpha test uses base alpha with DiscardValue as threshold
+    if (EnableHairSpecular)
+    {
+        vec2 discardUv = TransformUvFd(rawUv1Safe, UVScaleOffset);
+        vec4 discardMask = texture(DiscardMaskMap, discardUv);
+        float discardAlpha = mix(1.0, discardMask.r, DiscardValue_R);
+        discardAlpha = mix(discardAlpha, discardMask.g, DiscardValue_G);
+        discardAlpha = mix(discardAlpha, discardMask.b, DiscardValue_B);
+        discardAlpha = mix(discardAlpha, discardMask.a, DiscardValue_A);
+        if (discardAlpha < 0.5)
+        {
+            discard;
+        }
+        alpha = discardAlpha;
+        baseColor.a = discardAlpha;
+    }
+    else if (EnableAlphaTest)
+    {
+        if (baseColor.a < DiscardValue)
+        {
+            discard;
+        }
+    }
+
+    vec3 lightDir = normalize(-LightDirection);
+    float nDotL = dot(n, lightDir);
+    float wrappedNdotL = WrapNdotL(nDotL, LightWrap);
+
+    float halfLambert = nDotL * 0.5 + 0.5;
+    float biasedHalfLambert = mix(halfLambert, halfLambert * halfLambert, HalfLambertBias);
+    biasedHalfLambert = clamp(biasedHalfLambert, 0.0, 1.0);
+
+    vec2 shadingRange = vec2(ShadingBias * ShadingBias * 0.5) * vec2(-1.0, 1.0);
+    shadingRange = (vec2(0.5) + shadingRange) * ShadowingBias;
+    float remappedHalfLambert = clamp(Remap(biasedHalfLambert, shadingRange, vec2(1.0, 0.0)), 0.0, 1.0);
+    vec3 shadowedDiffuse = mix(vec3(1.0), shadowingColor.rgb, remappedHalfLambert);
+
+    vec3 shadedBaseColor = baseColor.rgb * clamp(shadowingColor.rgb + ao, 0.0, 1.0);
+    vec3 diffuseLight = LightColor * (biasedHalfLambert * ao);
+    float diffuseLightIntensity = max(diffuseLight.r, max(diffuseLight.g, diffuseLight.b));
+
+    float diffuseMid = smoothstep(1.0 + MidAreaShift, MidAreaShift, diffuseLightIntensity);
+    diffuseMid = SGCheapContrast(diffuseMid, MidAreaContrast);
+    float diffuseDark = smoothstep(1.0 + DarkAreaShift, DarkAreaShift, diffuseLightIntensity);
+    diffuseDark = SGCheapContrast(diffuseDark, DarkAreaContrast);
+
+    vec3 shadedBaseMid = HueDegrees(shadedBaseColor, MidAreaHueOffset);
+    vec3 shadedBaseDark = HueDegrees(shadedBaseColor, DarkAreaHueOffset);
+    shadedBaseMid = mix(shadedBaseColor, shadedBaseMid, vec3(diffuseMid));
+    float hueShiftAreaFactor = mix(1.0, 0.5, HueShiftAreaValue * diffuseMid);
+    vec3 shadedDarkToMid = mix(shadedBaseDark, shadedBaseMid, vec3(diffuseDark)) * hueShiftAreaFactor;
+    vec3 shadedMidToDark = mix(shadedBaseMid, shadedBaseDark, vec3(diffuseDark)) * hueShiftAreaFactor;
+
+    float shadowingGradient = smoothstep(0.0 + ShadowingShift, 1.0 + ShadowingShift, halfLambert);
+    shadowingGradient = SGCheapContrast(shadowingGradient, ShadowingContrast);
+    vec3 shadedShifted = mix(shadedDarkToMid, shadedMidToDark, vec3(shadowingGradient));
+    shadedShifted = mix(shadedBaseColor, shadedShifted, vec3(HueShiftBias));
+    shadedBaseColor = mix(shadedBaseColor, shadedShifted, clamp(LightColor, 0.0, 1.0));
+
+    // ShadowingGIGain: uses it as a GI gain factor for indirect lighting
+    // Viewer : boost ambient more when direct light is weak
+    float directStrength = clamp(max(LightColor.r, max(LightColor.g, LightColor.b)), 0.0, 1.0);
+    float giGain = mix(1.0 + ShadowingGIGain * 2.0, 1.0, directStrength);
+    vec3 lightTerm = AmbientColor * giGain + LightColor * wrappedNdotL;
+    vec3 color = shadedBaseColor * shadowedDiffuse * lightTerm;
+
+    // Specular is written to the spec buffer (gbuffer pass adds it separately)
+    vec3 viewDir = viewDirWs;
+    vec3 halfVec = normalize(viewDir + lightDir);
+    float nDotH = clamp(dot(n, halfVec), 0.0, 1.0);
+
+    // Roughness reduces spec intensity (cheap ); uses a stylized spec term
+    float phongSpec = pow(nDotH, 8.0) * (1.0 - roughness) * wrappedNdotL;
+    float spec = SGSpecularParam(specParams.x, phongSpec, specParams.y, specParams.z);
+    vec3 specF0 = mix(vec3(0.04 * reflectance), vec3(1.0), metallic);
+    vec3 specularOut = (spec * specF0) * (SpecularScale * specMask * ao);
+
+    // rim light (masked) is merged into the specular light term
+    float rimMaskOut = 0.0;
+    if (EnableRimLightMaskMap)
+    {
+        float rimMask = texture(RimLightMaskMap, uvParallax).r;
+        rimMaskOut = rimMask;
+        float nvFresnel = FresnelEffect(n, viewDir, 1.0);
+        float rimBase = smoothstep(RimLightOffset, 1.0, nvFresnel);
+        rimBase = SGCheapContrast(rimBase, RimLightContrast);
+
+        vec2 rimBurnBoth = vec2(nDotL, -nDotL) + vec2(nvFresnel - 1.0);
+        vec2 rimBoth = rimBase * clamp(smoothstep(vec2(-0.4), vec2(0.0), rimBurnBoth), vec2(0.0), vec2(1.0));
+        rimBoth.x *= RimLightIntensity * nDotL * ao;
+        float rimBackTemp = rimBoth.y * BackRimLightIntensity;
+        rimBoth.y = mix(rimBackTemp, rimBoth.y, rimBackTemp);
+        rimBoth.y *= RimLightIntensity;
+        rimBoth *= rimMask;
+
+        float rimSelect = clamp(dot(lightDir, n) * -1.0, 0.0, 1.0);
+        float rim = mix(rimBoth.x, rimBoth.y, rimSelect);
+        rim *= max(0.0, 1.0 - emissionIntensity);
+
+        // Merge rim into specular buffer as a lit term
+        specularOut = max(specularOut, vec3(rim) * LightColor);
+    }
+
+    // uses ShadowStrength to remap shadow attenuation; viewer doesn't have per pixel shadows,
+    // but we keep it as a global scale to avoid ignoring authored values
+    float shadowScale = clamp(1.0 + ShadowStrength, 0.0, 2.0);
+    specularOut *= shadowScale;
+
+    // local reflection ( uses cubemap; viewer uses 2D lat long probe)
+    if (metallic > 0.0)
+    {
+        vec3 reflectionVec = reflect(-viewDir, n);
+        vec2 envUv = EnvLatLongUv(reflectionVec);
+        vec3 probe = textureLod(LocalReflectionMap, envUv, ReflectionsBlur).rgb;
+
+        vec3 clampedProbe = clamp(probe, vec3(0.0), vec3(0.25));
+        vec3 localReflection = mix(clampedProbe, probe, clamp(biasedHalfLambert, 0.0, 1.0));
+
+        float reflectionFresnel = FresnelEffect(n, viewDir, 1.0);
+        reflectionFresnel = clamp(1.0 - smoothstep(0.3, 0.7, reflectionFresnel), 0.1, 1.0);
+        localReflection = clamp(localReflection * reflectionFresnel, vec3(DiffusionLevels), vec3(1.0));
+
+        vec3 reflectionMul = mix(vec3(1.0), localReflection, metallic);
+        color *= reflectionMul;
+        specularOut *= reflectionMul;
+    }
+
+    // optional effects (Holocast / upword noise / aura)
+    if (EnableHolocastEffect)
+    {
+        // holocast adds to emission and turns the shaded term off
+        emission += SGHolocastEffect(color, n, viewDir, FragPos).rgb;
+        color = vec3(0.0);
+        specularOut = vec3(0.0);
+    }
+
+    if (EnableMgUpwordNoise)
+    {
+        vec3 noiseSamplePos = (MgUpwordNoiseProjectType == 0) ? FragPos : ObjectPos;
+        vec3 noiseLightingNorm = (MgUpwordNoiseProjectType == 0) ? n : normalize(ObjectNormal);
+        vec3 noiseSampleOffset = vec3(0.0, time_params.x * NoiseScrollSpeed, 0.0);
+        vec3 noiseSampleNorm = noiseLightingNorm;
+        noiseSampleNorm.y = (MgUpwordNoiseBottomCap == 0) ? 0.0 : min(0.0, noiseSampleNorm.y);
+
+        vec4 noiseSampleSt = vec4(NoiseScale, NoiseScale, 0.0, 0.0);
+        vec4 noiseSample = TriplanarTextureFetch(NoiseSourceMap, noiseSampleSt, noiseSampleNorm, noiseSamplePos - noiseSampleOffset);
+        float noiseInt = mix(NoiseIntensity, 0.0, smoothstep(NoiseFadeStart, NoiseFadeEnd, noiseSamplePos.y));
+        vec3 noiseColor = NoiseBaseColor.rgb * noiseSample.r * noiseInt;
+        if (MgUpwordNoiseOutputType == 0)
+        {
+            emission += noiseColor;
+        }
+        else
+        {
+            emission += noiseColor * mix(NoiseLightMin, 1.0, max(0.0, -noiseLightingNorm.y));
+        }
+    }
+
+    if (EnableAuraEffect)
+    {
+        vec4 auraFactor = AuraEmission(ObjectPos, n, viewDir);
+        emission = mix(emission, auraFactor.rgb, auraFactor.a);
+    }
+
+    // additional controls in the remaining channels for later passes
+    vec3 finalShadedColor = color + specularOut;
+    if (TransparentPass)
+    {
+        float alpha = clamp(baseSample.a, 0.0, 1.0);
+        gAlbedo = vec4((finalShadedColor + emission) * alpha, alpha);
+        gNormal = vec4(n * 0.5 + 0.5, 1.0);
+        gSpecular = vec4(0.0);
+        gAO = vec4(0.0, 0.0, 0.0, 2.0);
+        return;
+    }
+    gAlbedo = vec4(finalShadedColor, ShadowingGIGain);
+    gNormal = vec4(n * 0.5 + 0.5, ShadowStrength);
+    gSpecular = vec4(ao, rimMaskOut, 0.0, 0.0);
+    // shadingModel=2.0 => PreLit (AO already applied inside shader; deferred combine applies SSAO only)
+    gAO = vec4(emission, 2.0);
+}

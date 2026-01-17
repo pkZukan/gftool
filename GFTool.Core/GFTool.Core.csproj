@@ -25,4 +25,21 @@
     <PackageReference Include="System.Drawing.Common" Version="8.0.10" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Flatbuffers\\Reflections\\Bfbs\\**\\*.b64" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Flatbuffers/FlatSharp generated DTOs are populated by deserialization rather than constructors. -->
+    <Compile Update="Flatbuffers\TR\**\*.cs">
+      <NoWarn>$(NoWarn);CS8618;CS8601;CS8602;CS8603;CS8604</NoWarn>
+    </Compile>
+    <Compile Update="Flatbuffers\Common\**\*.cs">
+      <NoWarn>$(NoWarn);CS8618;CS8601;CS8602;CS8603;CS8604</NoWarn>
+    </Compile>
+    <Compile Update="Flatbuffers\Reflections\**\*.cs">
+      <NoWarn>$(NoWarn);CS8618;CS8601;CS8602;CS8603;CS8604</NoWarn>
+    </Compile>
+  </ItemGroup>
+
 </Project>

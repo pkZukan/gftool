@@ -16,7 +16,16 @@ namespace Trinity.Core.Flatbuffers.Converters
         public override PackedQuaternion Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             var quatdict = JsonSerializer.Deserialize<Dictionary<string, float>>(ref reader, options);
-            Quaternion quaternion = new Quaternion(quatdict["X"], quatdict["Y"], quatdict["Z"], quatdict["W"]);
+            if (quatdict == null ||
+                !quatdict.TryGetValue("X", out var x) ||
+                !quatdict.TryGetValue("Y", out var y) ||
+                !quatdict.TryGetValue("Z", out var z) ||
+                !quatdict.TryGetValue("W", out var w))
+            {
+                throw new JsonException("Invalid quaternion JSON; expected {X,Y,Z,W}.");
+            }
+
+            Quaternion quaternion = new Quaternion(x, y, z, w);
             return quaternion.Pack();
         }
 

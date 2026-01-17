@@ -24,18 +24,45 @@ namespace Trinity.Core.Flatbuffers.Converters
     {
         public override FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            Dictionary<string, JsonElement> dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(ref reader, options);
-            byte discriminator = dict["Discriminator"].Deserialize<byte>();
+            Dictionary<string, JsonElement>? dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(ref reader, options);
+            if (dict == null ||
+                !dict.TryGetValue("Discriminator", out var discEl) ||
+                !dict.TryGetValue("Values", out var valuesEl))
+            {
+                return new FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>();
+            }
+
+            byte discriminator = discEl.Deserialize<byte>();
             switch (discriminator)
             {
                 case 1:
-                    return new FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>(dict["Values"].Deserialize<FixedVectorTrack>());
+                    {
+                        var value = valuesEl.Deserialize<FixedVectorTrack>(options);
+                        return value == null
+                            ? new FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>()
+                            : new FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>(value);
+                    }
                 case 2:
-                    return new FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>(dict["Values"].Deserialize<FramedVectorTrack>());
+                    {
+                        var value = valuesEl.Deserialize<FramedVectorTrack>(options);
+                        return value == null
+                            ? new FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>()
+                            : new FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>(value);
+                    }
                 case 3:
-                    return new FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>(dict["Values"].Deserialize<Keyed16VectorTrack>());
+                    {
+                        var value = valuesEl.Deserialize<Keyed16VectorTrack>(options);
+                        return value == null
+                            ? new FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>()
+                            : new FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>(value);
+                    }
                 case 4:
-                    return new FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>(dict["Values"].Deserialize<Keyed8VectorTrack>());
+                    {
+                        var value = valuesEl.Deserialize<Keyed8VectorTrack>(options);
+                        return value == null
+                            ? new FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>()
+                            : new FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>(value);
+                    }
                 default:
                     return new FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>();
             }
@@ -61,18 +88,45 @@ namespace Trinity.Core.Flatbuffers.Converters
     {
         public override FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            Dictionary<string, JsonElement> dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(ref reader, options);
-            byte discriminator = dict["Discriminator"].Deserialize<byte>();
+            Dictionary<string, JsonElement>? dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(ref reader, options);
+            if (dict == null ||
+                !dict.TryGetValue("Discriminator", out var discEl) ||
+                !dict.TryGetValue("Values", out var valuesEl))
+            {
+                return new FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>();
+            }
+
+            byte discriminator = discEl.Deserialize<byte>();
             switch (discriminator)
             {
                 case 1:
-                    return new FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>(dict["Values"].Deserialize<FixedRotationTrack>());
+                    {
+                        var value = valuesEl.Deserialize<FixedRotationTrack>(options);
+                        return value == null
+                            ? new FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>()
+                            : new FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>(value);
+                    }
                 case 2:
-                    return new FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>(dict["Values"].Deserialize<FramedRotationTrack>());
+                    {
+                        var value = valuesEl.Deserialize<FramedRotationTrack>(options);
+                        return value == null
+                            ? new FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>()
+                            : new FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>(value);
+                    }
                 case 3:
-                    return new FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>(dict["Values"].Deserialize<Keyed16RotationTrack>());
+                    {
+                        var value = valuesEl.Deserialize<Keyed16RotationTrack>(options);
+                        return value == null
+                            ? new FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>()
+                            : new FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>(value);
+                    }
                 case 4:
-                    return new FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>(dict["Values"].Deserialize<Keyed8RotationTrack>());
+                    {
+                        var value = valuesEl.Deserialize<Keyed8RotationTrack>(options);
+                        return value == null
+                            ? new FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>()
+                            : new FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>(value);
+                    }
                 default:
                     return new FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>();
             }

@@ -57,13 +57,14 @@ namespace GFTool.Renderer.Core.Graphics
             GL.GenFramebuffers(1, out fbo);
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, fbo);
 
-            //Gen gbuffer textures
+            // Gen GBuffer textures.
+            // Use RGBA so we can pack additional material properties (roughness/metallic/etc) like the game’s deferred path.
             textures = new int[(int)GBufferType.GBUFFER_MAX];
             GL.GenTextures(textures.Length, textures);
             for (int i = 0; i < textures.Length; i++)
             {
                 GL.BindTexture(TextureTarget.Texture2D, textures[i]);
-                GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgb32f, width, height, 0, PixelFormat.Rgb, PixelType.Float, IntPtr.Zero);
+                GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba16f, width, height, 0, PixelFormat.Rgba, PixelType.HalfFloat, IntPtr.Zero);
                 GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
                 GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
                 GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
@@ -102,7 +103,7 @@ namespace GFTool.Renderer.Core.Graphics
         public void BindFBO()
         {
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, fbo);
-            GL.ClearColor(Color.Gray);
+            GL.ClearColor(Color.FromArgb(45, 45, 45));
         }
 
         public void BindDefaultFB()
@@ -152,7 +153,7 @@ namespace GFTool.Renderer.Core.Graphics
         }
 
 
-        public void Draw(int ssaoTexture, bool enableSsao)
+        public void Draw(int ssaoTexture, bool enableSsao, float cameraNear, float cameraFar, Matrix4 view, Matrix4 projection, Vector3 cameraPos)
         {
             // FBO is bound for read and the default framebuffer is bound for write
             GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, fbo);
@@ -160,10 +161,25 @@ namespace GFTool.Renderer.Core.Graphics
             Clear();
 
             var gbShader = ShaderPool.Instance.GetShader("gbuffer");
+            if (gbShader == null)
+            {
+                MessageHandler.Instance.AddMessage(MessageType.ERROR, "Failed to load 'gbuffer' shader; skipping final pass.");
+                return;
+            }
             gbShader.Bind();
 
             // Copy depth buffer over for grid/overlay depth testing
             GL.BlitFramebuffer(0, 0, width, height, 0, 0, width, height, ClearBufferMask.DepthBufferBit, BlitFramebufferFilter.Nearest);
+
+            Matrix4.Invert(view, out var invView);
+            Matrix4.Invert(projection, out var invProjection);
+            gbShader.SetMatrix4("InvView", invView);
+            gbShader.SetMatrix4("InvProjection", invProjection);
+            gbShader.SetVector3("CameraPos", cameraPos);
+            gbShader.SetVector3("LightDirection", RenderOptions.WorldLightDirection);
+            gbShader.SetVector3("LightColor", new Vector3(1.0f, 1.0f, 1.0f));
+            gbShader.SetVector3("AmbientColor", new Vector3(0.25f, 0.25f, 0.25f));
+            gbShader.SetFloat("LightWrap", RenderOptions.LightWrap);
 
             //Set frame textures
             string[] frameList = new string[]
@@ -172,7 +188,8 @@ namespace GFTool.Renderer.Core.Graphics
                 "normalTexture",
                 "specularTexture",
                 "aoTexture",
-                "ssaoTexture"
+                "ssaoTexture",
+                "depthTexture"
             };
 
             //Attach frames
@@ -183,6 +200,10 @@ namespace GFTool.Renderer.Core.Graphics
                 if (i == (int)GBufferType.GBUFFER_MAX)
                 {
                     GL.BindTexture(TextureTarget.Texture2D, ssaoTexture);
+                }
+                else if (i == (int)GBufferType.GBUFFER_MAX + 1)
+                {
+                    GL.BindTexture(TextureTarget.Texture2D, depthTex);
                 }
                 else
                 {
@@ -199,13 +220,9 @@ namespace GFTool.Renderer.Core.Graphics
             gbShader.SetBool("useSSAO", enableSsao && DisplayMode == DisplayType.DISPLAY_ALL);
             gbShader.SetBool("useToon", DisplayMode == DisplayType.DISPLAY_TOON);
             gbShader.SetBool("useLegacy", DisplayMode == DisplayType.DISPLAY_LEGACY);
-
-            if (DisplayMode == DisplayType.DISPLAY_TOON)
-            {
-                gbShader.SetVector3("LightDirection", RenderOptions.WorldLightDirection);
-                gbShader.SetVector3("LightColor", new Vector3(1.0f, 1.0f, 1.0f));
-                gbShader.SetVector3("AmbientColor", new Vector3(0.25f, 0.25f, 0.25f));
-            }
+            gbShader.SetBool("useDepth", DisplayMode == DisplayType.DISPLAY_DEPTH);
+            gbShader.SetFloat("CameraNear", cameraNear);
+            gbShader.SetFloat("CameraFar", cameraFar);
 
             //Draw screen quad
             GL.Disable(EnableCap.DepthTest);

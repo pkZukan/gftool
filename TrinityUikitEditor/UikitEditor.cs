@@ -1,5 +1,3 @@
-using SARCExt;
-using System.Diagnostics;
 using static OpenTK.Graphics.OpenGL.GL;
 
 namespace TrinityUikitEditor
@@ -19,9 +17,7 @@ namespace TrinityUikitEditor
             if (ofd.ShowDialog() != DialogResult.OK) return;
             sceneView.Nodes.Clear();
             uiView = new TRUiView();
-            var truiv = ofd.FileName;
-
-            uiView.DeserializeView(truiv);
+            uiView.DeserializeView(ofd.FileName);
             sceneView.Nodes.Add(uiView.TreeNode);
         }
 
@@ -41,7 +37,7 @@ namespace TrinityUikitEditor
             {
                 Point ScreenPoint = sceneView.PointToScreen(ClickPoint);
                 Point FormPoint = this.PointToClient(ScreenPoint);
-                //TODO: right click context?
+                sceneContext.Show(this, FormPoint);
             }
 
             //Check for data to display

@@ -1,46 +1,47 @@
-﻿using FlatSharp.Attributes;
+using FlatSharp.Attributes;
 
 namespace GFTool.Core.Flatbuffers.TR.Scene.Components
 {
     [FlatBufferTable]
-    public class UnkTable2
+    public class PropertySheetSomeTable3
     {
         [FlatBufferItem(0)]
-        public UInt64 unk0 { get; set; }
+        public ulong unk0 { get; set; }
 
         [FlatBufferItem(1)]
         public bool unk1 { get; set; }
     }
 
     [FlatBufferTable]
-    public class Property
+    public class PropertySheetProperty
     {
         [FlatBufferItem(0)]
-        public string name { get; set; }
+        public string? name { get; set; }
 
         [FlatBufferItem(1)]
         public bool value { get; set; }
 
         [FlatBufferItem(2)]
-        public UnkTable2 unk0 { get; set; }
+        public PropertySheetSomeTable3? unk1 { get; set; }
     }
 
     [FlatBufferTable]
-    public class UnkTable {
+    public class PropertySheetEntry
+    {
         [FlatBufferItem(0)]
-        public Property[] properties { get; set; }
+        public PropertySheetProperty[]? properties { get; set; }
     }
 
     [FlatBufferTable]
     public class trinity_PropertySheet
     {
         [FlatBufferItem(0)]
-        public string property_name { get; set; }
+        public string? name { get; set; }
 
         [FlatBufferItem(1)]
-        public string property_template { get; set; }
+        public string? template { get; set; }
 
         [FlatBufferItem(2)]
-        public UnkTable[] unk0 { get; set; }
+        public PropertySheetEntry[]? entries { get; set; }
     }
 }
