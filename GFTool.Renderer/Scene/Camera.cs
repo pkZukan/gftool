@@ -1,5 +1,6 @@
-﻿using GFTool.Renderer.Scene.GraphicsObjects;
+using GFTool.Renderer.Scene.GraphicsObjects;
 using OpenTK.Mathematics;
+using System;
 
 namespace GFTool.Renderer.Scene
 {
@@ -14,15 +15,22 @@ namespace GFTool.Renderer.Scene
         public bool CanMove { get; set; } = true;
 
         private int Width, Height;
+        private bool rotationInitialized = false;
+        private float yaw;
+        private float pitch;
+        private Vector3 target = Vector3.Zero;
+        private float distance = 5.0f;
 
         //Constants
-        const float SENSITIVITY_X = 0.1f;
-        const float SENSITIVITY_Y = 0.1f;
+        const float ROTATE_SPEED = 2.2f;
+        const float PAN_SPEED = 2.0f;
+        const float DOLLY_SPEED = 5.0f;
+        const float PITCH_LIMIT = 1.553343f; // ~89 degrees
 
-        const float MOVEMENT_SPEED = 0.1f;
+        const float MOVEMENT_SPEED = 6.0f;
 
         public enum ProjectionType
-        { 
+        {
             Perspective,
             Orthographic
         }
@@ -31,12 +39,19 @@ namespace GFTool.Renderer.Scene
         {
             Width = width;
             Height = height;
-            Transform.Rotation = Quaternion.FromEulerAngles(0, 90, 0); //Camera defaults to facing forward
+            Transform.Position = new Vector3(0, 1, 1);
+            target = Vector3.Zero;
+            distance = (Transform.Position - target).Length;
+            var front = Vector3.Normalize(target - Transform.Position);
+            pitch = MathF.Asin(front.Y);
+            yaw = MathF.Atan2(front.Z, front.X);
+            rotationInitialized = true;
+            Transform.Rotation = Quaternion.FromEulerAngles(pitch, yaw, 0f);
             SetProjectionMode(ProjectionType.Perspective);
         }
 
         public void SetProjectionMode(ProjectionType mode)
-        { 
+        {
             projMode = mode;
             UpdateProjMatrix();
         }
@@ -62,54 +77,134 @@ namespace GFTool.Renderer.Scene
             }
         }
 
+        public void Resize(int width, int height)
+        {
+            Width = Math.Max(1, width);
+            Height = Math.Max(1, height);
+            UpdateProjMatrix();
+        }
+
 
         private Vector3 CalculateCameraFront()
         {
-            Vector3 front = new Vector3();
-            Vector3 currRot = Transform.Rotation.ToEulerAngles();
+            if (!rotationInitialized)
+            {
+                var euler = Transform.Rotation.ToEulerAngles();
+                pitch = euler.X;
+                yaw = euler.Y;
+                rotationInitialized = true;
+            }
 
-            float yawRad = currRot.Y;
-            float pitchRad = currRot.X;
-
-            front.X = (float)(Math.Cos(yawRad) * Math.Cos(pitchRad));
-            front.Y = (float)(Math.Sin(pitchRad));
-            front.Z = (float)(Math.Sin(yawRad) * Math.Cos(pitchRad));
-
-            return Vector3.Normalize(front);
+            return FrontFromAngles(yaw, pitch);
         }
 
         public void ApplyRotationalDelta(float deltaX, float deltaY)
         {
             if (!CanMove) return;
 
-            Quaternion yawRotation = Quaternion.FromAxisAngle(Vector3.UnitY, MathHelper.DegreesToRadians(deltaX * SENSITIVITY_X));
-            Quaternion pitchRotation = Quaternion.FromAxisAngle(Vector3.UnitX, MathHelper.DegreesToRadians(-deltaY * SENSITIVITY_Y));
+            if (!rotationInitialized)
+            {
+                var euler = Transform.Rotation.ToEulerAngles();
+                pitch = euler.X;
+                yaw = euler.Y;
+                rotationInitialized = true;
+            }
 
-            Transform.Rotation = yawRotation * pitchRotation * Transform.Rotation;
+            const float maxDelta = 0.25f;
+            deltaX = Math.Clamp(deltaX, -maxDelta, maxDelta);
+            deltaY = Math.Clamp(deltaY, -maxDelta, maxDelta);
+
+            yaw += deltaX * ROTATE_SPEED;
+            pitch += -deltaY * ROTATE_SPEED;
+            pitch = Math.Clamp(pitch, -PITCH_LIMIT, PITCH_LIMIT);
+            yaw = WrapAngle(yaw);
+
+            Transform.Rotation = Quaternion.FromEulerAngles(pitch, yaw, 0f);
         }
 
 
-        public void ApplyMovement(float x, float y, float z)
+        public void ApplyMovement(float x, float y, float z, float deltaSeconds)
+        {
+            if (!CanMove) return;
+            if (deltaSeconds <= 0f) return;
+            Vector3 forward = CalculateCameraFront();
+            Vector3 right = Vector3.Cross(forward, Vector3.UnitY).Normalized();
+            Vector3 up = Vector3.Cross(right, forward).Normalized();
+
+            // Combine movement along each axis
+            float move = MOVEMENT_SPEED * deltaSeconds;
+            Transform.Position += right * z * move;
+            Transform.Position += up * y * move;
+            Transform.Position += forward * x * move;
+            target += right * z * move;
+            target += up * y * move;
+            target += forward * x * move;
+        }
+
+        public void ApplyPan(float deltaX, float deltaY)
         {
             if (!CanMove) return;
             Vector3 forward = CalculateCameraFront();
             Vector3 right = Vector3.Cross(forward, Vector3.UnitY).Normalized();
             Vector3 up = Vector3.Cross(right, forward).Normalized();
 
-            // Combine movement along each axis
-            Transform.Position += right * z * MOVEMENT_SPEED;
-            Transform.Position += up * y * MOVEMENT_SPEED;
-            Transform.Position += forward * x * MOVEMENT_SPEED;
+            float scale = PAN_SPEED * distance;
+            Vector3 pan = right * deltaX * scale + up * deltaY * scale;
+            Transform.Position += pan;
+            target += pan;
+        }
+
+        public void ApplyDolly(float delta)
+        {
+            if (!CanMove) return;
+            distance = Math.Max(0.1f, distance - (delta * DOLLY_SPEED));
+            UpdateOrbitPosition();
         }
 
         public void Update()
         {
+            UpdateOrbitPosition();
             Vector3 front = CalculateCameraFront();
             viewMat = Matrix4.LookAt(
                 Transform.Position,         // Camera position
-                Transform.Position + front, // Target (position + front vector)
+                target, // Target position
                 new Vector3(0, 1, 0)        // Up vector (y-axis up)
             );
+        }
+
+        private void UpdateOrbitPosition()
+        {
+            if (!rotationInitialized)
+            {
+                var euler = Transform.Rotation.ToEulerAngles();
+                pitch = euler.X;
+                yaw = euler.Y;
+                rotationInitialized = true;
+            }
+
+            Vector3 front = FrontFromAngles(yaw, pitch);
+            Transform.Position = target - (front * distance);
+        }
+
+        private static Vector3 FrontFromAngles(float yawRad, float pitchRad)
+        {
+            Vector3 front;
+            front.X = (float)(Math.Cos(yawRad) * Math.Cos(pitchRad));
+            front.Y = (float)(Math.Sin(pitchRad));
+            front.Z = (float)(Math.Sin(yawRad) * Math.Cos(pitchRad));
+            return Vector3.Normalize(front);
+        }
+
+        private static float WrapAngle(float radians)
+        {
+            const float twoPi = MathF.PI * 2f;
+            if (radians > MathF.PI || radians < -MathF.PI)
+            {
+                radians %= twoPi;
+                if (radians > MathF.PI) radians -= twoPi;
+                if (radians < -MathF.PI) radians += twoPi;
+            }
+            return radians;
         }
 
         private void UpdateMatricies()

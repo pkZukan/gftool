@@ -1,5 +1,7 @@
-﻿using OpenTK.Compute.OpenCL;
+using GFTool.Renderer.Core;
+using OpenTK.Compute.OpenCL;
 using OpenTK.Graphics.OpenGL4;
+using OpenTK.Mathematics;
 using System.Drawing;
 
 namespace GFTool.Renderer.Core.Graphics
@@ -22,7 +24,9 @@ namespace GFTool.Renderer.Core.Graphics
             DISPLAY_NORMAL,
             DISPLAY_SPECULAR,
             DISPLAY_AO,
-            DISPLAY_DEPTH
+            DISPLAY_DEPTH,
+            DISPLAY_TOON,
+            DISPLAY_LEGACY
         }
         private int fbo = 0;
         private int[] textures;
@@ -34,6 +38,15 @@ namespace GFTool.Renderer.Core.Graphics
         private int width, height;
 
         public DisplayType DisplayMode { get; set; } = DisplayType.DISPLAY_ALL;
+
+        public int DepthTexture => depthTex;
+        public int Width => width;
+        public int Height => height;
+
+        public int GetTexture(GBufferType type)
+        {
+            return textures[(int)type];
+        }
 
         public GBuffer(int width, int height)
         {
@@ -58,11 +71,15 @@ namespace GFTool.Renderer.Core.Graphics
                 GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0 + i, TextureTarget.Texture2D, textures[i], 0);
             }
 
-            //Gen depth buffer
-            GL.GenRenderbuffers(1, out depthTex);
-            GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, depthTex);
-            GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, RenderbufferStorage.DepthComponent, width, height);
-            GL.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, RenderbufferTarget.Renderbuffer, depthTex);
+            // Depth texture for reliable sampling and blitting
+            GL.GenTextures(1, out depthTex);
+            GL.BindTexture(TextureTarget.Texture2D, depthTex);
+            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.DepthComponent24, width, height, 0, PixelFormat.DepthComponent, PixelType.Float, IntPtr.Zero);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+            GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, TextureTarget.Texture2D, depthTex, 0);
 
             if (GL.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != FramebufferErrorCode.FramebufferComplete)
             {
@@ -100,16 +117,16 @@ namespace GFTool.Renderer.Core.Graphics
 
         void CreateScreenQuad()
         {
-            // Define vertices for a full-screen quad (NDC coordinates)
+            // Define vertices for a full screen quad (NDC coordinates)
             float[] vertices = {
                 // Positions        // Texture Coords
-                -1.0f,  1.0f,  0.0f, 1.0f,  // Top-left
-                -1.0f, -1.0f,  0.0f, 0.0f,  // Bottom-left
-                 1.0f, -1.0f,  1.0f, 0.0f,  // Bottom-right
+                -1.0f,  1.0f,  0.0f, 1.0f,  // Top left
+                -1.0f, -1.0f,  0.0f, 0.0f,  // Bottom left
+                 1.0f, -1.0f,  1.0f, 0.0f,  // Bottom right
 
-                -1.0f,  1.0f,  0.0f, 1.0f,  // Top-left
-                 1.0f, -1.0f,  1.0f, 0.0f,  // Bottom-right
-                 1.0f,  1.0f,  1.0f, 1.0f   // Top-right
+                -1.0f,  1.0f,  0.0f, 1.0f,  // Top left
+                 1.0f, -1.0f,  1.0f, 0.0f,  // Bottom right
+                 1.0f,  1.0f,  1.0f, 1.0f   // Top right
             };
 
             // Generate and bind a Vertex Array Object (VAO) and Vertex Buffer Object (VBO)
@@ -135,9 +152,9 @@ namespace GFTool.Renderer.Core.Graphics
         }
 
 
-        public void Draw()
+        public void Draw(int ssaoTexture, bool enableSsao)
         {
-            //Bind our FBO as read and default as write
+            // FBO is bound for read and the default framebuffer is bound for write
             GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, fbo);
             GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, 0); //Bind default framebuf for write
             Clear();
@@ -145,9 +162,8 @@ namespace GFTool.Renderer.Core.Graphics
             var gbShader = ShaderPool.Instance.GetShader("gbuffer");
             gbShader.Bind();
 
-            // Copy depth buffer over
-            if (DisplayMode == DisplayType.DISPLAY_ALL || DisplayMode == DisplayType.DISPLAY_DEPTH)
-                GL.BlitFramebuffer(0, 0, width, height, 0, 0, width, height, ClearBufferMask.DepthBufferBit, BlitFramebufferFilter.Nearest);
+            // Copy depth buffer over for grid/overlay depth testing
+            GL.BlitFramebuffer(0, 0, width, height, 0, 0, width, height, ClearBufferMask.DepthBufferBit, BlitFramebufferFilter.Nearest);
 
             //Set frame textures
             string[] frameList = new string[]
@@ -155,7 +171,8 @@ namespace GFTool.Renderer.Core.Graphics
                 "albedoTexture",
                 "normalTexture",
                 "specularTexture",
-                "aoTexture"
+                "aoTexture",
+                "ssaoTexture"
             };
 
             //Attach frames
@@ -163,29 +180,55 @@ namespace GFTool.Renderer.Core.Graphics
             foreach (var frame in frameList)
             {
                 GL.ActiveTexture(TextureUnit.Texture0 + i);
-                GL.BindTexture(TextureTarget.Texture2D, textures[i]);
+                if (i == (int)GBufferType.GBUFFER_MAX)
+                {
+                    GL.BindTexture(TextureTarget.Texture2D, ssaoTexture);
+                }
+                else
+                {
+                    GL.BindTexture(TextureTarget.Texture2D, textures[i]);
+                }
                 gbShader.SetInt(frame, i++);
             }
 
             //Set bools for visibility
-            gbShader.SetBool("useAlbedo", DisplayMode == DisplayType.DISPLAY_ALL || DisplayMode == DisplayType.DISPLAY_ALBEDO);
-            gbShader.SetBool("useNormal", DisplayMode == DisplayType.DISPLAY_ALL || DisplayMode == DisplayType.DISPLAY_NORMAL);
-            gbShader.SetBool("useSpecular", DisplayMode == DisplayType.DISPLAY_ALL || DisplayMode == DisplayType.DISPLAY_SPECULAR);
-            gbShader.SetBool("useAO", DisplayMode == DisplayType.DISPLAY_ALL || DisplayMode == DisplayType.DISPLAY_AO);
+            gbShader.SetBool("useAlbedo", DisplayMode == DisplayType.DISPLAY_ALL || DisplayMode == DisplayType.DISPLAY_ALBEDO || DisplayMode == DisplayType.DISPLAY_TOON || DisplayMode == DisplayType.DISPLAY_LEGACY);
+            gbShader.SetBool("useNormal", DisplayMode == DisplayType.DISPLAY_ALL || DisplayMode == DisplayType.DISPLAY_NORMAL || DisplayMode == DisplayType.DISPLAY_TOON || DisplayMode == DisplayType.DISPLAY_LEGACY);
+            gbShader.SetBool("useSpecular", DisplayMode == DisplayType.DISPLAY_ALL || DisplayMode == DisplayType.DISPLAY_SPECULAR || DisplayMode == DisplayType.DISPLAY_LEGACY);
+            gbShader.SetBool("useAO", DisplayMode == DisplayType.DISPLAY_ALL || DisplayMode == DisplayType.DISPLAY_AO || DisplayMode == DisplayType.DISPLAY_TOON || DisplayMode == DisplayType.DISPLAY_LEGACY);
+            gbShader.SetBool("useSSAO", enableSsao && DisplayMode == DisplayType.DISPLAY_ALL);
+            gbShader.SetBool("useToon", DisplayMode == DisplayType.DISPLAY_TOON);
+            gbShader.SetBool("useLegacy", DisplayMode == DisplayType.DISPLAY_LEGACY);
+
+            if (DisplayMode == DisplayType.DISPLAY_TOON)
+            {
+                gbShader.SetVector3("LightDirection", RenderOptions.WorldLightDirection);
+                gbShader.SetVector3("LightColor", new Vector3(1.0f, 1.0f, 1.0f));
+                gbShader.SetVector3("AmbientColor", new Vector3(0.25f, 0.25f, 0.25f));
+            }
 
             //Draw screen quad
+            GL.Disable(EnableCap.DepthTest);
+            GL.DepthMask(false);
+            RenderFullscreenQuad();
+            GL.DepthMask(true);
+            GL.Enable(EnableCap.DepthTest);
+
+            gbShader.Unbind();
+        }
+
+        public void RenderFullscreenQuad()
+        {
             GL.BindVertexArray(screenGeom);
             GL.DrawArrays(PrimitiveType.Triangles, 0, 6);
             GL.BindVertexArray(0);
-
-            gbShader.Unbind();
         }
 
         public void Dispose()
         {
             GL.DeleteVertexArray(screenGeom);
             GL.DeleteFramebuffer(fbo);
-            GL.DeleteRenderbuffer(depthTex);
+            GL.DeleteTexture(depthTex);
             foreach (var tex in textures)
                 GL.DeleteTexture(tex);
         }
