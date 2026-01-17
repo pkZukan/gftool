@@ -29,6 +29,13 @@ namespace Trinity.Core.Flatbuffers.Utils
     }
 
     [FlatBufferStruct]
+    public class Vector2i
+    {
+        [FlatBufferItem(0)] public int X { get; set; } = 0;
+        [FlatBufferItem(1)] public int Y { get; set; } = 0;
+    }
+
+    [FlatBufferStruct]
     public class Sphere
     {
         [FlatBufferItem(0)] public float X { get; set; } = 0.0f;

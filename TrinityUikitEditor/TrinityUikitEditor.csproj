@@ -11,6 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\GFTool.Core\GFTool.Core.csproj" />
     <ProjectReference Include="..\GFTool.RenderControl_WinForms\GFTool.RenderControl_WinForms.csproj" />
+    <ProjectReference Include="..\NxMiddleware\SarcLib\SarcLib.csproj" />
   </ItemGroup>
 
 </Project>

@@ -10,7 +10,7 @@ namespace TrinitySceneView
 {
     public partial class SceneViewerForm : Form
     {
-        
+
         Point prevMousePos;
 
         private TRSceneTree sceneTree;
@@ -42,7 +42,7 @@ namespace TrinitySceneView
 
         private void ClearProperties()
         {
-            InfoBox.Text = string.Empty;
+            PropertiesBox.Text = string.Empty;
         }
 
         //Treeview context
@@ -68,7 +68,8 @@ namespace TrinitySceneView
                 return;
             }
 
-            InfoBox.Text = TRSceneProperties.GetProperties(meta?.Type, meta?.Data);
+            AttribBox.Text = TRSceneProperties.GetAttributes(meta?.Type, meta?.Data);
+            PropertiesBox.Text = TRSceneProperties.GetProperties((SceneMetaData)meta);
         }
 
         //Update camera position info
@@ -138,6 +139,11 @@ namespace TrinitySceneView
                 messageListView.Items.Add(item);
                 messageListView.EnsureVisible(messageListView.Items.Count - 1);
             }
+        }
+
+        private void renderCtrl_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

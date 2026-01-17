@@ -20,6 +20,7 @@ namespace TrinitySceneView
         public string FilePath { get; private set; }
         public string Type { get; private set; }
         public object? Data { get; private set; }
+        public ulong ID { get; private set; }
 
         //Deserialize scene component via reflection
         private object? DeserializeChunk(SceneChunk chunk)
@@ -49,6 +50,7 @@ namespace TrinitySceneView
             FilePath = string.Empty;
             Type = chunk.Type;
             Data = null;
+            ID = chunk.Id;
 
             Data = DeserializeChunk(chunk);
         }
@@ -59,6 +61,7 @@ namespace TrinitySceneView
             FilePath = extFile;
             Type = string.Empty;
             Data = null;
+            ID = 0;
         }
     }
 
@@ -107,6 +110,7 @@ namespace TrinitySceneView
         private void WalkTrSceneChunks(TreeNode node, SceneChunk chunk, string sceneFile = "")
         {
             var newnode = node.Nodes.Add(chunk.Type);
+
 
             //SubScenes save meta with external path
             if (chunk.Type == "SubScene")

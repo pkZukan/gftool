@@ -5,18 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GFTool.Core.Flatbuffers.TR.UI.Components
+namespace GFTool.Core.Flatbuffers.TR.Scene.Components
 {
     [FlatBufferTable]
-    public class UikitGauge
+    public class pe_SimpleNode
     {
         [FlatBufferItem(0)]
         public string Name { get; set; }
-
-        [FlatBufferItem(1)]
-        public string ControlName { get; set; }
-
-        [FlatBufferItem(2)]
-        public int ControlIndex { get; set; }
     }
 }
