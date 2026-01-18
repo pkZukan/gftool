@@ -21,8 +21,8 @@ namespace TrinityFileExplorer
         private DataGridViewTextBoxColumn FileType;
         private DataGridViewTextBoxColumn FileSize;
 
-        private CustomFileDescriptor _fileDescriptor;
-        private FileSystem _fileSystem;
+        private CustomFileDescriptor _fileDescriptor = null!;
+        private FileSystem _fileSystem = null!;
 
         private List<string> romfs_paths = new List<string>();
         private List<string> layeredfs_paths = new List<string>();
@@ -51,8 +51,16 @@ namespace TrinityFileExplorer
             ulong[] fileHashes = _fileDescriptor.FileHashes;
             ulong[] markedHashes = _fileDescriptor.HasUnusedFiles() ? _fileDescriptor.UnusedHashes : new ulong[] { };
 
-            romfs_paths = fileHashes.Select(x => GFPakHashCache.GetName(x)).Where(x => !string.IsNullOrEmpty(x)).ToList();
-            layeredfs_paths = markedHashes.Select(x => GFPakHashCache.GetName(x)).Where(x => !string.IsNullOrEmpty(x)).ToList();
+            romfs_paths = fileHashes
+                .Select(x => GFPakHashCache.GetName(x))
+                .Where(x => !string.IsNullOrEmpty(x))
+                .Select(x => x!)
+                .ToList();
+            layeredfs_paths = markedHashes
+                .Select(x => GFPakHashCache.GetName(x))
+                .Where(x => !string.IsNullOrEmpty(x))
+                .Select(x => x!)
+                .ToList();
 
             romfs_paths.Sort();
             layeredfs_paths.Sort();
@@ -89,7 +97,10 @@ namespace TrinityFileExplorer
             if (Rows.Count == 0) return null;
             try
             {
-                return Rows.Cast<DataGridViewRow>().FirstOrDefault(row => row.Cells["FileName"].Value.ToString().Equals(path));
+                return Rows
+                    .Cast<DataGridViewRow>()
+                    .FirstOrDefault(row =>
+                        string.Equals(row.Cells["FileName"].Value?.ToString(), path, StringComparison.Ordinal));
             }
             catch
             {
@@ -113,7 +124,7 @@ namespace TrinityFileExplorer
             System.Console.WriteLine(index);
             var row = Rows[index];
 
-            if (row.Cells["FileType"].Value.ToString().Equals("File Folder"))
+            if (string.Equals(row.Cells["FileType"].Value?.ToString(), "File Folder", StringComparison.Ordinal))
             {
                 var path = _cwd + row.Cells["FileName"].Value.ToString() + "/";
                 return path;
@@ -133,7 +144,7 @@ namespace TrinityFileExplorer
             var fileName = _cwd + row.Cells["FileName"].Value.ToString();
             row.Cells["FileLocation"].Value = fileLocation;
 
-            if (row.Cells["FileType"].Value == "File Folder")
+            if (string.Equals(row.Cells["FileType"].Value?.ToString(), "File Folder", StringComparison.Ordinal))
             {
                 var folderPaths = sourcePaths.Where(x => x.StartsWith(fileName)).ToList();
                 foreach (var path in folderPaths)

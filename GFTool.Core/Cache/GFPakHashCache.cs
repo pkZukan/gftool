@@ -75,7 +75,39 @@ namespace Trinity.Core.Cache
                 }
 
                 var hashText = parts[0];
-                var path = parts[1];
+
+                // Prefer the "real" in-pack path when the list includes multiple columns.
+                //   <hash> <absoluteDumpPath>.gfpak.Absolute[n] <inPackPath>
+                string path = parts[1];
+                if (parts.Length >= 3)
+                {
+                    // Pick the first candidate that looks like an internal path.
+                    // Avoid Windows drive prefixes and the common ".gfpak.Absolute[n]" placeholder column.
+                    for (int i = 1; i < parts.Length; i++)
+                    {
+                        var candidate = parts[i];
+                        if (string.IsNullOrWhiteSpace(candidate))
+                        {
+                            continue;
+                        }
+
+                        if (candidate.Contains(".gfpak.Absolute[", StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        if (candidate.Contains(':'))
+                        {
+                            continue;
+                        }
+
+                        if (candidate.Contains('/'))
+                        {
+                            path = candidate;
+                            break;
+                        }
+                    }
+                }
                 if (string.IsNullOrWhiteSpace(hashText) || string.IsNullOrWhiteSpace(path))
                 {
                     continue;

@@ -1,5 +1,6 @@
-
-using System.Xml.Linq;
+using System.Linq;
+using GFTool.Renderer.Core;
+using OpenTK.Graphics.OpenGL4;
 
 namespace GFTool.Renderer.Core.Graphics
 {
@@ -14,19 +15,81 @@ namespace GFTool.Renderer.Core.Graphics
 
         private ShaderPool()
         {
-            shaderPath = "Shaders/";
+            shaderPath = Path.Combine(AppContext.BaseDirectory, "Shaders");
+        }
+
+        public void Invalidate(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return;
+            }
+
+            if (!shaders.TryGetValue(name, out var shader) || shader == null)
+            {
+                return;
+            }
+
+            shaders.Remove(name);
+
+            // Best-effort cleanup; requires a valid GL context.
+            try
+            {
+                GL.DeleteProgram(shader.Handle);
+            }
+            catch
+            {
+                // Ignore.
+            }
+        }
+
+        public void Clear()
+        {
+            foreach (var name in shaders.Keys.ToArray())
+            {
+                Invalidate(name);
+            }
         }
 
         private bool AddShader(string name)
         {
-            var vsh = shaderPath + name + ".vsh";
-            var fsh = shaderPath + name + ".fsh";
+            string vsh;
+            string fsh;
+
+            if (string.Equals(name, "IkCharacter", StringComparison.OrdinalIgnoreCase))
+            {
+                // Allow quick A/B comparisons while iterating on IkCharacter.
+                // Uses the backed-up sources copied to output at `Shaders/_ShaderBackups/IkCharacter.*.bak`.
+                if (RenderOptions.UseBackupIkCharacterShader)
+                {
+                    vsh = Path.Combine(shaderPath, "_ShaderBackups", "IkCharacter.vsh.bak");
+                    fsh = Path.Combine(shaderPath, "_ShaderBackups", "IkCharacter.fsh.bak");
+                    goto LoadShader;
+                }
+
+                // Default IkCharacter shader is the legacy highlights shader.
+                vsh = Path.Combine(shaderPath, "IkCharacterLegacy.vsh");
+                fsh = Path.Combine(shaderPath, "IkCharacterLegacy.fsh");
+                goto LoadShader;
+            }
+
+            vsh = Path.Combine(shaderPath, name + ".vsh");
+            fsh = Path.Combine(shaderPath, name + ".fsh");
+
+        LoadShader:
             if (!File.Exists(vsh) || !File.Exists(fsh))
             {
                 MessageHandler.Instance.AddMessage(MessageType.ERROR, string.Format("Shader \"{0}\" not supported.", name));
                 return false;
             }
-            shaders[name] = new Shader(name, vsh, fsh);
+            var shader = new Shader(name, vsh, fsh);
+            if (shader.Handle == 0)
+            {
+                MessageHandler.Instance.AddMessage(MessageType.ERROR, string.Format("Shader \"{0}\" failed to compile.", name));
+                return false;
+            }
+
+            shaders[name] = shader;
             MessageHandler.Instance.AddMessage(MessageType.LOG, string.Format("Shader \"{0}\" loaded into pool.", name));
 
             return true;

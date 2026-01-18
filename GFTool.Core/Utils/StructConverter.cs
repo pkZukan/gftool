@@ -9,7 +9,7 @@ namespace Trinity.Core.Utils
             var handle = GCHandle.Alloc(bytearray, GCHandleType.Pinned);
             try
             {
-                return (T)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), typeof(T));
+                return Marshal.PtrToStructure<T>(handle.AddrOfPinnedObject())!;
             }
             finally
             {
@@ -23,9 +23,15 @@ namespace Trinity.Core.Utils
             byte[] arr = new byte[size];
 
             IntPtr ptr = Marshal.AllocHGlobal(size);
-            Marshal.StructureToPtr(obj, ptr, true);
-            Marshal.Copy(ptr, arr, 0, size);
-            Marshal.FreeHGlobal(ptr);
+            try
+            {
+                Marshal.StructureToPtr(obj, ptr, true);
+                Marshal.Copy(ptr, arr, 0, size);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(ptr);
+            }
             return arr;
         }
     }

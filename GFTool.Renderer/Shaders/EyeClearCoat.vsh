@@ -3,6 +3,7 @@
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
 layout (location = 2) in vec2 aTexCoord;
+layout (location = 8) in vec2 aTexCoord2;
 layout (location = 3) in vec4 aColor;
 layout (location = 4) in vec4 aTangent;
 layout (location = 5) in vec3 aBinormal;
@@ -20,6 +21,7 @@ uniform int BoneCount;
 out vec3 FragPos;
 out vec3 Normal;
 out vec2 TexCoord;
+out vec4 UV01;
 out vec4 Color;
 out vec3 Tangent;
 out vec3 Bitangent;
@@ -70,6 +72,7 @@ void main()
     Binormal = normalize(normalMatrix * localBinormal);
 
     TexCoord = aTexCoord;
+    UV01 = vec4(aTexCoord, aTexCoord2);
     Color = aColor;
 
     // Clip space position - this is the same as forward rendering

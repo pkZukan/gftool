@@ -1,5 +1,20 @@
 namespace GFTool.Renderer.Core
 {
+    public enum ShaderGame
+    {
+        Auto = 0,
+        SCVI = 1,
+        ZA = 2,
+        LA = 3
+    }
+
+    public enum UvSetOverride
+    {
+        Material = 0,
+        Uv0 = 1,
+        Uv1 = 2
+    }
+
     public static class RenderOptions
     {
         public static bool EnableNormalMaps { get; set; } = true;
@@ -26,5 +41,31 @@ namespace GFTool.Renderer.Core
         public static bool UseSkinningPaletteMatrices { get; set; } = false;
         public static bool MapBlendIndicesViaJointInfo { get; set; } = false;
         public static bool UseJointInfoMatrices { get; set; } = false;
+        public static bool DeterministicSkinningAndAnimation { get; set; } = false;
+
+        public static UvSetOverride LayerMaskUvOverride { get; set; } = UvSetOverride.Material;
+        public static UvSetOverride AOUvOverride { get; set; } = UvSetOverride.Material;
+
+        public static bool UseRareTrmtrMaterials { get; set; } = false;
+
+        public static bool UseBackupIkCharacterShader { get; set; } = false;
+
+        public static int ShaderDebugMode { get; set; } = 0;
+
+        public static bool EnablePerfHud { get; set; } = false;
+        public static bool EnablePerfSpikeLog { get; set; } = false;
+        public static float PerfSpikeThresholdMs { get; set; } = 10.0f;
+
+        public static ShaderGame ShaderGame { get; set; } = ShaderGame.Auto;
+
+        // Async loading (keeps UI/render loop responsive by slicing GL work across frames).
+        public static bool EnableAsyncResourceLoading { get; set; } = true;
+        public static float AsyncGpuWorkBudgetMs { get; set; } = 3.0f;
+        public static int AsyncTextureDecodeConcurrency { get; set; } = 2;
+
+        // Optional disk fallback for loading shared textures/motions from an extracted "out" tree.
+        public static bool EnableExtractedOutFallback { get; set; } = false;
+        public static string ExtractedOutRoot { get; set; } = string.Empty;
+        public static string ExtractedOutGame { get; set; } = "ZA";
     }
 }

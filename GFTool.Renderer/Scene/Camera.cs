@@ -50,6 +50,17 @@ namespace GFTool.Renderer.Scene
             SetProjectionMode(ProjectionType.Perspective);
         }
 
+        public void SetOrbitTarget(Vector3 newTarget, float? newDistance = null)
+        {
+            target = newTarget;
+            if (newDistance.HasValue)
+            {
+                distance = Math.Max(0.1f, newDistance.Value);
+            }
+
+            UpdateOrbitPosition();
+        }
+
         public void SetProjectionMode(ProjectionType mode)
         {
             projMode = mode;

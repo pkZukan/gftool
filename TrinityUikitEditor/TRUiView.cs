@@ -13,6 +13,7 @@ namespace TrinityUikitEditor
 {
     public struct ViewMetaData
     {
+        public bool IsExternal { get; private set; }
         public string FilePath { get; private set; }
         public string Type { get; private set; }
         public object? Data { get; private set; }
@@ -41,6 +42,7 @@ namespace TrinityUikitEditor
 
         public ViewMetaData(ViewChunk chunk)
         {
+            IsExternal = false;
             FilePath = string.Empty;
             Type = chunk.Type;
             Data = null;
@@ -50,6 +52,7 @@ namespace TrinityUikitEditor
 
         public ViewMetaData(string extFile)
         {
+            IsExternal = true;
             FilePath = extFile;
             Type = string.Empty;
             Data = null;
@@ -63,7 +66,7 @@ namespace TrinityUikitEditor
 
         public TreeNode TreeNode { get; private set; } = new TreeNode();
 
-        //Deserialize view from metadata
+        //Deserialize scene from metadata
         public void DeserializeView(ViewMetaData meta, TreeNode node = null)
         {
             var truiv = FlatBufferConverter.DeserializeFrom<TRUIV>(meta.FilePath);
@@ -76,13 +79,13 @@ namespace TrinityUikitEditor
             WalkTrView(n, truiv, meta.FilePath);
         }
 
-        //Deserialize view from filepath
+        //Deserialize scene from filepath
         public void DeserializeView(string filePath)
         {
             DeserializeView(new ViewMetaData(filePath));
         }
 
-        private void ProcessViewMeta(ViewMetaData meta)
+        private void ProcessSceneMeta(ViewMetaData meta)
         {
             //TODO
         }
@@ -99,7 +102,7 @@ namespace TrinityUikitEditor
             var newnode = node.Nodes.Add(chunk.Type);
 
             var meta = new ViewMetaData(chunk);
-            ProcessViewMeta(meta);
+            ProcessSceneMeta(meta);
             InnerData.Add(newnode, meta);
             foreach (var child in chunk.Children)
                 WalkTrViewChunks(newnode, child);
@@ -107,7 +110,7 @@ namespace TrinityUikitEditor
 
         private void WalkTrView(TreeNode node, TRUIV view, string sceneFile)
         {
-            //Iterate over all children in view and create tree
+            //Iterate over all children in scene and create tree
             foreach (var ent in view.Chunks)
             {
                 WalkTrViewChunks(node, ent, sceneFile);

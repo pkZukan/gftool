@@ -12,7 +12,7 @@ uniform bool EnableLayerMaskMap;
 uniform bool EnableNormalMap;
 uniform bool EnableRoughnessMap;
 uniform bool EnableAOMap;
-uniform bool NumMaterialLayer;
+uniform int NumMaterialLayer;
 uniform bool EnableSSSMaskMap;
 uniform bool EnableMetallicMap;
 uniform bool EnableVertexColor;
@@ -29,10 +29,10 @@ uniform bool TwoSidedDiffuse;
 uniform float LightWrap;
 uniform float SpecularScale;
 
-layout (location = 0) out vec3 gAlbedo;
-layout (location = 1) out vec3 gNormal;
-layout (location = 2) out vec3 gSpecular;
-layout (location = 3) out vec3 gAO;
+layout (location = 0) out vec4 gAlbedo;
+layout (location = 1) out vec4 gNormal;
+layout (location = 2) out vec4 gSpecular;
+layout (location = 3) out vec4 gAO;
 
 in vec3 FragPos;
 in vec3 Normal;
@@ -44,8 +44,8 @@ in vec3 Binormal;
 
 void main()
 {
-    vec2 uv = vec2(TexCoord.x, 1.0f - TexCoord.y);
-    bool useLayerMask = EnableLayerMaskMap && NumMaterialLayer;
+    vec2 uv = vec2(TexCoord.x, 1.0 - TexCoord.y);
+    bool useLayerMask = EnableLayerMaskMap && (NumMaterialLayer > 0);
     vec4 layerMask = vec4(0.0);
     if (useLayerMask)
     {
@@ -94,25 +94,9 @@ void main()
         n = normalize(tbn * tangentNormal);
     }
 
-    vec3 lightDir = normalize(-LightDirection);
-    vec3 viewDir = normalize(CameraPos - FragPos);
-    vec3 halfDir = normalize(lightDir + viewDir);
-
-    float nDotL = dot(n, lightDir);
-    if (TwoSidedDiffuse)
-        nDotL = abs(nDotL);
-    else
-        nDotL = max(nDotL, 0.0);
-    float wrappedNdotL = (nDotL + LightWrap) / (1.0 + LightWrap);
-    float specPower = mix(16.0, 96.0, 1.0 - roughness);
-    float spec = pow(max(dot(n, halfDir), 0.0), specPower);
-
-    vec3 diffuse = albedo * (1.0 - metallic);
-    vec3 specColor = mix(vec3(0.04), albedo, metallic);
-    vec3 color = AmbientColor * albedo + LightColor * wrappedNdotL * diffuse;
-
-    gAlbedo = color;
-    gNormal = n * 0.5 + 0.5;
-    gSpecular = spec * specColor * SpecularScale;
-    gAO = vec3(ao);
+    // Deferred attributes (PBR shading computed in `gbuffer.fsh`)
+    gAlbedo = vec4(albedo, roughness);
+    gNormal = vec4(n * 0.5 + 0.5, 1.0);
+    gSpecular = vec4(ao, metallic, 0.0, 0.0);
+    gAO = vec4(0.0, 0.0, 0.0, 0.0); // emission=0, shadingModel=PBR
 }
