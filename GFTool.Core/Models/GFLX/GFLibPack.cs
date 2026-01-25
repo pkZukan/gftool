@@ -8,8 +8,8 @@ namespace Trinity.Core.Models.GFLX
 {
     public class GFLibFolder
     {
-        public string path;
-        public List<GFLibFile> files;
+        public string path = string.Empty;
+        public List<GFLibFile> files = new List<GFLibFile>();
 
         public void AddFile(GFLibFile file)
         {
@@ -19,20 +19,21 @@ namespace Trinity.Core.Models.GFLX
 
     public class GFLibFile
     {
-        public string name;
-        public string fullname;
-        public byte[] data;
+        public string name = string.Empty;
+        public string fullname = string.Empty;
+        public byte[] data = Array.Empty<byte>();
     }
 
     public class GFLibPack
     {
-        public string name;
-        public List<GFLibFolder> folders;
+        public string name = string.Empty;
+        public List<GFLibFolder> folders = new List<GFLibFolder>();
 
         public int GetFileCount()
         {
             int count = 0;
-            foreach (GFLibFolder folder in folders) {
+            foreach (GFLibFolder folder in folders)
+            {
                 count += folder.files.Count;
             }
             return count;

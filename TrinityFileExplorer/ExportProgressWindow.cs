@@ -103,8 +103,11 @@ namespace TrinityFileExplorer
                     UpdateProgressUi(fileName, filepath);
                 }
 
-                if (!Directory.Exists(Path.GetDirectoryName(filepath)))
-                    Directory.CreateDirectory(Path.GetDirectoryName(filepath));
+                var dir = Path.GetDirectoryName(filepath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
 
                 var entry = pack.FileEntry[i];
                 var buffer = entry.FileBuffer;
@@ -154,6 +157,11 @@ namespace TrinityFileExplorer
 
         private PackedArchive? GetPackByName(string packName)
         {
+            if (fileDescriptor == null || fileSystem == null)
+            {
+                return null;
+            }
+
             int packIndex = Array.IndexOf(fileDescriptor.PackNames, packName);
             if (packIndex == -1)
             {

@@ -4,12 +4,31 @@ using GFTool.Renderer.Core.Graphics;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using System;
+using System.Globalization;
+using System.Drawing;
+using System.Linq;
 using Trinity.Core.Flatbuffers.TR.Model;
+using Trinity.Core.Flatbuffers.Utils;
+using Trinity.Core.Assets;
 
 namespace GFTool.Renderer.Scene.GraphicsObjects
 {
-    public class Material : IDisposable
+    public partial class Material : IDisposable
     {
+        private static readonly HashSet<string> warnedMissingSkinningUniforms = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<string> warnedMissingSamplerBindings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<string> warnedMissingEyeClearCoatForward = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<string> loggedEyeClearCoatParams = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private enum TransparentBlendMode
+        {
+            Alpha,
+            PremultipliedAlpha,
+            Additive
+        }
+
+        private static TransparentBlendMode? lastTransparentBlendMode;
+
         public string Name { get; set; }
         public IReadOnlyList<Texture> Textures => textures;
 
@@ -17,6 +36,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         private List<Texture> textures;
         private readonly string shaderKey;
         private readonly bool isTransparent;
+        private readonly TransparentBlendMode transparentBlendMode;
 
         private PathString modelpath;
 
@@ -27,7 +47,26 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         private TRVec4fParameter[] vec4Params;
         private TRSampler[] samplers;
 
-        public Material(PathString modelPath, TRMaterial trmat)
+        private static readonly HashSet<string> reservedOverrideUniformNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "model",
+            "view",
+            "projection",
+            "Bones",
+            "BoneCount",
+            "EnableSkinning",
+            "SwapBlendOrder"
+        };
+
+        private readonly object overrideLock = new object();
+        private readonly Dictionary<string, object> uniformOverrides = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        private bool colorTableCacheReady;
+        private int colorTableDivideCached;
+        private Vector3[]? colorTableBaseColorsCached;
+        private Vector3[]? colorTableShadowColorsCached;
+
+        public Material(PathString modelPath, TRMaterial trmat, IAssetProvider? assetProvider = null)
         {
             Name = trmat.Name;
             modelpath = modelPath;
@@ -43,12 +82,37 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             //I hope we dont actually have more than one shader per material
             var shaderName = trmat.Shader?.Length > 0 ? trmat.Shader[0].Name : string.Empty;
             shaderKey = ResolveShaderName(shaderName);
-            shader = ShaderPool.Instance.GetShader(shaderKey);
-            if (shader == null && !string.Equals(shaderKey, "Standard", StringComparison.OrdinalIgnoreCase))
+            // Shader compilation/linking requires a current GL context. Defer acquisition until first use
+            // (or explicit warmup) so materials can be created off the render thread.
+            shader = null!;
+
+            string? techniqueName = null;
+            if (trmat.Shader != null && trmat.Shader.Length > 0 && trmat.Shader[0].Values != null)
             {
-                shader = ShaderPool.Instance.GetShader("Standard");
+                foreach (var param in trmat.Shader[0].Values)
+                {
+                    if (param == null)
+                    {
+                        continue;
+                    }
+                    if (string.Equals(param.Name, "__TechniqueName", StringComparison.OrdinalIgnoreCase))
+                    {
+                        techniqueName = param.Value;
+                        break;
+                    }
+                }
             }
-            isTransparent = Name.Contains("eye_lens", StringComparison.OrdinalIgnoreCase);
+
+            bool isTransparentByTechnique = !string.IsNullOrWhiteSpace(techniqueName) &&
+                                            techniqueName.Contains("Transparent", StringComparison.OrdinalIgnoreCase);
+
+            isTransparent =
+                Name.Contains("eye_lens", StringComparison.OrdinalIgnoreCase) ||
+                isTransparentByTechnique ||
+                string.Equals(shaderKey, "Transparent", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(shaderKey, "EyeClearCoatForward", StringComparison.OrdinalIgnoreCase);
+
+            transparentBlendMode = isTransparentByTechnique ? TransparentBlendMode.PremultipliedAlpha : TransparentBlendMode.Alpha;
 
             if (trmat.Shader != null && trmat.Shader.Length > 0 && trmat.Shader[0].Values != null)
             {
@@ -58,9 +122,81 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 }
             }
 
+            var samplersBySlot = new Dictionary<uint, TRSampler>();
+            if (trmat.Samplers != null)
+            {
+                for (int i = 0; i < trmat.Samplers.Length; i++)
+                {
+                    samplersBySlot[(uint)i] = trmat.Samplers[i];
+                }
+            }
+
             foreach (var tex in trmat.Textures ?? Array.Empty<TRTexture>())
             {
-                textures.Add(new Texture(modelPath, tex));
+                if (!samplersBySlot.TryGetValue(tex.Slot, out var sampler) && MessageHandler.Instance.DebugLogsEnabled)
+                {
+                    var key = $"{modelpath}::{Name}::{tex.Name}::{tex.Slot}";
+                    if (warnedMissingSamplerBindings.Add(key))
+                    {
+                        MessageHandler.Instance.AddMessage(
+                            MessageType.WARNING,
+                            $"[Sampler] Missing sampler for mat='{Name}' tex='{tex.Name}' SamplerId={tex.Slot} (defaults to ClampToEdge)");
+                    }
+                }
+                textures.Add(new Texture(modelPath, tex, sampler, assetProvider));
+            }
+
+            TryApplyColorTableOverrides();
+            if (MessageHandler.Instance.DebugLogsEnabled &&
+                string.Equals(shaderKey, "IkCharacter", StringComparison.OrdinalIgnoreCase))
+            {
+                bool TryGetVec4(string name, out Vector4 value)
+                {
+                    for (int i = 0; i < vec4Params.Length; i++)
+                    {
+                        if (!string.Equals(vec4Params[i].Name, name, StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        var v = vec4Params[i].Value;
+                        value = new Vector4(v.W, v.X, v.Y, v.Z);
+                        return true;
+                    }
+
+                    value = default;
+                    return false;
+                }
+
+                bool hasUvScaleOffset = TryGetVec4("UVScaleOffset", out var uvScaleOffset);
+                bool nonIdentityUv = hasUvScaleOffset &&
+                                     (Math.Abs(uvScaleOffset.X - 1.0f) > 0.0001f ||
+                                      Math.Abs(uvScaleOffset.Y - 1.0f) > 0.0001f ||
+                                      Math.Abs(uvScaleOffset.Z) > 0.0001f ||
+                                      Math.Abs(uvScaleOffset.W) > 0.0001f);
+
+                const TextureWrapMode mirrorClampToEdge = (TextureWrapMode)0x8743;
+                bool hasMirroredSampler = false;
+                for (int i = 0; i < textures.Count; i++)
+                {
+                    var wrapS = textures[i].WrapS;
+                    var wrapT = textures[i].WrapT;
+                    if (wrapS == TextureWrapMode.MirroredRepeat || wrapT == TextureWrapMode.MirroredRepeat ||
+                        wrapS == mirrorClampToEdge || wrapT == mirrorClampToEdge)
+                    {
+                        hasMirroredSampler = true;
+                        break;
+                    }
+                }
+
+                if (nonIdentityUv || hasMirroredSampler)
+                {
+                    var uvLabel = hasUvScaleOffset ? $"({uvScaleOffset.X:0.###},{uvScaleOffset.Y:0.###},{uvScaleOffset.Z:0.###},{uvScaleOffset.W:0.###})" : "(missing)";
+                    var samplerLabel = string.Join(", ", textures.Select(t => $"{t.Name}[{t.WrapS}/{t.WrapT}]"));
+                    MessageHandler.Instance.AddMessage(
+                        MessageType.LOG,
+                        $"[UV] IkCharacter mat='{Name}' UVScaleOffset={uvLabel} samplers={samplerLabel}");
+                }
             }
         }
 
@@ -79,181 +215,5 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         public IReadOnlyList<TRSampler> Samplers => samplers;
         public string ShaderName => shaderKey;
 
-        public void Use(Matrix4 view, Matrix4 model, Matrix4 proj, bool hasVertexColors, bool hasTangents, bool hasBinormals)
-        {
-            var activeShader = GetActiveShader();
-            if (activeShader == null) return;
-
-            activeShader.Bind();
-            var usedSlots = new HashSet<int>();
-            var textureNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            int nextSlot = 0;
-            for (int i = 0; i < textures.Count; i++)
-            {
-                textures[i].EnsureLoaded();
-                textureNames.Add(textures[i].Name);
-                int slot = (int)textures[i].Slot;
-                if (slot < 0 || slot > 31 || usedSlots.Contains(slot))
-                {
-                    while (usedSlots.Contains(nextSlot) && nextSlot < 32) nextSlot++;
-                    slot = Math.Min(nextSlot, 31);
-                }
-                usedSlots.Add(slot);
-
-                GL.ActiveTexture(TextureUnit.Texture0 + slot);
-                GL.BindTexture(TextureTarget.Texture2D, textures[i].textureId);
-                activeShader.SetInt(textures[i].Name, slot);
-            }
-
-            ApplyShaderParams(activeShader);
-            SetTextureFlags(activeShader, textureNames);
-            activeShader.SetBool("EnableVertexColor", RenderOptions.EnableVertexColors && hasVertexColors);
-            activeShader.SetBool("HasTangents", hasTangents);
-            activeShader.SetBool("HasBinormals", hasBinormals);
-            activeShader.SetBool("FlipNormalY", RenderOptions.FlipNormalY);
-            activeShader.SetBool("ReconstructNormalZ", RenderOptions.ReconstructNormalZ);
-            SetLightingUniforms(activeShader, view);
-            activeShader.SetMatrix4("model", model);
-            activeShader.SetMatrix4("view", view);
-            activeShader.SetMatrix4("projection", proj);
-        }
-
-        public void ApplySkinning(bool enabled, int boneCount, Matrix4[] matrices)
-        {
-            var activeShader = GetActiveShader();
-            if (activeShader == null)
-            {
-                return;
-            }
-
-            activeShader.Bind();
-            activeShader.SetBoolIfExists("EnableSkinning", enabled);
-            activeShader.SetIntIfExists("BoneCount", enabled ? boneCount : 0);
-            activeShader.SetBoolIfExists("SwapBlendOrder", RenderOptions.SwapBlendOrder);
-            if (enabled)
-            {
-                activeShader.SetMatrix4ArrayIfExists("Bones", matrices, RenderOptions.TransposeSkinMatrices);
-            }
-        }
-
-        private Shader GetActiveShader()
-        {
-            if (RenderOptions.LegacyMode)
-            {
-                return ShaderPool.Instance.GetShader("Standard") ?? shader;
-            }
-
-            if (RenderOptions.TransparentPass && isTransparent)
-            {
-                var forwardShader = ShaderPool.Instance.GetShader("EyeClearCoatForward");
-                if (forwardShader != null)
-                {
-                    return forwardShader;
-                }
-            }
-
-            return shader;
-        }
-
-        private void ApplyShaderParams(Shader activeShader)
-        {
-            foreach (var param in ShaderParams)
-            {
-                var name = param.Name;
-                var value = param.Value;
-
-                if (string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(value, "false", StringComparison.OrdinalIgnoreCase))
-                {
-                    activeShader.SetBoolIfExists(name, string.Equals(value, "true", StringComparison.OrdinalIgnoreCase));
-                    continue;
-                }
-
-                if (int.TryParse(value, out int intValue))
-                {
-                    activeShader.SetIntIfExists(name, intValue);
-                    continue;
-                }
-
-                if (float.TryParse(value, out float floatValue))
-                {
-                    activeShader.SetFloatIfExists(name, floatValue);
-                }
-            }
-
-            foreach (var param in floatParams)
-            {
-                activeShader.SetFloatIfExists(param.Name, param.Value);
-            }
-
-            foreach (var param in vec2Params)
-            {
-                activeShader.SetVector2IfExists(param.Name, new Vector2(param.Value.X, param.Value.Y));
-            }
-
-            foreach (var param in vec3Params)
-            {
-                activeShader.SetVector3IfExists(param.Name, new Vector3(param.Value.X, param.Value.Y, param.Value.Z));
-            }
-
-            foreach (var param in vec4Params)
-            {
-                activeShader.SetVector4IfExists(param.Name, new Vector4(param.Value.X, param.Value.Y, param.Value.Z, param.Value.W));
-            }
-        }
-
-        private static string ResolveShaderName(string name)
-        {
-            if (string.IsNullOrEmpty(name))
-            {
-                return "Standard";
-            }
-
-            return name switch
-            {
-                "Opaque" => "Standard",
-                "Transparent" => "Transparent",
-                "Hair" => "Hair",
-                "SSS" => "SSS",
-                "EyeClearCoat" => "EyeClearCoat",
-                "Unlit" => "Unlit",
-                // TODO Make more shaders.
-                _ => name
-            };
-        }
-
-        private void SetTextureFlags(Shader activeShader, HashSet<string> textureNames)
-        {
-            activeShader.SetBoolIfExists("EnableBaseColorMap", textureNames.Contains("BaseColorMap"));
-            activeShader.SetBoolIfExists("EnableLayerMaskMap", textureNames.Contains("LayerMaskMap"));
-            activeShader.SetBoolIfExists("EnableNormalMap", RenderOptions.EnableNormalMaps && textureNames.Contains("NormalMap"));
-            activeShader.SetBoolIfExists("EnableNormalMap1", RenderOptions.EnableNormalMaps && textureNames.Contains("NormalMap1"));
-            activeShader.SetBoolIfExists("EnableNormalMap2", RenderOptions.EnableNormalMaps && textureNames.Contains("NormalMap2"));
-            activeShader.SetBoolIfExists("EnableRoughnessMap", textureNames.Contains("RoughnessMap"));
-            activeShader.SetBoolIfExists("EnableRoughnessMap1", textureNames.Contains("RoughnessMap1"));
-            activeShader.SetBoolIfExists("EnableRoughnessMap2", textureNames.Contains("RoughnessMap2"));
-            activeShader.SetBoolIfExists("EnableMetallicMap", textureNames.Contains("MetallicMap"));
-            activeShader.SetBoolIfExists("EnableAOMap", RenderOptions.EnableAO && textureNames.Contains("AOMap"));
-            activeShader.SetBoolIfExists("EnableDetailMaskMap", textureNames.Contains("DetailMaskMap"));
-            activeShader.SetBoolIfExists("EnableSSSMaskMap", textureNames.Contains("SSSMaskMap"));
-            activeShader.SetBoolIfExists("EnableHairFlowMap", textureNames.Contains("HairFlowMap"));
-        }
-
-        private void SetLightingUniforms(Shader activeShader, Matrix4 view)
-        {
-            Matrix4.Invert(view, out var inverseView);
-            var cameraPos = inverseView.ExtractTranslation();
-            activeShader.SetVector3IfExists("CameraPos", cameraPos);
-
-            var lightDirection = RenderOptions.WorldLightDirection;
-            activeShader.SetVector3IfExists("LightDirection", lightDirection);
-            activeShader.SetVector3IfExists("LightColor", new Vector3(0.95f, 0.95f, 0.95f));
-            activeShader.SetVector3IfExists("AmbientColor", new Vector3(0.18f, 0.18f, 0.18f));
-            activeShader.SetBoolIfExists("TwoSidedDiffuse", true);
-            activeShader.SetFloatIfExists("LightWrap", RenderOptions.LightWrap);
-            activeShader.SetFloatIfExists("SpecularScale", RenderOptions.SpecularScale);
-            activeShader.SetFloatIfExists("LensOpacity", RenderOptions.LensOpacity);
-            activeShader.SetBoolIfExists("LegacyMode", RenderOptions.LegacyMode);
-        }
     }
 }

@@ -11,6 +11,8 @@ namespace GFTool.Renderer.Core.Graphics
         private readonly string Name;
 
         private readonly Dictionary<string, int> uniformLocations = null;
+        private readonly Dictionary<string, ActiveUniformType> uniformTypes = null;
+        private Dictionary<string, string>? uniformArray0NameCache;
         private readonly HashSet<string> missingUniforms = new HashSet<string>();
 
         public Shader(string name, string vertPath, string fragPath)
@@ -45,12 +47,14 @@ namespace GFTool.Renderer.Core.Graphics
                 GL.GetProgram(Handle, GetProgramParameterName.ActiveUniforms, out var numberOfUniforms);
 
                 uniformLocations = new Dictionary<string, int>();
+                uniformTypes = new Dictionary<string, ActiveUniformType>();
 
                 for (var i = 0; i < numberOfUniforms; i++)
                 {
-                    var key = GL.GetActiveUniform(Handle, i, out _, out _);
+                    var key = GL.GetActiveUniform(Handle, i, out _, out ActiveUniformType type);
                     var location = GL.GetUniformLocation(Handle, key);
                     uniformLocations.Add(key, location);
+                    uniformTypes[key] = type;
                 }
             }
             catch (Exception ex)
@@ -85,15 +89,23 @@ namespace GFTool.Renderer.Core.Graphics
 
         private bool HasUniform(string name)
         {
-            if (uniformLocations == null) return false; ;
+            if (uniformLocations == null)
+            {
+                return false;
+            }
 
-            bool ret = uniformLocations.ContainsKey(name);
-            if (!ret && !missingUniforms.Contains(name))
+            if (TryGetUniformLocation(name, out _))
+            {
+                return true;
+            }
+
+            if (!missingUniforms.Contains(name))
             {
                 missingUniforms.Add(name);
                 MessageHandler.Instance.AddMessage(MessageType.WARNING, string.Format("Uniform {0} does not exist in shader {1}.", name, Name));
             }
-            return ret;
+
+            return false;
         }
 
         private bool TryGetUniformLocation(string name, out int location)
@@ -104,12 +116,60 @@ namespace GFTool.Renderer.Core.Graphics
                 return false;
             }
 
-            return uniformLocations.TryGetValue(name, out location);
+            if (uniformLocations.TryGetValue(name, out location))
+            {
+                return true;
+            }
+
+            // Some drivers expose single samplers as `name[0]` in the active uniform list.
+            // Treat array[0] as equivalent for uniform lookups.
+            return uniformLocations.TryGetValue(GetUniformArray0Name(name), out location);
+        }
+
+        public bool TryGetUniformType(string name, out ActiveUniformType type)
+        {
+            type = default;
+            if (uniformTypes == null)
+            {
+                return false;
+            }
+
+            if (uniformTypes.TryGetValue(name, out type))
+            {
+                return true;
+            }
+
+            return uniformTypes.TryGetValue(GetUniformArray0Name(name), out type);
+        }
+
+        private string GetUniformArray0Name(string name)
+        {
+            uniformArray0NameCache ??= new Dictionary<string, string>(StringComparer.Ordinal);
+            if (uniformArray0NameCache.TryGetValue(name, out var cached))
+            {
+                return cached;
+            }
+
+            var arrayName = name + "[0]";
+            uniformArray0NameCache[name] = arrayName;
+            return arrayName;
         }
 
         public void Bind()
         {
             GL.UseProgram(Handle);
+        }
+
+        public string DebugName => Name;
+
+        public bool HasUniformFast(string name)
+        {
+            if (uniformLocations == null)
+            {
+                return false;
+            }
+
+            return uniformLocations.ContainsKey(name) || uniformLocations.ContainsKey(GetUniformArray0Name(name));
         }
 
         public void Unbind()
@@ -119,44 +179,74 @@ namespace GFTool.Renderer.Core.Graphics
 
         public void SetBool(string name, bool data)
         {
-            if (HasUniform(name))
-                GL.Uniform1(uniformLocations[name], data ? 1 : 0);
+            if (TryGetUniformLocation(name, out int location))
+            {
+                GL.Uniform1(location, data ? 1 : 0);
+            }
+            else
+            {
+                HasUniform(name);
+            }
         }
 
         public void SetBoolIfExists(string name, bool data)
         {
             if (TryGetUniformLocation(name, out int location))
+            {
                 GL.Uniform1(location, data ? 1 : 0);
+            }
         }
 
         public void SetInt(string name, int data)
         {
-            if (HasUniform(name))
-                GL.Uniform1(uniformLocations[name], data);
+            if (TryGetUniformLocation(name, out int location))
+            {
+                GL.Uniform1(location, data);
+            }
+            else
+            {
+                HasUniform(name);
+            }
         }
 
         public void SetIntIfExists(string name, int data)
         {
             if (TryGetUniformLocation(name, out int location))
+            {
                 GL.Uniform1(location, data);
+            }
         }
 
         public void SetFloat(string name, float data)
         {
-            if (HasUniform(name))
-                GL.Uniform1(uniformLocations[name], data);
+            if (TryGetUniformLocation(name, out int location))
+            {
+                GL.Uniform1(location, data);
+            }
+            else
+            {
+                HasUniform(name);
+            }
         }
 
         public void SetFloatIfExists(string name, float data)
         {
             if (TryGetUniformLocation(name, out int location))
+            {
                 GL.Uniform1(location, data);
+            }
         }
 
         public void SetMatrix4(string name, Matrix4 data)
         {
-            if (HasUniform(name))
-                GL.UniformMatrix4(uniformLocations[name], false, ref data);
+            if (TryGetUniformLocation(name, out int location))
+            {
+                GL.UniformMatrix4(location, false, ref data);
+            }
+            else
+            {
+                HasUniform(name);
+            }
         }
 
         public void SetMatrix4ArrayIfExists(string name, Matrix4[] data)
@@ -171,7 +261,7 @@ namespace GFTool.Renderer.Core.Graphics
                 return;
             }
 
-            if (TryGetUniformLocation(name, out int location) || TryGetUniformLocation($"{name}[0]", out location))
+            if (TryGetUniformLocation(name, out int location) || TryGetUniformLocation(GetUniformArray0Name(name), out location))
             {
                 GL.UniformMatrix4(location, data.Length, transpose, ref data[0].Row0.X);
             }
@@ -179,8 +269,14 @@ namespace GFTool.Renderer.Core.Graphics
 
         public void SetVector3(string name, Vector3 data)
         {
-            if (HasUniform(name))
-                GL.Uniform3(uniformLocations[name], data);
+            if (TryGetUniformLocation(name, out int location))
+            {
+                GL.Uniform3(location, data);
+            }
+            else
+            {
+                HasUniform(name);
+            }
         }
 
         public void SetVector3IfExists(string name, Vector3 data)
@@ -191,8 +287,14 @@ namespace GFTool.Renderer.Core.Graphics
 
         public void SetVector2(string name, Vector2 data)
         {
-            if (HasUniform(name))
-                GL.Uniform2(uniformLocations[name], data);
+            if (TryGetUniformLocation(name, out int location))
+            {
+                GL.Uniform2(location, data);
+            }
+            else
+            {
+                HasUniform(name);
+            }
         }
 
         public void SetVector2IfExists(string name, Vector2 data)
@@ -203,8 +305,14 @@ namespace GFTool.Renderer.Core.Graphics
 
         public void SetVector4(string name, Vector4 data)
         {
-            if (HasUniform(name))
-                GL.Uniform4(uniformLocations[name], data);
+            if (TryGetUniformLocation(name, out int location))
+            {
+                GL.Uniform4(location, data);
+            }
+            else
+            {
+                HasUniform(name);
+            }
         }
 
         public void SetVector4IfExists(string name, Vector4 data)

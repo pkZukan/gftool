@@ -1,102 +1,150 @@
-﻿using GFTool.Core.Flatbuffers.TR.Scene.Components;
-using System.Collections;
-using System.Reflection;
+using GFTool.Core.Flatbuffers.TR.Scene.Components;
+using System;
 using System.Text;
 
 namespace TrinitySceneView
 {
     public static class TRSceneProperties
     {
-        public static string GetProperties(SceneMetaData meta)
+        private static string CameraEntity(object objData)
         {
-            var sb = new StringBuilder();
-            sb.AppendLine($"ID: {meta.ID.ToString("X")}");
+            StringBuilder sb = new StringBuilder();
+
+            var data = (trinity_CameraEntity)objData;
+            sb.AppendLine("Name: " + data.Name);
+            sb.AppendLine("Target: " + data.TargetName);
+
             return sb.ToString();
         }
 
-        public static string GetAttributes(string sceneComponent, object objData)
+        private static string SceneObject(object objData)
         {
-            if (objData == null) return string.Empty;
+            StringBuilder sb = new StringBuilder();
 
-            var sb = new StringBuilder();
-            var type = objData.GetType();
+            var data = (trinity_SceneObject)objData;
+            sb.AppendLine("Name: " + data.Name);
+            if (data.AttachJointName != string.Empty)
+                sb.AppendLine("Attach joint name: " + data.AttachJointName);
+            sb.AppendLine(string.Format("Tags: ({0})", data.TagList.Length));
 
-            var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-
-            foreach (var prop in properties)
+            foreach (var tag in data.TagList)
             {
-                var value = prop.GetValue(objData);
+                sb.AppendLine(string.Format("  {0}" + Environment.NewLine, tag == string.Empty ? "(Blank)" : tag));
+            }
 
-                if (value == null)
+            if (data.Layers.Length > 0)
+            {
+                sb.AppendLine(string.Format("Layers: ({0})", data.Layers.Length));
+                foreach (var layer in data.Layers)
                 {
-                    sb.AppendLine($"{prop.Name}: null");
+                    sb.AppendLine(string.Format("  {0}" + Environment.NewLine, layer.Name));
                 }
-                else if (value is IEnumerable enumerable && !(value is string))
+            }
+
+            return sb.ToString();
+        }
+
+        private static string OverrideSensorData(object objData)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            var data = (trinity_OverrideSensorData)objData;
+            sb.AppendLine("Realizing Dist: " + data.RealizingDistance);
+            sb.AppendLine("Unrealizing Dist: " + data.UnrealizingDistance);
+            sb.AppendLine("Loading Dist: " + data.LoadingDistance);
+            sb.AppendLine("Unloading Dist: " + data.UnloadingDistance);
+
+            return sb.ToString();
+        }
+
+        private static string ScriptComponent(object objData)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            var data = (trinity_ScriptComponent)objData;
+            sb.AppendLine("File: " + data.FilePath);
+            sb.AppendLine("Package: " + data.PackageName);
+            sb.AppendLine("Is static: " + (data.IsStatic ? "True" : "False"));
+
+            return sb.ToString();
+        }
+
+        private static string TextComponent(object objData)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            var data = (pe_TextComponent)objData;
+            sb.AppendLine("File: " + data.FilePath);
+
+            return sb.ToString();
+        }
+
+        private static string InputEventTriggerComponent(object objData)
+        {
+            StringBuilder sb = new StringBuilder();
+
+            var data = (pe_InputEventTriggerComponent)objData;
+            sb.AppendLine("Input name: " + data.InputName);
+            sb.AppendLine("Resource name: " + data.ResourceName);
+
+            return sb.ToString();
+        }
+
+        private static string PropertySheet(object objData)
+        {
+            var sb = new StringBuilder();
+            var data = (trinity_PropertySheet)objData;
+
+            sb.AppendLine("Name: " + (data.name ?? string.Empty));
+            sb.AppendLine("Template: " + (data.template ?? string.Empty));
+
+            try
+            {
+                var entries = data.entries ?? Array.Empty<PropertySheetEntry>();
+                sb.AppendLine($"Entries: ({entries.Length})");
+
+                int entryIndex = 0;
+                foreach (var entry in entries)
                 {
-                    sb.AppendLine($"{prop.Name}:");
-                    foreach (var item in enumerable)
+                    entryIndex++;
+                    if (entry?.properties == null || entry.properties.Length == 0)
                     {
-                        sb.AppendLine($"\t{item}");
+                        continue;
+                    }
+
+                    sb.AppendLine($" Entry {entryIndex}: properties ({entry.properties.Length})");
+                    foreach (var prop in entry.properties)
+                    {
+                        if (prop == null) continue;
+                        sb.AppendLine($"  {prop.name} = {(prop.value ? "true" : "false")}");
                     }
                 }
-                else if (IsComplexType(value))
-                {
-                    sb.AppendLine($"{prop.Name}: {FormatComplexValue(value)}");
-                }
-                else
-                {
-                    sb.AppendLine($"{prop.Name}: {value}");
-                }
+            }
+            catch (Exception ex)
+            {
+                sb.AppendLine($"(Failed to enumerate entries: {ex.GetType().Name}: {ex.Message})");
             }
 
             return sb.ToString();
         }
 
-        private static bool IsComplexType(object value)
+        public static string GetProperties(string sceneComponent, object objData)
         {
-            if (value == null) return false;
+            string ret = string.Empty;
 
-            var type = value.GetType();
-
-            if (type.Namespace?.StartsWith("Generated.") == true)
-                return false;
-
-            return !type.IsPrimitive
-                && !type.IsEnum
-                && type != typeof(string)
-                && type != typeof(decimal);
-        }
-
-        private static string FormatComplexValue(object value)
-        {
-            if (value == null) return "null";
-
-            var type = value.GetType();
-
-            if (type.Namespace?.StartsWith("Generated.") == true)
-                return value.ToString();
-
-            var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(p => p.CanRead && p.GetIndexParameters().Length == 0)
-                .ToArray();
-
-            if (properties.Length == 0)
-                return value.ToString();
-
-            if (properties.Length <= 4)
+            switch (sceneComponent)
             {
-                var parts = properties.Select(p => $"{p.Name}={p.GetValue(value)}");
-                return $"{{{string.Join(", ", parts)}}}";
+                case "trinity_CameraEntity": ret = CameraEntity(objData); break;
+                case "trinity_SceneObject": ret = SceneObject(objData); break;
+                case "trinity_OverrideSensorData": ret = OverrideSensorData(objData); break;
+                case "trinity_ScriptComponent": ret = ScriptComponent(objData); break;
+                case "pe_TextComponent": ret = TextComponent(objData); break;
+                case "pe_InputEventTriggerComponent": ret = InputEventTriggerComponent(objData); break;
+                case "trinity_PropertySheet": ret = PropertySheet(objData); break;
+
             }
 
-            var sb = new StringBuilder();
-            sb.AppendLine("{");
-            foreach (var prop in properties)
-            {
-                sb.AppendLine($"\t\t{prop.Name}: {prop.GetValue(value)}");
-            }
-            sb.Append("\t}");
-            return sb.ToString();
+            return ret;
         }
     }
 }

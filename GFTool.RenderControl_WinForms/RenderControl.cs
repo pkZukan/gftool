@@ -25,6 +25,13 @@ namespace GFTool.RenderControl_WinForms
         private float pendingPanX = 0f;
         private float pendingPanY = 0f;
         private float pendingDolly = 0f;
+        private float ctrlSpeedMultiplier = 2.0f;
+        private bool vsyncEnabled = false;
+
+        private const float CtrlSpeedMin = 1.0f;
+        private const float CtrlSpeedMax = 200.0f;
+        private const float CtrlSpeedStepFactor = 1.25f;
+        private const float MouseWheelDollyStep = 0.25f;
 
         public RenderControl()
         {
@@ -49,11 +56,97 @@ namespace GFTool.RenderControl_WinForms
             if (!IsDesignMode())
             {
                 RendererReady?.Invoke(this, EventArgs.Empty);
-                TryEnableVsync();
+                // Default to VSync off (can be toggled by the viewer).
+                SetVsync(vsyncEnabled);
                 useIdleRenderLoop = true;
                 timer.Enabled = false;
                 Application.Idle += RenderLoop;
             }
+        }
+
+        public void SetVsync(bool enabled)
+        {
+            bool changed = vsyncEnabled != enabled;
+            vsyncEnabled = enabled;
+            try
+            {
+                MakeCurrent();
+            }
+            catch
+            {
+                // Ignore; swap interval changes are best-effort.
+            }
+
+            try
+            {
+                var type = GetType();
+                var vsyncProp = type.GetProperty("VSync", BindingFlags.Instance | BindingFlags.Public);
+                if (vsyncProp != null && vsyncProp.CanWrite)
+                {
+                    vsyncProp.SetValue(this, enabled);
+                }
+
+                var swapProp = type.GetProperty("SwapInterval", BindingFlags.Instance | BindingFlags.Public);
+                if (swapProp != null && swapProp.CanWrite)
+                {
+                    swapProp.SetValue(this, enabled ? 1 : 0);
+                }
+
+                var contextProp = type.GetProperty("Context", BindingFlags.Instance | BindingFlags.Public);
+                var context = contextProp?.GetValue(this);
+                if (context != null)
+                {
+                    var ctxType = context.GetType();
+                    var ctxSwap = ctxType.GetProperty("SwapInterval", BindingFlags.Instance | BindingFlags.Public);
+                    if (ctxSwap != null && ctxSwap.CanWrite)
+                    {
+                        ctxSwap.SetValue(context, enabled ? 1 : 0);
+                    }
+                }
+
+                // Intentionally no log spam here; caller can confirm via perf counters if needed.
+            }
+            catch
+            {
+                // Ignore if not supported by this GLControl build.
+            }
+        }
+
+        private int? TryGetSwapInterval()
+        {
+            try
+            {
+                var type = GetType();
+                var swapProp = type.GetProperty("SwapInterval", BindingFlags.Instance | BindingFlags.Public);
+                if (swapProp != null && swapProp.CanRead)
+                {
+                    if (swapProp.GetValue(this) is int interval)
+                    {
+                        return interval;
+                    }
+                }
+
+                var contextProp = type.GetProperty("Context", BindingFlags.Instance | BindingFlags.Public);
+                var context = contextProp?.GetValue(this);
+                if (context != null)
+                {
+                    var ctxType = context.GetType();
+                    var ctxSwap = ctxType.GetProperty("SwapInterval", BindingFlags.Instance | BindingFlags.Public);
+                    if (ctxSwap != null && ctxSwap.CanRead)
+                    {
+                        if (ctxSwap.GetValue(context) is int interval)
+                        {
+                            return interval;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore.
+            }
+
+            return null;
         }
 
         protected override void OnMouseHover(EventArgs e)
@@ -132,6 +225,46 @@ namespace GFTool.RenderControl_WinForms
             }
         }
 
+        protected override void OnMouseWheel(MouseEventArgs e)
+        {
+            base.OnMouseWheel(e);
+            if (IsDesignMode()) return;
+            if (!Focused) return;
+
+            int steps = e.Delta / 120;
+            if (steps == 0) return;
+
+            var modifiers = Control.ModifierKeys;
+            if ((modifiers & Keys.Control) != 0)
+            {
+                float before = ctrlSpeedMultiplier;
+                if (steps > 0)
+                {
+                    for (int i = 0; i < steps; i++)
+                    {
+                        ctrlSpeedMultiplier *= CtrlSpeedStepFactor;
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < -steps; i++)
+                    {
+                        ctrlSpeedMultiplier /= CtrlSpeedStepFactor;
+                    }
+                }
+
+                ctrlSpeedMultiplier = Math.Clamp(ctrlSpeedMultiplier, CtrlSpeedMin, CtrlSpeedMax);
+                if (Math.Abs(ctrlSpeedMultiplier - before) > 0.0001f && MessageHandler.Instance.DebugLogsEnabled)
+                {
+                    MessageHandler.Instance.AddMessage(MessageType.LOG, $"[View] Ctrl speed multiplier: {ctrlSpeedMultiplier:0.##}x");
+                }
+
+                return;
+            }
+
+            pendingDolly += steps * MouseWheelDollyStep;
+        }
+
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
@@ -167,7 +300,7 @@ namespace GFTool.RenderControl_WinForms
             if (!IsDesignMode())
             {
                 float deltaSeconds = GetDeltaSeconds();
-                renderer?.UpdateMovementControls(deltaSeconds * GetSpeedMultiplier());
+                renderer?.UpdateMovementControls(deltaSeconds * GetMovementSpeedMultiplier());
                 Invalidate();
             }
         }
@@ -179,7 +312,7 @@ namespace GFTool.RenderControl_WinForms
             while (IsApplicationIdle())
             {
                 float deltaSeconds = GetDeltaSeconds();
-                renderer.UpdateMovementControls(deltaSeconds * GetSpeedMultiplier());
+                renderer.UpdateMovementControls(deltaSeconds * GetMovementSpeedMultiplier());
 
                 ApplyPendingCameraInput();
                 renderer.Update();
@@ -190,7 +323,7 @@ namespace GFTool.RenderControl_WinForms
         {
             if (renderer == null) return;
 
-            float speedMultiplier = GetSpeedMultiplier();
+            float speedMultiplier = GetMouseSpeedMultiplier();
             if (pendingDolly != 0f)
             {
                 renderer.DollyCamera(pendingDolly * speedMultiplier);
@@ -212,7 +345,21 @@ namespace GFTool.RenderControl_WinForms
             }
         }
 
-        private static float GetSpeedMultiplier()
+        private float GetMovementSpeedMultiplier()
+        {
+            var modifiers = Control.ModifierKeys;
+            if ((modifiers & Keys.Control) != 0)
+            {
+                return ctrlSpeedMultiplier;
+            }
+            if ((modifiers & Keys.Shift) != 0)
+            {
+                return 0.2f;
+            }
+            return 1.0f;
+        }
+
+        private static float GetMouseSpeedMultiplier()
         {
             var modifiers = Control.ModifierKeys;
             if ((modifiers & Keys.Control) != 0)
@@ -241,40 +388,7 @@ namespace GFTool.RenderControl_WinForms
             return Math.Clamp(deltaSeconds, 0f, 0.1f);
         }
 
-        private void TryEnableVsync()
-        {
-            try
-            {
-                var type = GetType();
-                var vsyncProp = type.GetProperty("VSync", BindingFlags.Instance | BindingFlags.Public);
-                if (vsyncProp != null && vsyncProp.CanWrite)
-                {
-                    vsyncProp.SetValue(this, true);
-                }
-
-                var swapProp = type.GetProperty("SwapInterval", BindingFlags.Instance | BindingFlags.Public);
-                if (swapProp != null && swapProp.CanWrite)
-                {
-                    swapProp.SetValue(this, 1);
-                }
-
-                var contextProp = type.GetProperty("Context", BindingFlags.Instance | BindingFlags.Public);
-                var context = contextProp?.GetValue(this);
-                if (context != null)
-                {
-                    var ctxType = context.GetType();
-                    var ctxSwap = ctxType.GetProperty("SwapInterval", BindingFlags.Instance | BindingFlags.Public);
-                    if (ctxSwap != null && ctxSwap.CanWrite)
-                    {
-                        ctxSwap.SetValue(context, 1);
-                    }
-                }
-            }
-            catch
-            {
-                // Ignore if not supported by this GLControl build.
-            }
-        }
+        // Legacy helper removed: VSync is controlled by the viewer menu now.
 
         private bool IsApplicationIdle()
         {

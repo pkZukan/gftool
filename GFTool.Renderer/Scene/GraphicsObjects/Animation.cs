@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FlatSharp;
 using OpenTK.Mathematics;
+using GFTool.Renderer.Core;
 using Trinity.Core.Flatbuffers.GF.Animation;
 using Trinity.Core.Flatbuffers.Utils;
 using Trinity.Core.Utils;
@@ -17,6 +18,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         }
 
         public string Name { get; }
+        public string? SourcePath { get; }
         public PlayType LoopType { get; }
         public uint FrameCount { get; }
         public uint FrameRate { get; }
@@ -25,10 +27,56 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
         private readonly Dictionary<string, BoneTrack> tracks = new Dictionary<string, BoneTrack>(StringComparer.OrdinalIgnoreCase);
         private readonly List<string> trackOrder = new List<string>();
+        private readonly Dictionary<string, BoneTrack> resolvedTracks = new Dictionary<string, BoneTrack>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> missingTracks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // Deterministic normalization: strips authoring namespaces/hierarchy prefixes in a stable way.
+        // Used as a fallback when exact names don't match, but only when the normalized name is unambiguous.
+        private readonly Dictionary<string, BoneTrack> normalizedTracks = new Dictionary<string, BoneTrack>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> ambiguousNormalizedTracks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        public Animation(Trinity.Core.Flatbuffers.GF.Animation.Animation anim, string name)
+        [ThreadStatic] private static float sampleFrame;
+        [ThreadStatic] private static Vector3? sampleVectorResult;
+        [ThreadStatic] private static Quaternion? sampleRotationResult;
+
+        private static readonly Action SampleDefault = static () => { };
+        private static readonly Action<FixedVectorTrack> SampleVectorFixed = static v =>
+        {
+            sampleVectorResult = v.Co != null ? ToVector3(v.Co) : null;
+        };
+        private static readonly Action<DynamicVectorTrack> SampleVectorDynamic = static v =>
+        {
+            sampleVectorResult = SampleDynamicVector(v.Co, sampleFrame);
+        };
+        private static readonly Action<Framed16VectorTrack> SampleVectorFramed16 = static v =>
+        {
+            sampleVectorResult = SampleFramedVector16(v.Frames, v.Co, sampleFrame);
+        };
+        private static readonly Action<Framed8VectorTrack> SampleVectorFramed8 = static v =>
+        {
+            sampleVectorResult = SampleFramedVector8(v.Frames, v.Co, sampleFrame);
+        };
+
+        private static readonly Action<FixedRotationTrack> SampleRotationFixed = static v =>
+        {
+            sampleRotationResult = v.Co != null ? ToQuaternion(v.Co) : null;
+        };
+        private static readonly Action<DynamicRotationTrack> SampleRotationDynamic = static v =>
+        {
+            sampleRotationResult = SampleDynamicRotation(v.Co, sampleFrame);
+        };
+        private static readonly Action<Framed16RotationTrack> SampleRotationFramed16 = static v =>
+        {
+            sampleRotationResult = SampleFramedRotation16(v.Frames, v.Co, sampleFrame);
+        };
+        private static readonly Action<Framed8RotationTrack> SampleRotationFramed8 = static v =>
+        {
+            sampleRotationResult = SampleFramedRotation8(v.Frames, v.Co, sampleFrame);
+        };
+
+        public Animation(Trinity.Core.Flatbuffers.GF.Animation.Animation anim, string name, string? sourcePath = null)
         {
             Name = name;
+            SourcePath = sourcePath;
             LoopType = anim.Info.DoesLoop != 0 ? PlayType.Looped : PlayType.Once;
             FrameCount = anim.Info.KeyFrames;
             FrameRate = anim.Info.FrameRate;
@@ -49,9 +97,24 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                     }
 
                     var normalized = NormalizeBoneName(track.Name);
-                    if (!string.IsNullOrWhiteSpace(normalized) && !tracks.ContainsKey(normalized))
+                    if (!string.IsNullOrWhiteSpace(normalized) && !string.Equals(normalized, track.Name, StringComparison.OrdinalIgnoreCase))
                     {
-                        tracks[normalized] = track;
+                        // Always build the normalized map, but treat collisions as ambiguous.
+                        if (normalizedTracks.TryGetValue(normalized, out var existing) && !ReferenceEquals(existing, track))
+                        {
+                            ambiguousNormalizedTracks.Add(normalized);
+                            normalizedTracks.Remove(normalized);
+                        }
+                        else if (!ambiguousNormalizedTracks.Contains(normalized))
+                        {
+                            normalizedTracks[normalized] = track;
+                        }
+
+                        // Legacy behavior: in non-deterministic mode, also allow normalized lookup via the main dictionary.
+                        if (!RenderOptions.DeterministicSkinningAndAnimation && !tracks.ContainsKey(normalized))
+                        {
+                            tracks[normalized] = track;
+                        }
                     }
                 }
             }
@@ -102,18 +165,48 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 return false;
             }
 
-            if (tracks.TryGetValue(boneName, out track))
+            if (resolvedTracks.TryGetValue(boneName, out track))
             {
                 return true;
+            }
+            if (missingTracks.Contains(boneName))
+            {
+                track = default;
+                return false;
+            }
+
+            if (tracks.TryGetValue(boneName, out track))
+            {
+                resolvedTracks[boneName] = track;
+                return true;
+            }
+
+            if (RenderOptions.DeterministicSkinningAndAnimation)
+            {
+                // Still allow deterministic namespace/hierarchy normalization as a stable fallback, but only when unique.
+                var normalizedKey = NormalizeBoneName(boneName);
+                if (!string.IsNullOrWhiteSpace(normalizedKey) &&
+                    !string.Equals(normalizedKey, boneName, StringComparison.OrdinalIgnoreCase) &&
+                    normalizedTracks.TryGetValue(normalizedKey, out track))
+                {
+                    resolvedTracks[boneName] = track;
+                    return true;
+                }
+
+                track = default;
+                missingTracks.Add(boneName);
+                return false;
             }
 
             var normalized = NormalizeBoneName(boneName);
             if (!string.IsNullOrWhiteSpace(normalized) && tracks.TryGetValue(normalized, out track))
             {
+                resolvedTracks[boneName] = track;
                 return true;
             }
 
             track = default;
+            missingTracks.Add(boneName);
             return false;
         }
 
@@ -151,28 +244,30 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
         private static Vector3? SampleVector(FlatBufferUnion<FixedVectorTrack, DynamicVectorTrack, Framed16VectorTrack, Framed8VectorTrack> channel, float frame)
         {
-            Vector3? result = null;
+            sampleFrame = frame;
+            sampleVectorResult = null;
             channel.Switch(
-                defaultCase: () => { },
-                case1: v => result = v.Co != null ? ToVector3(v.Co) : (Vector3?)null,
-                case2: v => result = SampleDynamicVector(v.Co, frame),
-                case3: v => result = SampleFramedVector(v.Frames, v.Co, frame),
-                case4: v => result = SampleFramedVector(v.Frames, v.Co, frame)
+                defaultCase: SampleDefault,
+                case1: SampleVectorFixed,
+                case2: SampleVectorDynamic,
+                case3: SampleVectorFramed16,
+                case4: SampleVectorFramed8
             );
-            return result;
+            return sampleVectorResult;
         }
 
         private static Quaternion? SampleRotation(FlatBufferUnion<FixedRotationTrack, DynamicRotationTrack, Framed16RotationTrack, Framed8RotationTrack> channel, float frame)
         {
-            Quaternion? result = null;
+            sampleFrame = frame;
+            sampleRotationResult = null;
             channel.Switch(
-                defaultCase: () => { },
-                case1: v => result = v.Co != null ? ToQuaternion(v.Co) : (Quaternion?)null,
-                case2: v => result = SampleDynamicRotation(v.Co, frame),
-                case3: v => result = SampleFramedRotation(v.Frames, v.Co, frame),
-                case4: v => result = SampleFramedRotation(v.Frames, v.Co, frame)
+                defaultCase: SampleDefault,
+                case1: SampleRotationFixed,
+                case2: SampleRotationDynamic,
+                case3: SampleRotationFramed16,
+                case4: SampleRotationFramed8
             );
-            return result;
+            return sampleRotationResult;
         }
 
         private static Vector3? SampleDynamicVector(IList<Vector3f> values, float frame)
@@ -186,7 +281,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             return ToVector3(values[index]);
         }
 
-        private static Vector3? SampleFramedVector<T>(IList<T> frames, IList<Vector3f> values, float frame) where T : struct
+        private static Vector3? SampleFramedVector16(IList<ushort> frames, IList<Vector3f> values, float frame)
         {
             if (frames == null || values == null || frames.Count == 0 || values.Count == 0)
             {
@@ -195,11 +290,11 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
             int count = Math.Min(frames.Count, values.Count);
             float keyFrame = frame;
-            if (keyFrame <= GetFrame(frames[0]))
+            if (keyFrame <= frames[0])
             {
                 return ToVector3(values[0]);
             }
-            if (keyFrame >= GetFrame(frames[count - 1]))
+            if (keyFrame >= frames[count - 1])
             {
                 return ToVector3(values[count - 1]);
             }
@@ -207,8 +302,8 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             bool useCatmull = count >= 4;
             for (int i = 0; i < count - 1; i++)
             {
-                float k1 = GetFrame(frames[i]);
-                float k2 = GetFrame(frames[i + 1]);
+                float k1 = frames[i];
+                float k2 = frames[i + 1];
                 if (keyFrame >= k1 && keyFrame <= k2)
                 {
                     float denom = k2 - k1;
@@ -230,10 +325,65 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                         v1,
                         v2,
                         ToVector3(values[Math.Min(i + 2, count - 1)]),
-                        GetFrame(frames[Math.Max(i - 1, 0)]),
+                        frames[Math.Max(i - 1, 0)],
                         k1,
                         k2,
-                        GetFrame(frames[Math.Min(i + 2, count - 1)]),
+                        frames[Math.Min(i + 2, count - 1)],
+                        keyFrame);
+                }
+            }
+
+            return ToVector3(values[count - 1]);
+        }
+
+        private static Vector3? SampleFramedVector8(IList<byte> frames, IList<Vector3f> values, float frame)
+        {
+            if (frames == null || values == null || frames.Count == 0 || values.Count == 0)
+            {
+                return null;
+            }
+
+            int count = Math.Min(frames.Count, values.Count);
+            float keyFrame = frame;
+            if (keyFrame <= frames[0])
+            {
+                return ToVector3(values[0]);
+            }
+            if (keyFrame >= frames[count - 1])
+            {
+                return ToVector3(values[count - 1]);
+            }
+
+            bool useCatmull = count >= 4;
+            for (int i = 0; i < count - 1; i++)
+            {
+                float k1 = frames[i];
+                float k2 = frames[i + 1];
+                if (keyFrame >= k1 && keyFrame <= k2)
+                {
+                    float denom = k2 - k1;
+                    if (denom <= 0.0f)
+                    {
+                        return ToVector3(values[i + 1]);
+                    }
+
+                    float t = (keyFrame - k1) / denom;
+                    var v1 = ToVector3(values[i]);
+                    var v2 = ToVector3(values[i + 1]);
+                    if (!useCatmull)
+                    {
+                        return Vector3.Lerp(v1, v2, t);
+                    }
+
+                    return CatmullRomNonUniform(
+                        ToVector3(values[Math.Max(i - 1, 0)]),
+                        v1,
+                        v2,
+                        ToVector3(values[Math.Min(i + 2, count - 1)]),
+                        frames[Math.Max(i - 1, 0)],
+                        k1,
+                        k2,
+                        frames[Math.Min(i + 2, count - 1)],
                         keyFrame);
                 }
             }
@@ -252,7 +402,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             return ToQuaternion(values[index]);
         }
 
-        private static Quaternion? SampleFramedRotation<T>(IList<T> frames, IList<PackedQuaternion> values, float frame) where T : struct
+        private static Quaternion? SampleFramedRotation16(IList<ushort> frames, IList<PackedQuaternion> values, float frame)
         {
             if (frames == null || values == null || frames.Count == 0 || values.Count == 0)
             {
@@ -261,11 +411,11 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
             int count = Math.Min(frames.Count, values.Count);
             float keyFrame = frame;
-            if (keyFrame <= GetFrame(frames[0]))
+            if (keyFrame <= frames[0])
             {
                 return ToQuaternion(values[0]);
             }
-            if (keyFrame >= GetFrame(frames[count - 1]))
+            if (keyFrame >= frames[count - 1])
             {
                 return ToQuaternion(values[count - 1]);
             }
@@ -273,8 +423,8 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             bool useCatmull = count >= 4;
             for (int i = 0; i < count - 1; i++)
             {
-                float k1 = GetFrame(frames[i]);
-                float k2 = GetFrame(frames[i + 1]);
+                float k1 = frames[i];
+                float k2 = frames[i + 1];
                 if (keyFrame >= k1 && keyFrame <= k2)
                 {
                     float denom = k2 - k1;
@@ -296,10 +446,10 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                         q1,
                         q2,
                         ToQuaternion(values[Math.Min(i + 2, count - 1)]),
-                        GetFrame(frames[Math.Max(i - 1, 0)]),
+                        frames[Math.Max(i - 1, 0)],
                         k1,
                         k2,
-                        GetFrame(frames[Math.Min(i + 2, count - 1)]),
+                        frames[Math.Min(i + 2, count - 1)],
                         keyFrame);
                 }
             }
@@ -307,14 +457,59 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             return ToQuaternion(values[count - 1]);
         }
 
-        private static float GetFrame<T>(T value) where T : struct
+        private static Quaternion? SampleFramedRotation8(IList<byte> frames, IList<PackedQuaternion> values, float frame)
         {
-            return value switch
+            if (frames == null || values == null || frames.Count == 0 || values.Count == 0)
             {
-                byte b => b,
-                ushort s => s,
-                _ => 0f
-            };
+                return null;
+            }
+
+            int count = Math.Min(frames.Count, values.Count);
+            float keyFrame = frame;
+            if (keyFrame <= frames[0])
+            {
+                return ToQuaternion(values[0]);
+            }
+            if (keyFrame >= frames[count - 1])
+            {
+                return ToQuaternion(values[count - 1]);
+            }
+
+            bool useCatmull = count >= 4;
+            for (int i = 0; i < count - 1; i++)
+            {
+                float k1 = frames[i];
+                float k2 = frames[i + 1];
+                if (keyFrame >= k1 && keyFrame <= k2)
+                {
+                    float denom = k2 - k1;
+                    if (denom <= 0.0f)
+                    {
+                        return ToQuaternion(values[i + 1]);
+                    }
+
+                    float t = (keyFrame - k1) / denom;
+                    var q1 = ToQuaternion(values[i]);
+                    var q2 = ToQuaternion(values[i + 1]);
+                    if (!useCatmull)
+                    {
+                        return Quaternion.Slerp(q1, q2, t);
+                    }
+
+                    return CatmullRomNonUniform(
+                        ToQuaternion(values[Math.Max(i - 1, 0)]),
+                        q1,
+                        q2,
+                        ToQuaternion(values[Math.Min(i + 2, count - 1)]),
+                        frames[Math.Max(i - 1, 0)],
+                        k1,
+                        k2,
+                        frames[Math.Min(i + 2, count - 1)],
+                        keyFrame);
+                }
+            }
+
+            return ToQuaternion(values[count - 1]);
         }
 
         private static Vector3 ToVector3(Vector3f value)

@@ -12,20 +12,5 @@ namespace GFTool.Core.Flatbuffers.TR.UI.Components
     {
         [FlatBufferItem(0)]
         public string Name { get; set; }
-
-        [FlatBufferItem(1)]
-        public string ControlName { get; set; }
-
-        [FlatBufferItem(2)]
-        public int ControlIndex { get; set; }
-
-        [FlatBufferItem(3)]
-        public int SwitchCount { get; set; }
-
-        [FlatBufferItem(4)]
-        public int ButtonType { get; set; }
-        
-        [FlatBufferItem(5)]
-        public string[] SwitchNames { get; set; }
     }
 }
