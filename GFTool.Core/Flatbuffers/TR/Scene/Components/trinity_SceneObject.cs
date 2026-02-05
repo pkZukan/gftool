@@ -13,7 +13,7 @@ namespace GFTool.Core.Flatbuffers.TR.Scene.Components
         public string Name { get; set; }
 
         [FlatBufferItem(2)]
-        public Transform Srt { get; set; }
+        public trinity_Transform Srt { get; set; } = new trinity_Transform();
     }
 
     [FlatBufferTable]
@@ -23,7 +23,7 @@ namespace GFTool.Core.Flatbuffers.TR.Scene.Components
         public string Name { get; set; }
 
         [FlatBufferItem(1)]
-        public Transform Srt { get; set; }
+        public trinity_Transform Srt { get; set; } = new trinity_Transform();
 
         [FlatBufferItem(2)]
         public bool KeepWorldSrt { get; set; }

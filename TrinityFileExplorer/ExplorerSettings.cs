@@ -26,8 +26,8 @@ namespace TrinityFileExplorer
 
     public static class ExplorerSettings
     {
-        private static string _settingsPath;
-        public static FilepathSettings _filePathSettings;
+        private static string _settingsPath = "settings.json";
+        public static FilepathSettings _filePathSettings = new FilepathSettings();
 
         public static void Open(string path = "settings.json")
         {
@@ -39,7 +39,7 @@ namespace TrinityFileExplorer
             }
             else
             {
-                _filePathSettings = JsonSerializer.Deserialize<FilepathSettings>(File.ReadAllText(path));
+                _filePathSettings = JsonSerializer.Deserialize<FilepathSettings>(File.ReadAllText(path)) ?? new FilepathSettings();
             }
         }
 
@@ -63,7 +63,6 @@ namespace TrinityFileExplorer
 
         public static void Save()
         {
-            if (_filePathSettings == null) return;
             _filePathSettings.Save(_settingsPath);
         }
 

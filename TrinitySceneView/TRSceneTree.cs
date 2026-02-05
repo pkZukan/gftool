@@ -1,5 +1,6 @@
-﻿using GFTool.Core.Flatbuffers.TR.Scene;
+using GFTool.Core.Flatbuffers.TR.Scene;
 using GFTool.Core.Flatbuffers.TR.Scene.Components;
+using GFTool.Renderer.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,41 +17,110 @@ namespace TrinitySceneView
 {
     public struct SceneMetaData
     {
+        private static readonly Lazy<Dictionary<string, Type>> TypeByName =
+            new Lazy<Dictionary<string, Type>>(() =>
+                typeof(TRSCN).Assembly
+                    .GetTypes()
+                    .GroupBy(t => t.Name, StringComparer.Ordinal)
+                    .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal));
+
+        private static readonly Lazy<MethodInfo?> FlatBufferDeserializeMethod =
+            new Lazy<MethodInfo?>(() =>
+                typeof(FlatBufferConverter).GetMethod(
+                    "DeserializeFrom",
+                    BindingFlags.Static | BindingFlags.Public,
+                    null,
+                    new[] { typeof(byte[]) },
+                    null));
+
+        private static readonly HashSet<string> MissingTypeWarnings = new HashSet<string>(StringComparer.Ordinal);
+        private static readonly HashSet<string> FallbackDecodeWarnings = new HashSet<string>(StringComparer.Ordinal);
+
         public bool IsExternal { get; private set; }
         public string FilePath { get; private set; }
         public string Type { get; private set; }
         public object? Data { get; private set; }
-        public ulong ID { get; private set; }
+        public byte[]? RawData { get; private set; }
 
         //Deserialize scene component via reflection
         private object? DeserializeChunk(SceneChunk chunk)
         {
-            object? obj = null;
+            // PropertySheet varies between scene versions and can throw during eager decode. Decode lazily
+            // when the user selects it in the UI.
+            if (chunk.Type == nameof(trinity_PropertySheet))
+            {
+                return null;
+            }
+
+            var method = FlatBufferDeserializeMethod.Value;
+            if (method == null)
+            {
+                MessageHandler.Instance.AddMessage(MessageType.ERROR, "[Scene] FlatBufferConverter.DeserializeFrom(byte[]) not found.");
+                return null;
+            }
+
+            if (!TypeByName.Value.TryGetValue(chunk.Type, out var compType))
+            {
+                if (MissingTypeWarnings.Add(chunk.Type))
+                {
+                    MessageHandler.Instance.AddMessage(
+                        MessageType.WARNING,
+                        $"[Scene] No schema/type found for chunk '{chunk.Type}'. Skipping chunk decode.");
+                }
+
+                return null;
+            }
+
             try
             {
-                var method = typeof(FlatBufferConverter).GetMethod("DeserializeFrom",
-                            BindingFlags.Static | BindingFlags.Public,
-                            null,  // Don't specify binder
-                            new Type[] { typeof(byte[]) },  // Parameter types
-                            null); // Don't specify modifiers
-                var compType = Assembly.Load("GFTool.Core").GetTypes().FirstOrDefault(t => t.Name == chunk.Type);
                 var generic = method.MakeGenericMethod(compType);
-                obj = generic.Invoke(null, new object[] { chunk.Data });
+                return InvokeWithFallback(chunk, generic);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error parsing chunk data for " + chunk.Type);
+                MessageHandler.Instance.AddMessage(
+                    MessageType.WARNING,
+                    $"[Scene] Failed to decode chunk '{chunk.Type}': {ex.GetType().Name}: {ex.Message}");
+                return null;
             }
-            return obj;
+        }
+
+        private static object? InvokeWithFallback(SceneChunk chunk, MethodInfo genericDeserialize)
+        {
+            try
+            {
+                return genericDeserialize.Invoke(null, new object[] { chunk.Data });
+            }
+            catch (TargetInvocationException tie) when (tie.InnerException is InvalidDataException)
+            {
+                // Some scene chunks appear to store the raw table bytes without the file-style root uoffset.
+                // As a fallback, wrap the bytes with a 4-byte uoffset pointing to the table at +4.
+                if (chunk.Data == null || chunk.Data.Length < 8)
+                {
+                    throw;
+                }
+
+                if (FallbackDecodeWarnings.Add(chunk.Type))
+                {
+                    MessageHandler.Instance.AddMessage(
+                        MessageType.WARNING,
+                        $"[Scene] Chunk '{chunk.Type}' failed FlatBuffer parse; retrying with root-offset wrapper.");
+                }
+
+                var wrapped = new byte[chunk.Data.Length + 4];
+                BitConverter.GetBytes(4).CopyTo(wrapped, 0);
+                Buffer.BlockCopy(chunk.Data, 0, wrapped, 4, chunk.Data.Length);
+                return genericDeserialize.Invoke(null, new object[] { wrapped });
+            }
         }
 
         public SceneMetaData(SceneChunk chunk)
-        { 
+        {
             IsExternal = false;
             FilePath = string.Empty;
             Type = chunk.Type;
             Data = null;
-            ID = chunk.Id;
+            RawData = chunk.Data;
 
             Data = DeserializeChunk(chunk);
         }
@@ -61,7 +131,7 @@ namespace TrinitySceneView
             FilePath = extFile;
             Type = string.Empty;
             Data = null;
-            ID = 0;
+            RawData = null;
         }
     }
 
@@ -103,14 +173,13 @@ namespace TrinitySceneView
         }
 
         private void ProcessSceneMeta(SceneMetaData meta)
-        { 
+        {
             //TODO
         }
 
         private void WalkTrSceneChunks(TreeNode node, SceneChunk chunk, string sceneFile = "")
         {
             var newnode = node.Nodes.Add(chunk.Type);
-
 
             //SubScenes save meta with external path
             if (chunk.Type == "SubScene")
@@ -140,7 +209,7 @@ namespace TrinitySceneView
         }
 
         public KeyValuePair<TreeNode, SceneMetaData> FindFirst(TreeNode node)
-        { 
+        {
             return InnerData.Where(x => x.Key == node).First();
         }
     }

@@ -13,9 +13,6 @@ namespace GFTool.Core.Flatbuffers.TR.Scene
 
         [FlatBufferItem(2)]
         public SceneChunk[] Children { get; set; }
-
-        [FlatBufferItem(3)]
-        public ulong Id { get; set; }
     }
 
     [FlatBufferTable]

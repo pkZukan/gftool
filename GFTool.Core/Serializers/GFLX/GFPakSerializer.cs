@@ -46,27 +46,19 @@ namespace Trinity.Core.Serializers.GFLX
             {
                 GFPakFileHeader file = embeddedFiles[i];
                 byte[] fileBytes = br.ReadBytes((int)file.FileSize);
-                byte[]? decompressed = new byte[file.BufferSize];
                 switch (file.CompressionType)
                 {
                     case GFPakCompressionType.LZ4:
-                        decompressed = LZ4.Decompress(fileBytes, (int)file.BufferSize);
-                        files.Add(decompressed);
+                        files.Add(LZ4.Decompress(fileBytes, (int)file.BufferSize));
                         break;
                     case GFPakCompressionType.OODLE:
-                        decompressed = Oodle.Decompress(fileBytes, (int)file.BufferSize);
-                        if (decompressed == null)
-                        {
-                            decompressed = fileBytes;
-                        }
-                        files.Add(decompressed);
+                        files.Add(Oodle.Decompress(fileBytes, (int)file.BufferSize) ?? fileBytes);
                         break;
                     case GFPakCompressionType.NONE:
                     default:
                         files.Add(fileBytes);
                         break;
                 }
-                files.Add(fileBytes);
             }
 
             br.BaseStream.Position = folderOffsets[0];
@@ -75,26 +67,19 @@ namespace Trinity.Core.Serializers.GFLX
             {
                 br.BaseStream.Position = folderOffsets[i];
                 GFPakFolderHeader tFolder = br.ReadBytes(GFPakFolderHeader.SIZE).ToStruct<GFPakFolderHeader>();
-                var folderName = GFPakHashCache.GetName(tFolder.Hash);
-                if (folderName == null) 
-                {
-                    folderName = tFolder.Hash.ToString();
-                }
-                GFLibFolder folder = new GFLibFolder() { path = folderName, files = new List<GFLibFile>()};
+                string folderName = GFPakHashCache.GetName(tFolder.Hash) ?? tFolder.Hash.ToString();
+                GFLibFolder folder = new GFLibFolder() { path = folderName, files = new List<GFLibFile>() };
                 for (int j = 0; j < tFolder.ContentNumber; j++)
                 {
                     GFPakFolderIndex content = br.ReadBytes(GFPakFolderIndex.SIZE).ToStruct<GFPakFolderIndex>();
-                    var name = GFPakHashCache.GetName(content.Hash);
-                    if (name == null)
-                    {
-                        name = content.Hash.ToString();
-                    }
-                    
-                    var path = GFPakHashCache.GetName(fileHashes[(int)content.Index]);
+                    string name = GFPakHashCache.GetName(content.Hash) ?? content.Hash.ToString();
+
+                    string? path = GFPakHashCache.GetName(fileHashes[(int)content.Index]);
                     if (path == null)
                     {
                         //Need to rethink this one here because I'm an idiot
-                        if (name != null && folderName != null) {
+                        if (name.Length > 0 && folderName.Length > 0)
+                        {
                             path = folderName + name;
                             GFPakHashCache.AddHashName(fileHashes[(int)content.Index], path);
                         }
@@ -237,4 +222,3 @@ namespace Trinity.Core.Serializers.GFLX
         }
     }
 }
-

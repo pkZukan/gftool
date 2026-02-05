@@ -27,8 +27,16 @@ namespace Trinity.Core.Serializers.TR
 
         public static byte[] SplitTRPAK(BinaryReader br, long offset, long fileSize)
         {
+            if (fileSize < 0 || fileSize > int.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(fileSize),
+                    fileSize,
+                    "TRPAK section is too large to load into a single byte[]; use an extracted RomFS on disk or implement streamed extraction.");
+            }
+
             br.BaseStream.Position = offset;
-            var bytes =  br.ReadBytes((int)fileSize);
+            var bytes = br.ReadBytes((int)fileSize);
             br.Close();
             return bytes;
         }
