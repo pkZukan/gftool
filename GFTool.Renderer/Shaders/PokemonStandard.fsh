@@ -11,25 +11,18 @@ uniform sampler2D RoughnessMap2;
 uniform sampler2D MetallicMap;
 uniform sampler2D AOMap;
 uniform sampler2D DetailMaskMap;
-uniform sampler2D ColorTableMap;
 
-uniform vec4 BaseColor;
 uniform vec4 BaseColorLayer1;
 uniform vec4 BaseColorLayer2;
 uniform vec4 BaseColorLayer3;
 uniform vec4 BaseColorLayer4;
+uniform vec4 BaseColor;
 uniform vec4 UVScaleOffset;
 uniform vec4 UVScaleOffsetNormal;
 uniform float LayerMaskScale1;
 uniform float LayerMaskScale2;
 uniform float LayerMaskScale3;
 uniform float LayerMaskScale4;
-uniform int ColorTableDivideNumber;
-uniform int BaseColorIndex1;
-uniform int BaseColorIndex2;
-uniform int BaseColorIndex3;
-uniform int BaseColorIndex4;
-uniform vec4 SkinToneOverride;
 
 uniform bool EnableBaseColorMap;
 uniform bool EnableLayerMaskMap;
@@ -43,17 +36,12 @@ uniform bool EnableMetallicMap;
 uniform bool EnableAOMap;
 uniform bool EnableDetailMaskMap;
 uniform bool NumMaterialLayer;
-uniform bool ForceLayerPalette;
-uniform bool UseTrinityMaterialUv;
-uniform bool UseColorAtlasAoUv;
-uniform bool EnableUVScaleOffsetNormal;
 uniform bool EnableVertexColor;
 uniform bool LegacyMode;
 uniform bool EnableLerpBaseColorEmission;
-uniform bool EnableColorTableMap;
 uniform bool BaseColorMultiply;
-uniform bool EnableSkinToneOverride;
-uniform bool IsSkinMaterial;
+uniform bool EnableUVScaleOffsetNormal;
+uniform bool UseTrinityMaterialUv;
 
 uniform vec3 LightDirection;
 uniform vec3 LightColor;
@@ -89,36 +77,7 @@ vec2 transformedUv(vec2 source, vec4 transform)
         1.0 - (source.y * transform.y - transform.w));
 }
 
-vec3 linearToSrgb(vec3 color)
-{
-    vec3 low = color * 12.92;
-    vec3 high = 1.055 * pow(max(color, vec3(0.0)), vec3(1.0 / 2.4)) - 0.055;
-    return clamp(mix(low, high, step(vec3(0.0031308), color)), 0.0, 1.0);
-}
-
-vec3 paletteLayerColor(int paletteIndex, vec3 fallbackColor)
-{
-    if (!EnableColorTableMap)
-    {
-        return fallbackColor;
-    }
-
-    ivec2 tableSize = textureSize(ColorTableMap, 0);
-    if (tableSize.x <= 0 || tableSize.y <= 0)
-    {
-        return fallbackColor;
-    }
-
-    int divisions = max(ColorTableDivideNumber, 1);
-    int zeroBasedIndex = clamp(paletteIndex - 1, 0, divisions * divisions - 1);
-    int cellX = zeroBasedIndex % divisions;
-    int cellY = zeroBasedIndex / divisions;
-    int texelX = clamp(((cellX * 2 + 1) * tableSize.x) / (divisions * 2), 0, tableSize.x - 1);
-    int texelY = clamp(((cellY * 2 + 1) * tableSize.y) / (divisions * 2), 0, tableSize.y - 1);
-    return texelFetch(ColorTableMap, ivec2(texelX, texelY), 0).rgb;
-}
-
-vec3 applyCharacterPalette(
+vec3 applyPokemonPalette(
     vec3 sourceColor,
     vec4 weights,
     vec3 layer1,
@@ -126,21 +85,16 @@ vec3 applyCharacterPalette(
     vec3 layer3,
     vec3 layer4)
 {
-    float weightSum = dot(weights, vec4(1.0));
-    if (weightSum <= 0.0001)
-        return sourceColor;
-
-    // Layer-mask channels can overlap at full strength. Compose their palette
-    // in parallel so BaseColorMultiply is applied once instead of repeatedly
-    // darkening the same pixel for every active channel.
-    vec3 palette =
-        layer1 * weights.r +
-        layer2 * weights.g +
-        layer3 * weights.b +
-        layer4 * weights.a;
-    palette /= weightSum;
-    vec3 targetColor = BaseColorMultiply ? sourceColor * palette : palette;
-    return mix(sourceColor, targetColor, clamp(weightSum, 0.0, 1.0));
+    vec3 color = sourceColor;
+    vec3 target1 = BaseColorMultiply ? sourceColor * layer1 : layer1;
+    vec3 target2 = BaseColorMultiply ? sourceColor * layer2 : layer2;
+    vec3 target3 = BaseColorMultiply ? sourceColor * layer3 : layer3;
+    vec3 target4 = BaseColorMultiply ? sourceColor * layer4 : layer4;
+    color = mix(color, target1, weights.r);
+    color = mix(color, target2, weights.g);
+    color = mix(color, target3, weights.b);
+    color = mix(color, target4, weights.a);
+    return color;
 }
 
 void main()
@@ -163,10 +117,7 @@ void main()
         return;
     }
 
-    // IkCharacter's palette lives entirely in the layer mask. Its material
-    // metadata uses a newer option layout, so keep this explicit renderer
-    // signal instead of relying solely on the legacy layer-count uniform.
-    bool useLayerMask = ForceLayerPalette || (EnableLayerMaskMap && NumMaterialLayer);
+    bool useLayerMask = EnableLayerMaskMap && NumMaterialLayer;
     vec4 layerMask = vec4(0.0);
     if (useLayerMask)
     {
@@ -177,51 +128,20 @@ void main()
         0.0,
         1.0);
 
-    // Older Standard materials used the unused mask area as the base-color
-    // weight. Preserve that interpretation outside the new IkCharacter path.
-    float layerWeight = 1.0;
-    if (useLayerMask && !ForceLayerPalette)
-    {
-        layerWeight = clamp(1.0 - dot(vec4(1.0), layerMask), 0.0, 1.0);
-        layerWeight = mix(layerWeight, 1.0, layerMask.r);
-    }
-
     vec3 baseColor = (EnableBaseColorMap ? texture(BaseColorMap, uv).rgb : vec3(1.0)) * BaseColor.rgb;
     vec3 layerColor = baseColor;
-    // Trinity's character layer colors are already authored in the same display
-    // color space as BaseColor. Converting them again makes layered face skin much
-    // brighter than an unlayered body using the identical material color.
-    vec3 fallback1 = BaseColorLayer1.rgb;
-    vec3 fallback2 = BaseColorLayer2.rgb;
-    vec3 fallback3 = BaseColorLayer3.rgb;
-    vec3 fallback4 = BaseColorLayer4.rgb;
-    vec3 palette1 = EnableSkinToneOverride
-        ? SkinToneOverride.rgb
-        : paletteLayerColor(BaseColorIndex1, fallback1);
-    vec3 palette2 = paletteLayerColor(BaseColorIndex2, fallback2);
-    vec3 palette3 = paletteLayerColor(BaseColorIndex3, fallback3);
-    vec3 palette4 = paletteLayerColor(BaseColorIndex4, fallback4);
-
-    if (useLayerMask && ForceLayerPalette)
+    if (useLayerMask)
     {
-        layerColor = applyCharacterPalette(
+        layerColor = applyPokemonPalette(
             layerColor,
             scaledLayerMask,
-            palette1,
-            palette2,
-            palette3,
-            palette4);
-    }
-    else if (useLayerMask)
-    {
-        layerColor = mix(layerColor, palette1, layerMask.r);
-        layerColor = mix(layerColor, palette2, layerMask.g);
-        layerColor = mix(layerColor, palette3, layerMask.b);
-        layerColor = mix(layerColor, palette4, layerMask.a);
+            BaseColorLayer1.rgb,
+            BaseColorLayer2.rgb,
+            BaseColorLayer3.rgb,
+            BaseColorLayer4.rgb);
     }
     vec3 vertexColor = EnableVertexColor ? Color.rgb : vec3(1.0);
     vec3 albedo = layerColor * vertexColor;
-    albedo *= layerWeight;
 
     float detailMask = EnableDetailMaskMap ? texture(DetailMaskMap, normalUv).r : 0.0;
     albedo *= mix(1.0, 0.85, detailMask);
@@ -240,11 +160,7 @@ void main()
     roughness = clamp(roughness, 0.04, 1.0);
 
     float metallic = EnableMetallicMap ? texture(MetallicMap, normalUv).r : 0.0;
-    // AO packing differs by resource: some follow the colour atlas while
-    // others use the surface layout. Material selects the matching UV pair
-    // from the decoded texture dimensions.
-    vec2 aoUv = UseColorAtlasAoUv ? uv : normalUv;
-    float ao = EnableAOMap ? texture(AOMap, aoUv).r : 1.0;
+    float ao = EnableAOMap ? texture(AOMap, normalUv).r : 1.0;
 
     vec3 n = normalize(Normal);
     vec3 tangentNormal = vec3(0.0, 0.0, 1.0);
@@ -327,8 +243,6 @@ void main()
     wrappedNdotL = clamp(wrappedNdotL, 0.0, 1.0);
     wrappedNdotL = smoothstep(0.0, 1.0, wrappedNdotL);
     wrappedNdotL = mix(wrappedNdotL, 1.0, 0.08); // lift deep shadows a bit
-    if (IsSkinMaterial)
-        wrappedNdotL = mix(wrappedNdotL, 1.0, 0.14);
 
     // Softer spec: lower peak sharpness and tie it to the light term.
     float specPower = mix(16.0, 64.0, 1.0 - roughness);

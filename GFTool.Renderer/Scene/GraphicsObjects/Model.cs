@@ -11,7 +11,7 @@ using System;
 
 namespace GFTool.Renderer.Scene.GraphicsObjects
 {
-    public class Model : RefObject
+    public class Model : RefObject, IDisposable
     {
         private enum BlendIndexRemapMode
         {
@@ -29,6 +29,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             public required Vector3[] Positions { get; init; }
             public required Vector3[] Normals { get; init; }
             public required Vector2[] UVs { get; init; }
+            public required IReadOnlyList<Vector2[]> UVSets { get; init; }
             public required Vector4[] Colors { get; init; }
             public required Vector4[] Tangents { get; init; }
             public required Vector3[] Binormals { get; init; }
@@ -64,6 +65,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                     Positions = Positions[i],
                     Normals = i < Normals.Count ? Normals[i] : Array.Empty<Vector3>(),
                     UVs = i < UVs.Count ? UVs[i] : Array.Empty<Vector2>(),
+                    UVSets = i < UvSets.Count ? UvSets[i] : Array.Empty<Vector2[]>(),
                     Colors = i < Colors.Count ? Colors[i] : Array.Empty<Vector4>(),
                     Tangents = i < Tangents.Count ? Tangents[i] : Array.Empty<Vector4>(),
                     Binormals = i < Binormals.Count ? Binormals[i] : Array.Empty<Vector3>(),
@@ -103,6 +105,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         private string? baseSkeletonCategoryHint;
 
         public string Name { get; private set; }
+        public string SourcePath { get; private set; }
 
         private int[] VAOs;
         private int[] VBOs;
@@ -111,6 +114,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         private List<Vector3[]> Positions = new List<Vector3[]>();
         private List<Vector3[]> Normals = new List<Vector3[]>();
         private List<Vector2[]> UVs = new List<Vector2[]>();
+        private List<Vector2[][]> UvSets = new List<Vector2[][]>();
         private List<Vector4[]> Colors = new List<Vector4[]>();
         private List<Vector4[]> Tangents = new List<Vector4[]>();
         private List<Vector3[]> Binormals = new List<Vector3[]>();
@@ -125,6 +129,8 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         private List<bool> HasTangents = new List<bool>();
         private List<bool> HasBinormals = new List<bool>();
         private List<bool> HasSkinning = new List<bool>();
+        private List<bool> SubmeshVisible = new List<bool>();
+        private List<bool> DefaultSubmeshVisible = new List<bool>();
 
         private Material[] materials;
         private List<string> MaterialNames = new List<string>();
@@ -132,6 +138,8 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         private List<string> SubmeshNames = new List<string>();
 
         private Armature? armature;
+        private ActionClipAnimation? appliedActionClip;
+        private bool disposed;
         public Armature? Armature => armature;
         private static int skeletonVao;
         private static int skeletonVbo;
@@ -147,36 +155,58 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         public Model(string model, bool loadAllLods)
         {
             Name = Path.GetFileNameWithoutExtension(model);
+            SourcePath = Path.GetFullPath(model);
             modelMat = Matrix4.Identity;
             modelPath = new PathString(model);
 
+            DiagnosticLog.Section($"Load model: {Name}");
+            DiagnosticLog.Write($"TRMDL path: {model}");
+            DiagnosticLog.Write($"TRMDL file: {DescribeFile(model)}");
+            DiagnosticLog.Write($"Load all LODs: {loadAllLods}");
             var mdl = FlatBufferConverter.DeserializeFrom<TRMDL>(model);
+            DiagnosticLog.Write($"TRMDL parsed: meshes={mdl.Meshes?.Length ?? 0}, materials={mdl.Materials?.Length ?? 0}, skeleton={(mdl.Skeleton?.PathName ?? "<none>")}");
+            if (mdl.Meshes == null || mdl.Meshes.Length == 0)
+            {
+                throw new InvalidDataException("This TRMDL has no mesh entries. It is probably a locator/helper resource, not a renderable model.");
+            }
 
             //Meshes
             if (loadAllLods)
             {
-                foreach (var mesh in mdl.Meshes)
+                for (int i = 0; i < mdl.Meshes.Length; i++)
                 {
+                    var mesh = mdl.Meshes[i];
+                    DiagnosticLog.Write($"Referenced mesh[{i}]: {mesh.PathName}");
                     ParseMesh(modelPath.Combine(mesh.PathName));
                 }
             }
             else
             {
                 var mesh = mdl.Meshes[0]; //LOD0
+                DiagnosticLog.Write($"Referenced mesh[LOD0]: {mesh.PathName}");
                 ParseMesh(modelPath.Combine(mesh.PathName));
             }
 
             baseSkeletonCategoryHint = GuessBaseSkeletonCategoryFromMesh(mdl.Meshes != null && mdl.Meshes.Length > 0 ? mdl.Meshes[0].PathName : null);
 
             //Materials
-            foreach (var mat in mdl.Materials)
+            for (int i = 0; i < mdl.Materials.Length; i++)
             {
+                var mat = mdl.Materials[i];
+                DiagnosticLog.Write($"Referenced material[{i}]: {mat}");
                 ParseMaterial(modelPath.Combine(mat));
             }
 
             //Skeleton
             if (mdl.Skeleton != null)
+            {
+                DiagnosticLog.Write($"Referenced skeleton: {mdl.Skeleton.PathName}");
                 ParseArmature(modelPath.Combine(mdl.Skeleton.PathName));
+            }
+            else
+            {
+                DiagnosticLog.Write("Referenced skeleton: <none>");
+            }
         }
 
         private static string? GuessBaseSkeletonCategoryFromMesh(string? meshPathName)
@@ -208,34 +238,39 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             return null;
         }
 
-        private void ParseMeshBuffer(TRVertexDeclaration vertDesc, TRBuffer[] vertexBuffers, TRBuffer indexBuf, TRIndexFormat polyType, long start, long count, TRBoneWeight[]? boneWeights, string meshName)
+        private void ParseMeshBuffer(TRVertexDeclaration vertDesc, TRBuffer[] vertexBuffers, TRBuffer indexBuf, TRIndexFormat polyType, long start, long count, TRBoneWeight[]? boneWeights, string meshName, string materialName, bool defaultVisible)
         {
             if (vertexBuffers == null || vertexBuffers.Length == 0)
             {
+                DiagnosticLog.Write($"Mesh buffer skipped: mesh={meshName}, material={materialName}, reason=no vertex buffers");
                 return;
             }
 
             var posElement = vertDesc.vertexElements.FirstOrDefault(e => e.vertexUsage == TRVertexUsage.POSITION);
             if (posElement == null)
             {
+                DiagnosticLog.Write($"Mesh buffer skipped: mesh={meshName}, material={materialName}, reason=no POSITION element");
                 return;
             }
 
             var posBuffer = GetVertexBuffer(vertexBuffers, posElement.vertexElementLayer);
             if (posBuffer == null)
             {
+                DiagnosticLog.Write($"Mesh buffer skipped: mesh={meshName}, material={materialName}, reason=POSITION layer {posElement.vertexElementLayer} missing");
                 return;
             }
 
             var posStride = GetStride(vertDesc, posElement.vertexElementSizeIndex);
             if (posStride <= 0)
             {
+                DiagnosticLog.Write($"Mesh buffer skipped: mesh={meshName}, material={materialName}, reason=invalid POSITION stride index {posElement.vertexElementSizeIndex}");
                 return;
             }
 
             int vertexCount = posBuffer.Bytes.Length / posStride;
             if (vertexCount <= 0)
             {
+                DiagnosticLog.Write($"Mesh buffer skipped: mesh={meshName}, material={materialName}, reason=vertex count <= 0");
                 return;
             }
 
@@ -261,8 +296,10 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
             var blendIndexStreams = new List<Vector4[]>();
             var blendWeightStreams = new List<Vector4[]>();
+            var uvStreams = new List<Vector2[]>();
             int blendIndexElementIndex = -1;
             int blendWeightElementIndex = -1;
+            int texCoordElementIndex = -1;
 
             for (int i = 0; i < vertDesc.vertexElements.Length; i++)
             {
@@ -281,6 +318,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
                 int? blendIndexStreamIndex = null;
                 int? blendWeightStreamIndex = null;
+                int? texCoordStreamIndex = null;
                 if (att.vertexUsage == TRVertexUsage.BLEND_INDEX)
                 {
                     blendIndexElementIndex++;
@@ -292,6 +330,12 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                     blendWeightElementIndex++;
                     EnsureBlendStream(blendWeightStreams, blendWeightElementIndex, vertexCount);
                     blendWeightStreamIndex = blendWeightElementIndex;
+                }
+                else if (att.vertexUsage == TRVertexUsage.TEX_COORD)
+                {
+                    texCoordElementIndex++;
+                    EnsureUvStream(uvStreams, texCoordElementIndex, vertexCount);
+                    texCoordStreamIndex = texCoordElementIndex;
                 }
 
                 for (int v = 0; v < vertexCount; v++)
@@ -312,7 +356,12 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                             hasNormals = true;
                             break;
                         case TRVertexUsage.TEX_COORD:
-                            uv[v] = ReadVector2(buffer.Bytes, offset, att.vertexFormat);
+                            var uvValue = ReadVector2(buffer.Bytes, offset, att.vertexFormat);
+                            uv[v] = uvValue;
+                            if (texCoordStreamIndex.HasValue)
+                            {
+                                uvStreams[texCoordStreamIndex.Value][v] = uvValue;
+                            }
                             hasUvs = true;
                             break;
                         case TRVertexUsage.COLOR:
@@ -366,6 +415,12 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 }
             }
 
+            if (hasBlendWeights)
+            {
+                NormalizeBlendWeights(blendWeights);
+                LogDetailedSkinWeights(meshName, materialName, blendIndexStreams.Count, blendWeightStreams.Count, blendWeights);
+            }
+
             if (hasBlendIndices)
             {
                 int maxIndex = 0;
@@ -385,6 +440,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             Positions.Add(pos);
             Normals.Add(hasNormals ? norm : new Vector3[vertexCount]);
             UVs.Add(hasUvs ? uv : new Vector2[vertexCount]);
+            UvSets.Add(hasUvs ? uvStreams.Select(stream => stream.ToArray()).ToArray() : Array.Empty<Vector2[]>());
             if (!hasColors)
             {
                 for (int v = 0; v < color.Length; v++)
@@ -418,6 +474,8 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             BlendBoneWeights.Add(boneWeights);
             BlendMeshNames.Add(meshName);
             HasSkinning.Add(hasBlendIndices && hasBlendWeights);
+            SubmeshVisible.Add(defaultVisible);
+            DefaultSubmeshVisible.Add(defaultVisible);
 
             //Parse index buffer
             using (var indBuf = new BinaryReader(new MemoryStream(indexBuf.Bytes)))
@@ -438,20 +496,48 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 Indices.Add(indices.ToArray());
             }
 
+            int texCoordElements = vertDesc.vertexElements.Count(e => e.vertexUsage == TRVertexUsage.TEX_COORD);
+            DiagnosticLog.Write(
+                $"Submesh data: mesh={meshName}, material={materialName}, vertices={vertexCount}, indices={indices.Count}, indexFormat={polyType}, " +
+                $"hasNormals={hasNormals}, hasUVs={hasUvs}, texCoordElements={texCoordElements}, hasColors={hasColors}, hasTangents={hasTangents}, hasBinormals={hasBinormals}, hasSkinning={HasSkinning.LastOrDefault()}");
+            if (texCoordElements > 1)
+            {
+                DiagnosticLog.Write($"UV warning: mesh={meshName}, material={materialName} has {texCoordElements} TEX_COORD elements. Renderer still uses the legacy UV array; export preserves each TEX_COORD set.");
+            }
+            DiagnosticLog.Write($"UV summary: mesh={meshName}, material={materialName}, {SummarizeUvArray(uv, hasUvs)}");
+            DiagnosticLog.Write($"UV indexed summary: mesh={meshName}, material={materialName}, {SummarizeIndexedUvArray(uv, indices, hasUvs)}");
         }
 
         private void ParseMesh(string file)
         {
+            DiagnosticLog.Section($"Parse mesh file: {Path.GetFileName(file)}");
+            DiagnosticLog.Write($"TRMSH path: {file}");
+            DiagnosticLog.Write($"TRMSH file: {DescribeFile(file)}");
             var msh = FlatBufferConverter.DeserializeFrom<TRMSH>(file);
-            var buffers = FlatBufferConverter.DeserializeFrom<TRMBF>(modelPath.Combine(msh.bufferFilePath)).TRMeshBuffers;
+            var bufferPath = modelPath.Combine(msh.bufferFilePath);
+            DiagnosticLog.Write($"TRMSH parsed: version={msh.Version}, meshCount={msh.Meshes?.Length ?? 0}, bufferFilePath={msh.bufferFilePath}");
+            DiagnosticLog.Write($"TRMBF path: {bufferPath}");
+            DiagnosticLog.Write($"TRMBF file: {DescribeFile(bufferPath)}");
+            var buffers = FlatBufferConverter.DeserializeFrom<TRMBF>(bufferPath).TRMeshBuffers;
+            DiagnosticLog.Write($"TRMBF parsed: meshBufferCount={buffers?.Length ?? 0}");
             var shapeCnt = msh.Meshes.Count();
             for (int i = 0; i < shapeCnt; i++)
             {
                 var meshShape = msh.Meshes[i];
+                bool defaultVisible = IsDefaultVisibleMeshShape(meshShape.Name, msh.Meshes);
                 var vertBufs = buffers[i].VertexBuffer;
                 var indexBuf = buffers[i].IndexBuffer[0]; //LOD0
                 var polyType = meshShape.IndexType;
                 int boneWeightCount = meshShape.boneWeight?.Length ?? 0;
+                DiagnosticLog.Write($"Mesh shape[{i}]: name={meshShape.Name}, parts={meshShape.meshParts?.Length ?? 0}, declarations={meshShape.vertexDeclaration?.Length ?? 0}, vertexBuffers={vertBufs?.Length ?? 0}, indexBuffers={buffers[i].IndexBuffer?.Length ?? 0}, indexType={polyType}, boneWeights={boneWeightCount}");
+                if (!defaultVisible)
+                {
+                    DiagnosticLog.Write($"Mesh shape default hidden: name={meshShape.Name}, reason=secondary mesh variant");
+                }
+                for (int d = 0; d < (meshShape.vertexDeclaration?.Length ?? 0); d++)
+                {
+                    LogVertexDeclaration(meshShape.Name, d, meshShape.vertexDeclaration[d]);
+                }
 
                 foreach (var part in meshShape.meshParts)
                 {
@@ -462,7 +548,8 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                     {
                         declIndex = 0;
                     }
-                    ParseMeshBuffer(meshShape.vertexDeclaration[declIndex], vertBufs, indexBuf, meshShape.IndexType, part.indexOffset, part.indexCount, meshShape.boneWeight, meshShape.Name);
+                    DiagnosticLog.Write($"Mesh part: mesh={meshShape.Name}, material={part.MaterialName}, indexOffset={part.indexOffset}, indexCount={part.indexCount}, declarationIndex={part.vertexDeclarationIndex}->{declIndex}");
+                    ParseMeshBuffer(meshShape.vertexDeclaration[declIndex], vertBufs, indexBuf, meshShape.IndexType, part.indexOffset, part.indexCount, meshShape.boneWeight, meshShape.Name, part.MaterialName, defaultVisible);
                 }
 
                 if (blendIndexStats != null)
@@ -476,6 +563,74 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 }
             }
 
+        }
+
+        private static bool IsDefaultVisibleMeshShape(string? meshName, TRMesh[] meshes)
+        {
+            if (string.IsNullOrWhiteSpace(meshName))
+            {
+                return true;
+            }
+
+            if (!TryGetMeshShapeVariant(meshName, out string groupKey, out char variant))
+            {
+                return true;
+            }
+
+            if (variant == 'a')
+            {
+                return true;
+            }
+
+            bool hasPrimaryVariant = meshes?.Any(mesh =>
+                !string.Equals(mesh?.Name, meshName, StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(mesh?.Name) &&
+                TryGetMeshShapeVariant(mesh.Name, out string otherGroupKey, out char otherVariant) &&
+                string.Equals(otherGroupKey, groupKey, StringComparison.OrdinalIgnoreCase) &&
+                otherVariant == 'a') == true;
+
+            return !hasPrimaryVariant;
+        }
+
+        private static bool TryGetMeshShapeVariant(string meshName, out string groupKey, out char variant)
+        {
+            groupKey = string.Empty;
+            variant = '\0';
+
+            if (string.IsNullOrWhiteSpace(meshName))
+            {
+                return false;
+            }
+
+            string lower = meshName.ToLowerInvariant();
+            const string suffix = "_mesh_shape";
+            if (!lower.EndsWith(suffix, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            string stem = lower.Substring(0, lower.Length - suffix.Length);
+            int lastUnderscore = stem.LastIndexOf('_');
+            if (lastUnderscore < 0 || lastUnderscore >= stem.Length - 1)
+            {
+                return false;
+            }
+
+            string variantPart = stem.Substring(lastUnderscore + 1);
+            if (variantPart.Length != 1)
+            {
+                return false;
+            }
+
+            char ch = variantPart[0];
+            if (ch < 'a' || ch > 'z')
+            {
+                return false;
+            }
+
+            groupKey = stem.Substring(0, lastUnderscore);
+            variant = ch;
+            return true;
         }
 
         private class BlendIndexStats
@@ -538,6 +693,14 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             }
         }
 
+        private static void EnsureUvStream(List<Vector2[]> streams, int index, int vertexCount)
+        {
+            while (streams.Count <= index)
+            {
+                streams.Add(new Vector2[vertexCount]);
+            }
+        }
+
         private static void CollapseBlendStreams(
             List<Vector4[]> indexStreams,
             List<Vector4[]> weightStreams,
@@ -579,6 +742,14 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 float w1 = top.Length > 1 ? top[1].Value : 0f;
                 float w2 = top.Length > 2 ? top[2].Value : 0f;
                 float w3 = top.Length > 3 ? top[3].Value : 0f;
+                float total = w0 + w1 + w2 + w3;
+                if (total > 0.000001f)
+                {
+                    w0 /= total;
+                    w1 /= total;
+                    w2 /= total;
+                    w3 /= total;
+                }
 
                 collapsedIndices[v] = new Vector4(
                     top.Length > 0 ? top[0].Key : 0,
@@ -587,6 +758,71 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                     top.Length > 3 ? top[3].Key : 0);
                 collapsedWeights[v] = new Vector4(w0, w1, w2, w3);
             }
+        }
+
+        private static void NormalizeBlendWeights(Vector4[] weights)
+        {
+            if (weights == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < weights.Length; i++)
+            {
+                var w = weights[i];
+                float total = w.X + w.Y + w.Z + w.W;
+                if (total <= 0.000001f)
+                {
+                    continue;
+                }
+
+                weights[i] = new Vector4(
+                    w.X / total,
+                    w.Y / total,
+                    w.Z / total,
+                    w.W / total);
+            }
+        }
+
+        private static void LogDetailedSkinWeights(string meshName, string materialName, int indexStreamCount, int weightStreamCount, Vector4[] weights)
+        {
+            if (!IsDetailedSkinMesh(meshName, materialName) || weights == null || weights.Length == 0)
+            {
+                return;
+            }
+
+            float minSum = float.MaxValue;
+            float maxSum = float.MinValue;
+            int zeroSum = 0;
+            int sampleCount = Math.Min(weights.Length, 2048);
+            for (int i = 0; i < sampleCount; i++)
+            {
+                var w = weights[i];
+                float sum = w.X + w.Y + w.Z + w.W;
+                minSum = MathF.Min(minSum, sum);
+                maxSum = MathF.Max(maxSum, sum);
+                if (sum <= 0.000001f)
+                {
+                    zeroSum++;
+                }
+            }
+
+            DiagnosticLog.Write(
+                $"[Skin] Weight detail mesh={meshName}, material={materialName}, indexStreams={indexStreamCount}, weightStreams={weightStreamCount}, sample={sampleCount}, sumRange=({minSum:0.######}, {maxSum:0.######}), zeroSum={zeroSum}");
+        }
+
+        private static bool IsDetailedSkinMesh(string meshName, string materialName)
+        {
+            return ContainsSkinDetailToken(meshName) || ContainsSkinDetailToken(materialName);
+        }
+
+        private static bool ContainsSkinDetailToken(string text)
+        {
+            return !string.IsNullOrWhiteSpace(text) &&
+                   (text.Contains("face", StringComparison.OrdinalIgnoreCase) ||
+                    text.Contains("mouth", StringComparison.OrdinalIgnoreCase) ||
+                    text.Contains("lip", StringComparison.OrdinalIgnoreCase) ||
+                    text.Contains("eye", StringComparison.OrdinalIgnoreCase));
         }
 
         private static void AccumulateInfluence(Dictionary<int, float> totals, int index, float weight)
@@ -817,8 +1053,206 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             return (buffer[offset] / 255f) * 2f - 1f;
         }
 
+        private static string DescribeFile(string path)
+        {
+            try
+            {
+                var info = new FileInfo(path);
+                if (!info.Exists)
+                {
+                    return "missing";
+                }
+
+                return $"exists, bytes={info.Length}, modified={info.LastWriteTime:O}";
+            }
+            catch (Exception ex)
+            {
+                return $"unavailable: {ex.Message}";
+            }
+        }
+
+        private static void LogVertexDeclaration(string meshName, int declarationIndex, TRVertexDeclaration declaration)
+        {
+            var elementCount = declaration.vertexElements?.Length ?? 0;
+            var strideCount = declaration.vertexElementSizes?.Length ?? 0;
+            var texCoordCount = declaration.vertexElements?.Count(e => e.vertexUsage == TRVertexUsage.TEX_COORD) ?? 0;
+            DiagnosticLog.Write($"Vertex declaration: mesh={meshName}, index={declarationIndex}, elements={elementCount}, strideEntries={strideCount}, texCoordElements={texCoordCount}");
+
+            if (declaration.vertexElementSizes != null)
+            {
+                for (int i = 0; i < declaration.vertexElementSizes.Length; i++)
+                {
+                    DiagnosticLog.Write($"  stride[{i}]={declaration.vertexElementSizes[i].elementSize}");
+                }
+            }
+
+            if (declaration.vertexElements == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < declaration.vertexElements.Length; i++)
+            {
+                var element = declaration.vertexElements[i];
+                var stride = GetStride(declaration, element.vertexElementSizeIndex);
+                DiagnosticLog.Write(
+                    $"  element[{i}]: usage={element.vertexUsage}, layer={element.vertexElementLayer}, format={element.vertexFormat}, offset={element.vertexElementOffset}, strideIndex={element.vertexElementSizeIndex}, stride={stride}");
+            }
+        }
+
+        private static void LogMaterialData(TRMaterial mat, string sourceKind)
+        {
+            if (mat == null)
+            {
+                DiagnosticLog.Write($"Material ({sourceKind}): <null>");
+                return;
+            }
+
+            var shaderName = mat.Shader?.FirstOrDefault()?.Name ?? "<none>";
+            DiagnosticLog.Write(
+                $"Material ({sourceKind}): name={mat.Name}, shader={shaderName}, textures={mat.Textures?.Length ?? 0}, samplers={mat.Samplers?.Length ?? 0}, " +
+                $"floatParams={mat.FloatParams?.Length ?? 0}, vec2Params={mat.Vec2fParams?.Length ?? 0}, vec3Params={mat.Vec3fParams?.Length ?? 0}, vec4Params={mat.Vec4fParams?.Length ?? 0}");
+
+            if (mat.Textures != null)
+            {
+                for (int i = 0; i < mat.Textures.Length; i++)
+                {
+                    var tex = mat.Textures[i];
+                    DiagnosticLog.Write($"  texture[{i}]: name={tex?.Name}, file={tex?.File}, slot={tex?.Slot}");
+                }
+            }
+
+            if (mat.Samplers != null)
+            {
+                for (int i = 0; i < mat.Samplers.Length; i++)
+                {
+                    var sampler = mat.Samplers[i];
+                    DiagnosticLog.Write($"  sampler[{i}]: repeatU={sampler.RepeatU}, repeatV={sampler.RepeatV}, repeatW={sampler.RepeatW}, states={sampler.State0},{sampler.State1},{sampler.State2},{sampler.State3},{sampler.State4},{sampler.State5},{sampler.State6},{sampler.State7},{sampler.State8}");
+                }
+            }
+
+            if (mat.Shader?.FirstOrDefault()?.Values != null)
+            {
+                foreach (var param in mat.Shader.First().Values.Where(p => p != null))
+                {
+                    DiagnosticLog.Write($"  shader option: {param.Name}={param.Value}");
+                }
+            }
+
+            if (mat.FloatParams != null)
+            {
+                foreach (var param in mat.FloatParams.Where(p => p != null))
+                {
+                    DiagnosticLog.Write($"  float param: {param.Name}={param.Value}");
+                }
+            }
+
+            if (mat.Vec2fParams != null)
+            {
+                foreach (var param in mat.Vec2fParams.Where(p => p != null))
+                {
+                    DiagnosticLog.Write($"  vec2 param: {param.Name}=({param.Value.X}, {param.Value.Y})");
+                }
+            }
+
+            if (mat.Vec3fParams != null)
+            {
+                foreach (var param in mat.Vec3fParams.Where(p => p != null))
+                {
+                    DiagnosticLog.Write($"  vec3 param: {param.Name}=({param.Value.X}, {param.Value.Y}, {param.Value.Z})");
+                }
+            }
+
+            if (mat.Vec4fParams != null)
+            {
+                foreach (var param in mat.Vec4fParams.Where(p => p != null))
+                {
+                    DiagnosticLog.Write($"  vec4 param: {param.Name}=({param.Value.X}, {param.Value.Y}, {param.Value.Z}, {param.Value.W})");
+                }
+            }
+        }
+
+        private static string SummarizeUvArray(Vector2[] uvs, bool hasUvs)
+        {
+            if (!hasUvs || uvs == null || uvs.Length == 0)
+            {
+                return "uv=<none>";
+            }
+
+            float minU = float.PositiveInfinity;
+            float minV = float.PositiveInfinity;
+            float maxU = float.NegativeInfinity;
+            float maxV = float.NegativeInfinity;
+            int nonZero = 0;
+            for (int i = 0; i < uvs.Length; i++)
+            {
+                var uv = uvs[i];
+                minU = Math.Min(minU, uv.X);
+                minV = Math.Min(minV, uv.Y);
+                maxU = Math.Max(maxU, uv.X);
+                maxV = Math.Max(maxV, uv.Y);
+                if (Math.Abs(uv.X) > 0.000001f || Math.Abs(uv.Y) > 0.000001f)
+                {
+                    nonZero++;
+                }
+            }
+
+            var samples = uvs.Take(Math.Min(5, uvs.Length))
+                .Select(uv => $"({uv.X:0.#####},{uv.Y:0.#####})");
+            return $"uvCount={uvs.Length}, nonZero={nonZero}, rangeU={minU:0.#####}..{maxU:0.#####}, rangeV={minV:0.#####}..{maxV:0.#####}, first={string.Join(" ", samples)}";
+        }
+
+        private static string SummarizeIndexedUvArray(Vector2[] uvs, IReadOnlyList<uint> indices, bool hasUvs)
+        {
+            if (!hasUvs || uvs == null || uvs.Length == 0 || indices == null || indices.Count == 0)
+            {
+                return "uv=<none>";
+            }
+
+            float minU = float.PositiveInfinity;
+            float minV = float.PositiveInfinity;
+            float maxU = float.NegativeInfinity;
+            float maxV = float.NegativeInfinity;
+            int used = 0;
+            int outOfRange = 0;
+            var samples = new List<string>();
+
+            foreach (var rawIndex in indices)
+            {
+                if (rawIndex >= uvs.Length)
+                {
+                    continue;
+                }
+
+                var uv = uvs[rawIndex];
+                minU = Math.Min(minU, uv.X);
+                minV = Math.Min(minV, uv.Y);
+                maxU = Math.Max(maxU, uv.X);
+                maxV = Math.Max(maxV, uv.Y);
+                if (uv.X < 0f || uv.X > 1f || uv.Y < 0f || uv.Y > 1f)
+                {
+                    outOfRange++;
+                }
+                if (samples.Count < 5)
+                {
+                    samples.Add($"({uv.X:0.#####},{uv.Y:0.#####})");
+                }
+                used++;
+            }
+
+            if (used == 0)
+            {
+                return "uv=<none>";
+            }
+
+            return $"indexedCount={used}, outOf0To1={outOfRange}, rangeU={minU:0.#####}..{maxU:0.#####}, rangeV={minV:0.#####}..{maxV:0.#####}, first={string.Join(" ", samples)}";
+        }
+
         private void ParseMaterial(string file)
         {
+            DiagnosticLog.Section($"Parse material file: {Path.GetFileName(file)}");
+            DiagnosticLog.Write($"Material path: {file}");
+            DiagnosticLog.Write($"Material file: {DescribeFile(file)}");
             List<Material> matlist = new List<Material>();
             var materialPath = new PathString(file);
 
@@ -826,10 +1260,12 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             try
             {
                 trmtrFallback = FlatBufferConverter.DeserializeFrom<TRMTR>(file);
+                DiagnosticLog.Write($"TRMTR fallback parse: ok, materials={trmtrFallback.Materials?.Length ?? 0}");
             }
             catch
             {
                 trmtrFallback = null;
+                DiagnosticLog.Write("TRMTR fallback parse: failed");
             }
 
             Dictionary<string, TRMaterial> trmtrByName = new Dictionary<string, TRMaterial>(StringComparer.OrdinalIgnoreCase);
@@ -844,7 +1280,16 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 }
             }
 
-            var gfxMaterials = FlatBufferConverter.DeserializeFrom<Trinity.Core.Flatbuffers.Gfx2.Material>(file);
+            Trinity.Core.Flatbuffers.Gfx2.Material? gfxMaterials = null;
+            try
+            {
+                gfxMaterials = FlatBufferConverter.DeserializeFrom<Trinity.Core.Flatbuffers.Gfx2.Material>(file);
+                DiagnosticLog.Write($"Gfx2 material parse: ok, itemCount={gfxMaterials?.ItemList?.Length ?? 0}");
+            }
+            catch (Exception ex)
+            {
+                DiagnosticLog.WriteException("Gfx2 material parse failed", ex);
+            }
             if (gfxMaterials?.ItemList != null && gfxMaterials.ItemList.Length > 0)
             {
                 foreach (var item in gfxMaterials.ItemList)
@@ -907,20 +1352,25 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                         trmat.Samplers = fallbackMat.Samplers;
                     }
 
-                    matlist.Add(new Material(materialPath, trmat));
+                    LogMaterialData(trmat, "Gfx2");
+                    matlist.Add(new Material(materialPath, trmat, IsPokemonModel()));
                 }
 
                 materials = matlist.ToArray();
+                HarmonizeSkinToneMaterials();
                 BuildMaterialMap();
                 return;
             }
 
             var mats = FlatBufferConverter.DeserializeFrom<TRMTR>(file);
+            DiagnosticLog.Write($"Using TRMTR materials: count={mats.Materials?.Length ?? 0}");
             foreach (var mat in mats.Materials)
             {
-                matlist.Add(new Material(materialPath, mat));
+                LogMaterialData(mat, "TRMTR");
+                matlist.Add(new Material(materialPath, mat, IsPokemonModel()));
             }
             materials = matlist.ToArray();
+            HarmonizeSkinToneMaterials();
             BuildMaterialMap();
         }
 
@@ -942,6 +1392,225 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         public IReadOnlyList<string> GetSubmeshMaterials()
         {
             return MaterialNames;
+        }
+
+        public void ApplyMeshVariantVisibility(char preferredVariant, string reason)
+        {
+            ApplyMeshVariantVisibility(Array.Empty<string>(), preferredVariant, reason);
+        }
+
+        public void ApplyMeshVariantVisibility(IReadOnlyList<string> trackNames, char fallbackVariant, string reason)
+        {
+            fallbackVariant = char.ToLowerInvariant(fallbackVariant);
+            if (fallbackVariant < 'a' || fallbackVariant > 'z')
+            {
+                fallbackVariant = 'a';
+            }
+
+            var groups = new Dictionary<string, Dictionary<char, List<int>>>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < SubmeshNames.Count; i++)
+            {
+                string meshName = GetMeshShapeNameFromSubmeshName(SubmeshNames[i]);
+                if (!TryGetMeshShapeVariant(meshName, out string groupKey, out char variant))
+                {
+                    continue;
+                }
+
+                if (!groups.TryGetValue(groupKey, out var variants))
+                {
+                    variants = new Dictionary<char, List<int>>();
+                    groups[groupKey] = variants;
+                }
+
+                if (!variants.TryGetValue(variant, out var indices))
+                {
+                    indices = new List<int>();
+                    variants[variant] = indices;
+                }
+
+                indices.Add(i);
+            }
+
+            foreach (var group in groups)
+            {
+                if (group.Value.Count <= 1)
+                {
+                    continue;
+                }
+
+                char selected = SelectMeshVariantFromAnimationTracks(group.Key, group.Value.Keys, trackNames, fallbackVariant, out string selectionSource);
+
+                foreach (var variant in group.Value)
+                {
+                    bool visible = variant.Key == selected;
+                    foreach (int submeshIndex in variant.Value)
+                    {
+                        if (submeshIndex < 0 || submeshIndex >= SubmeshVisible.Count)
+                        {
+                            continue;
+                        }
+
+                        bool visibilityChanged = SubmeshVisible[submeshIndex] != visible;
+                        bool baselineChanged = submeshIndex >= DefaultSubmeshVisible.Count ||
+                                               DefaultSubmeshVisible[submeshIndex] != visible;
+                        if (!visibilityChanged && !baselineChanged)
+                        {
+                            continue;
+                        }
+
+                        SubmeshVisible[submeshIndex] = visible;
+                        if (submeshIndex < DefaultSubmeshVisible.Count)
+                        {
+                            // Variant selection is the baseline for the next animation. Action clips
+                            // may override it temporarily, but reset/switch must return to this variant.
+                            DefaultSubmeshVisible[submeshIndex] = visible;
+                        }
+                        string submeshName = submeshIndex < SubmeshNames.Count ? SubmeshNames[submeshIndex] : $"Submesh {submeshIndex}";
+                        DiagnosticLog.Write($"Mesh variant visibility: model={Name}, group={group.Key}, fallback={fallbackVariant}, selected={selected}, source={selectionSource}, submesh={submeshName}, visible={visible}, reason={reason}");
+                    }
+                }
+            }
+        }
+
+        private char SelectMeshVariantFromAnimationTracks(string groupKey, IEnumerable<char> variants, IReadOnlyList<string>? trackNames, char fallbackVariant, out string selectionSource)
+        {
+            selectionSource = string.Empty;
+            var available = variants.Distinct().OrderBy(x => x).ToList();
+            char bestVariant = '\0';
+            int bestScore = 0;
+            bool hasTie = false;
+
+            foreach (char variant in available)
+            {
+                int score = CountVariantTrackMatches(groupKey, variant, trackNames);
+                if (score > bestScore)
+                {
+                    bestVariant = variant;
+                    bestScore = score;
+                    hasTie = false;
+                }
+                else if (score == bestScore && score > 0)
+                {
+                    hasTie = true;
+                }
+            }
+
+            if (bestScore > 0 && !hasTie)
+            {
+                selectionSource = $"animation-tracks:{bestScore}";
+                return bestVariant;
+            }
+
+            if (bestScore > 0 && hasTie)
+            {
+                selectionSource = "animation-tracks-tie";
+            }
+            else if (available.Contains(fallbackVariant))
+            {
+                selectionSource = "fallback";
+                return fallbackVariant;
+            }
+
+            if (available.Contains('a'))
+            {
+                selectionSource = selectionSource.Length > 0 ? selectionSource + "+a" : "fallback-a";
+                return 'a';
+            }
+
+            selectionSource = selectionSource.Length > 0 ? selectionSource + "+first" : "fallback-first";
+            return available.First();
+        }
+
+        private int CountVariantTrackMatches(string groupKey, char variant, IReadOnlyList<string>? trackNames)
+        {
+            if (trackNames == null || trackNames.Count == 0)
+            {
+                return 0;
+            }
+
+            string fullVariantPrefix = $"{groupKey}_{variant}".ToLowerInvariant();
+            string shortGroupKey = GetShortMeshVariantGroupKey(groupKey);
+            string shortVariantPrefix = string.IsNullOrWhiteSpace(shortGroupKey)
+                ? string.Empty
+                : $"{shortGroupKey}_{variant}".ToLowerInvariant();
+
+            int matches = 0;
+            foreach (string trackName in trackNames)
+            {
+                string track = NormalizeTrackNameForVariantMatch(trackName);
+                if (string.IsNullOrWhiteSpace(track))
+                {
+                    continue;
+                }
+
+                if (IsVariantTrackMatch(track, fullVariantPrefix) ||
+                    (!string.IsNullOrWhiteSpace(shortVariantPrefix) && IsVariantTrackMatch(track, shortVariantPrefix)))
+                {
+                    matches++;
+                }
+            }
+
+            return matches;
+        }
+
+        private string GetShortMeshVariantGroupKey(string groupKey)
+        {
+            string lower = groupKey.ToLowerInvariant();
+            string modelPrefix = Name.ToLowerInvariant() + "_";
+            if (lower.StartsWith(modelPrefix, StringComparison.Ordinal))
+            {
+                return lower.Substring(modelPrefix.Length);
+            }
+
+            return lower;
+        }
+
+        private static string NormalizeTrackNameForVariantMatch(string trackName)
+        {
+            if (string.IsNullOrWhiteSpace(trackName))
+            {
+                return string.Empty;
+            }
+
+            string name = trackName.Trim().ToLowerInvariant();
+
+            int lastColon = name.LastIndexOf(':');
+            if (lastColon >= 0 && lastColon < name.Length - 1)
+            {
+                name = name.Substring(lastColon + 1);
+            }
+
+            int lastPipe = name.LastIndexOf('|');
+            if (lastPipe >= 0 && lastPipe < name.Length - 1)
+            {
+                name = name.Substring(lastPipe + 1);
+            }
+
+            int lastSlash = Math.Max(name.LastIndexOf('/'), name.LastIndexOf('\\'));
+            if (lastSlash >= 0 && lastSlash < name.Length - 1)
+            {
+                name = name.Substring(lastSlash + 1);
+            }
+
+            return name.Trim();
+        }
+
+        private static bool IsVariantTrackMatch(string trackName, string variantPrefix)
+        {
+            return string.Equals(trackName, variantPrefix, StringComparison.OrdinalIgnoreCase) ||
+                   trackName.StartsWith(variantPrefix + "_", StringComparison.OrdinalIgnoreCase) ||
+                   trackName.StartsWith(variantPrefix + ".", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string GetMeshShapeNameFromSubmeshName(string submeshName)
+        {
+            if (string.IsNullOrWhiteSpace(submeshName))
+            {
+                return string.Empty;
+            }
+
+            int split = submeshName.IndexOf(':');
+            return split > 0 ? submeshName.Substring(0, split) : submeshName;
         }
 
         public IReadOnlyList<UvSet> GetUvSetsForMaterial(string materialName)
@@ -1005,11 +1674,40 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             }
         }
 
+        private bool IsPokemonModel()
+        {
+            return Name.StartsWith("pm", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void HarmonizeSkinToneMaterials()
+        {
+            if (materials == null || IsPokemonModel())
+            {
+                return;
+            }
+
+            var bodySkin = materials.FirstOrDefault(material => material?.IsBodySkin == true);
+            if (bodySkin == null)
+            {
+                return;
+            }
+
+            foreach (var faceSkin in materials.Where(material => material?.IsFaceSkin == true))
+            {
+                faceSkin.SetSkinToneSource(bodySkin);
+            }
+        }
+
         private void ParseArmature(string file)
         {
+            DiagnosticLog.Section($"Parse skeleton file: {Path.GetFileName(file)}");
+            DiagnosticLog.Write($"TRSKL path: {file}");
+            DiagnosticLog.Write($"TRSKL file: {DescribeFile(file)}");
             var skel = FlatBufferConverter.DeserializeFrom<TRSKL>(file);
+            DiagnosticLog.Write($"TRSKL parsed: transformNodes={skel.TransformNodes?.Length ?? 0}, jointInfos={skel.JointInfos?.Length ?? 0}, helperBones={skel.HelperBones?.Length ?? 0}, skinningPaletteOffset={skel.SkinningPaletteOffset}, baseHint={(baseSkeletonCategoryHint ?? "<none>")}");
             var merged = TryLoadAndMergeBaseSkeleton(skel, file, baseSkeletonCategoryHint);
             armature = new Armature(merged ?? skel, file);
+            DiagnosticLog.Write($"Armature built: bones={armature.Bones.Count}, usedMergedSkeleton={merged != null}");
             ApplyBlendIndexMapping(
                 RenderOptions.MapBlendIndicesViaJointInfo,
                 RenderOptions.MapBlendIndicesViaSkinningPalette,
@@ -1199,25 +1897,8 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 var mapped = new Vector4[source.Length];
                 int maxIndexBefore = GetMaxIndex(source);
 
-                bool canRemapViaBoneWeights = false;
-                if (boneWeights != null && boneWeights.Length > 0 && maxIndexBefore < boneWeights.Length)
-                {
-                    int outOfRangeWeights = 0;
-                    int sampleCount = Math.Min(source.Length, 512);
-                    for (int v = 0; v < sampleCount; v++)
-                    {
-                        var idx = source[v];
-                        CountOutOfRange(boneWeights, (int)MathF.Round(idx.X), ref outOfRangeWeights);
-                        CountOutOfRange(boneWeights, (int)MathF.Round(idx.Y), ref outOfRangeWeights);
-                        CountOutOfRange(boneWeights, (int)MathF.Round(idx.Z), ref outOfRangeWeights);
-                        CountOutOfRange(boneWeights, (int)MathF.Round(idx.W), ref outOfRangeWeights);
-                    }
-                    canRemapViaBoneWeights = outOfRangeWeights == 0;
-                }
-
                 var mode = SelectBlendIndexRemapMode(
                     i,
-                    canRemapViaBoneWeights,
                     boneWeights,
                     maxIndexBefore,
                     useJointInfo,
@@ -1225,6 +1906,22 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                     useBoneMeta,
                     autoMap,
                     skinPalette);
+                LogBlendIndexMappingSample(i, source, i < BlendWeights.Count ? BlendWeights[i] : null, mode);
+
+                if (i < BlendMeshNames.Count && BlendMeshNames[i].Contains("_eye_mesh_shape", StringComparison.OrdinalIgnoreCase))
+                {
+                    string palette = boneWeights == null
+                        ? "<none>"
+                        : string.Join(", ", boneWeights.Select((weight, index) =>
+                        {
+                            int rig = weight.RigIndex;
+                            int node = rig >= 0 && rig < armature.JointInfoCount ? armature.MapJointInfoIndex(rig) : -1;
+                            string boneName = node >= 0 && node < armature.Bones.Count ? armature.Bones[node].Name : "<out-of-range>";
+                            return $"joint{rig}->node{node}:{boneName}";
+                        }));
+                    string samples = string.Join(", ", source.Take(8).Select(value => $"({value.X},{value.Y},{value.Z},{value.W})"));
+                    DiagnosticLog.Write($"[EyeSkin] mesh={BlendMeshNames[i]}, mode={mode}, sourceIndices={samples}, boneWeights={palette}");
+                }
 
                 for (int v = 0; v < source.Length; v++)
                 {
@@ -1277,9 +1974,53 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             }
         }
 
+        private void LogBlendIndexMappingSample(
+            int submeshIndex,
+            Vector4[] source,
+            Vector4[]? weights,
+            BlendIndexRemapMode mode)
+        {
+            if (armature == null || source == null || source.Length == 0)
+            {
+                return;
+            }
+
+            var usedIndices = new HashSet<int>();
+            for (int vertexIndex = 0; vertexIndex < source.Length; vertexIndex++)
+            {
+                var index = source[vertexIndex];
+                var weight = weights != null && vertexIndex < weights.Length
+                    ? weights[vertexIndex]
+                    : Vector4.One;
+                AddWeightedRigIndex(usedIndices, index.X, weight.X);
+                AddWeightedRigIndex(usedIndices, index.Y, weight.Y);
+                AddWeightedRigIndex(usedIndices, index.Z, weight.Z);
+                AddWeightedRigIndex(usedIndices, index.W, weight.W);
+            }
+
+            string meshName = submeshIndex < BlendMeshNames.Count
+                ? BlendMeshNames[submeshIndex]
+                : $"Submesh {submeshIndex}";
+            string samples = string.Join(
+                ", ",
+                usedIndices.OrderBy(index => index).Take(24).Select(index =>
+                {
+                    string directName = index >= 0 && index < armature.Bones.Count
+                        ? armature.Bones[index].Name
+                        : "<out-of-range>";
+                    int mappedIndex = index >= 0 && index < armature.JointInfoCount
+                        ? armature.MapJointInfoIndex(index)
+                        : index;
+                    string mappedName = mappedIndex >= 0 && mappedIndex < armature.Bones.Count
+                        ? armature.Bones[mappedIndex].Name
+                        : "<out-of-range>";
+                    return $"{index}:direct={directName}->jointNode{mappedIndex}:{mappedName}";
+                }));
+            DiagnosticLog.Write($"[Skin] Mapping sample mesh={meshName}, mode={mode}, used={usedIndices.Count}: {samples}");
+        }
+
         private BlendIndexRemapMode SelectBlendIndexRemapMode(
             int submeshIndex,
-            bool canRemapViaBoneWeights,
             TRBoneWeight[]? boneWeights,
             int maxIndexBefore,
             bool useJointInfo,
@@ -1293,11 +2034,6 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 return BlendIndexRemapMode.None;
             }
 
-            if (canRemapViaBoneWeights && boneWeights != null)
-            {
-                return BlendIndexRemapMode.BoneWeights;
-            }
-
             bool canMapJointInfo = useJointInfo && armature.JointInfoCount > 0;
             bool canMapSkinPalette = useSkinPalette && skinPalette.Length > 0;
             bool canMapBoneMeta = useBoneMeta && armature.BoneMetaCount > 0;
@@ -1308,6 +2044,25 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 if (canMapSkinPalette) return BlendIndexRemapMode.SkinningPalette;
                 if (canMapBoneMeta) return BlendIndexRemapMode.BoneMeta;
                 return BlendIndexRemapMode.None;
+            }
+
+            var source = BlendIndiciesOriginal[submeshIndex];
+            var weights = submeshIndex < BlendWeights.Count ? BlendWeights[submeshIndex] : null;
+            string meshName = submeshIndex < BlendMeshNames.Count ? BlendMeshNames[submeshIndex] : $"Submesh {submeshIndex}";
+
+            if (canMapJointInfo &&
+                MatchesMeshRigSummary(source, weights, boneWeights, out int sourceRigCount, out int summaryRigCount))
+            {
+                var jointInfoScore = ScoreBlendIndexMapping(source, weights, BlendIndexRemapMode.JointInfo, boneWeights, skinPalette);
+                LogBlendIndexRemapPick(
+                    submeshIndex,
+                    maxIndexBefore,
+                    boneWeights,
+                    skinPalette,
+                    BlendIndexRemapMode.JointInfo,
+                    jointInfoScore,
+                    $"jointInfoRigSummary(source={sourceRigCount},summary={summaryRigCount})");
+                return BlendIndexRemapMode.JointInfo;
             }
 
             // Heuristic: if indices live in joint info space (common when Bones.Count > JointInfoCount),
@@ -1335,15 +2090,20 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
                 if (!mappingIsIdentity)
                 {
+                    LogBlendIndexRemapPick(
+                        submeshIndex,
+                        maxIndexBefore,
+                        boneWeights,
+                        skinPalette,
+                        BlendIndexRemapMode.JointInfo,
+                        ScoreBlendIndexMapping(source, weights, BlendIndexRemapMode.JointInfo, boneWeights, skinPalette),
+                        "jointInfoHeuristic");
                     return BlendIndexRemapMode.JointInfo;
                 }
             }
 
             // Auto mode tries each applicable mapping and picks the one with the fewest
             // out of range and non influencer indices (weights ignore unused channels).
-            var source = BlendIndiciesOriginal[submeshIndex];
-            var weights = submeshIndex < BlendWeights.Count ? BlendWeights[submeshIndex] : null;
-
             (int outOfRange, int nonInfluencer) bestScore = ScoreBlendIndexMapping(source, weights, BlendIndexRemapMode.None, boneWeights, skinPalette);
             BlendIndexRemapMode bestMode = BlendIndexRemapMode.None;
 
@@ -1358,7 +2118,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 }
             }
 
-            if (armature.JointInfoCount > 0) consider(BlendIndexRemapMode.JointInfo);
+            if (canMapJointInfo) consider(BlendIndexRemapMode.JointInfo);
             if (skinPalette.Length > 0) consider(BlendIndexRemapMode.SkinningPalette);
             if (armature.BoneMetaCount > 0) consider(BlendIndexRemapMode.BoneMeta);
 
@@ -1381,15 +2141,92 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 }
             }
 
+            string remapMessage =
+                $"[Skin] Remap pick mesh={meshName} maxIndex={maxIndexBefore} boneWeights={(boneWeights?.Length ?? 0)} jointInfo={armature.JointInfoCount} palette={skinPalette.Length} boneMeta={armature.BoneMetaCount} mode={bestMode} score=(oor={bestScore.outOfRange}, nonInfluencer={bestScore.nonInfluencer})";
+            DiagnosticLog.Write(remapMessage);
             if (MessageHandler.Instance.DebugLogsEnabled)
             {
-                string meshName = submeshIndex < BlendMeshNames.Count ? BlendMeshNames[submeshIndex] : $"Submesh {submeshIndex}";
                 MessageHandler.Instance.AddMessage(
                     MessageType.LOG,
-                    $"[Skin] Remap pick mesh={meshName} maxIndex={maxIndexBefore} boneWeights={(boneWeights?.Length ?? 0)} jointInfo={armature.JointInfoCount} palette={skinPalette.Length} boneMeta={armature.BoneMetaCount} mode={bestMode} score=(oor={bestScore.outOfRange}, nonInfluencer={bestScore.nonInfluencer})");
+                    remapMessage);
             }
 
             return bestMode;
+        }
+
+        private static bool MatchesMeshRigSummary(
+            Vector4[] indices,
+            Vector4[]? weights,
+            TRBoneWeight[]? boneWeights,
+            out int sourceRigCount,
+            out int summaryRigCount)
+        {
+            var sourceRigIndices = new HashSet<int>();
+            var summaryRigIndices = new HashSet<int>();
+
+            if (boneWeights != null)
+            {
+                foreach (var boneWeight in boneWeights)
+                {
+                    if (boneWeight.RigIndex >= 0 && boneWeight.RigWeight > 0f)
+                    {
+                        summaryRigIndices.Add(boneWeight.RigIndex);
+                    }
+                }
+            }
+
+            for (int vertexIndex = 0; vertexIndex < indices.Length; vertexIndex++)
+            {
+                var index = indices[vertexIndex];
+                var weight = weights != null && vertexIndex < weights.Length
+                    ? weights[vertexIndex]
+                    : Vector4.One;
+
+                AddWeightedRigIndex(sourceRigIndices, index.X, weight.X);
+                AddWeightedRigIndex(sourceRigIndices, index.Y, weight.Y);
+                AddWeightedRigIndex(sourceRigIndices, index.Z, weight.Z);
+                AddWeightedRigIndex(sourceRigIndices, index.W, weight.W);
+            }
+
+            sourceRigCount = sourceRigIndices.Count;
+            summaryRigCount = summaryRigIndices.Count;
+            return sourceRigCount > 0 && sourceRigIndices.SetEquals(summaryRigIndices);
+        }
+
+        private static void AddWeightedRigIndex(HashSet<int> rigIndices, float index, float weight)
+        {
+            if (weight > 0.0001f)
+            {
+                int rounded = (int)MathF.Round(index);
+                if (rounded >= 0)
+                {
+                    rigIndices.Add(rounded);
+                }
+            }
+        }
+
+        private void LogBlendIndexRemapPick(
+            int submeshIndex,
+            int maxIndexBefore,
+            TRBoneWeight[]? boneWeights,
+            int[] skinPalette,
+            BlendIndexRemapMode mode,
+            (int outOfRange, int nonInfluencer) score,
+            string reason)
+        {
+            if (armature == null)
+            {
+                return;
+            }
+
+            string meshName = submeshIndex < BlendMeshNames.Count ? BlendMeshNames[submeshIndex] : $"Submesh {submeshIndex}";
+            string message =
+                $"[Skin] Remap pick mesh={meshName} maxIndex={maxIndexBefore} boneWeights={(boneWeights?.Length ?? 0)} jointInfo={armature.JointInfoCount} palette={skinPalette.Length} boneMeta={armature.BoneMetaCount} mode={mode} score=(oor={score.outOfRange}, nonInfluencer={score.nonInfluencer}) reason={reason}";
+            DiagnosticLog.Write(message);
+            if (MessageHandler.Instance.DebugLogsEnabled)
+            {
+                MessageHandler.Instance.AddMessage(MessageType.LOG, message);
+            }
         }
 
         private (int outOfRange, int nonInfluencer) ScoreBlendIndexMapping(
@@ -1512,14 +2349,6 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             return maxIndex;
         }
 
-        private static void CountOutOfRange(TRBoneWeight[] boneWeights, int index, ref int outOfRange)
-        {
-            if (index < 0 || index >= boneWeights.Length)
-            {
-                outOfRange++;
-            }
-        }
-
         public override void Setup()
         {
             var submeshCnt = Positions.Count;
@@ -1540,14 +2369,18 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 var vertSize = Positions[i].Length * Vector3.SizeInBytes;
                 var normSize = Normals[i].Length * Vector3.SizeInBytes;
                 var uvSize = UVs[i].Length * Vector2.SizeInBytes;
+                var primaryUvs = i < UvSets.Count && UvSets[i].Length > 0 && UvSets[i][0].Length == UVs[i].Length
+                    ? UvSets[i][0]
+                    : UVs[i];
+                var primaryUvSize = primaryUvs.Length * Vector2.SizeInBytes;
                 var colorSize = Colors[i].Length * Vector4.SizeInBytes;
                 var tangentSize = Tangents[i].Length * Vector4.SizeInBytes;
                 var binormalSize = Binormals[i].Length * Vector3.SizeInBytes;
                 var blendIndexSize = BlendIndicies[i].Length * Vector4.SizeInBytes;
                 var blendWeightSize = BlendWeights[i].Length * Vector4.SizeInBytes;
-                var totalSize = vertSize + normSize + uvSize + colorSize + tangentSize + binormalSize + blendIndexSize + blendWeightSize;
+                var totalSize = vertSize + normSize + uvSize + primaryUvSize + colorSize + tangentSize + binormalSize + blendIndexSize + blendWeightSize;
 
-                blendIndexOffsets[i] = vertSize + normSize + uvSize + colorSize + tangentSize + binormalSize;
+                blendIndexOffsets[i] = vertSize + normSize + uvSize + primaryUvSize + colorSize + tangentSize + binormalSize;
                 blendIndexByteSizes[i] = blendIndexSize;
 
                 //VBO
@@ -1560,6 +2393,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 GL.BufferSubData(BufferTarget.ArrayBuffer, offset, vertSize, Positions[i].SelectMany(x => x.ToBytes()).ToArray()); offset += vertSize;          // Verts
                 GL.BufferSubData(BufferTarget.ArrayBuffer, offset, normSize, Normals[i].SelectMany(x => x.ToBytes()).ToArray()); offset += normSize;            // Normals
                 GL.BufferSubData(BufferTarget.ArrayBuffer, offset, uvSize, UVs[i].SelectMany(x => x.ToBytes()).ToArray()); offset += uvSize;                    // TexCoords
+                GL.BufferSubData(BufferTarget.ArrayBuffer, offset, primaryUvSize, primaryUvs.SelectMany(x => x.ToBytes()).ToArray()); offset += primaryUvSize;  // Primary TexCoords
                 GL.BufferSubData(BufferTarget.ArrayBuffer, offset, colorSize, Colors[i].SelectMany(x => x.ToBytes()).ToArray()); offset += colorSize;          // Colors
                 GL.BufferSubData(BufferTarget.ArrayBuffer, offset, tangentSize, Tangents[i].SelectMany(x => x.ToBytes()).ToArray()); offset += tangentSize;    // Tangents
                 GL.BufferSubData(BufferTarget.ArrayBuffer, offset, binormalSize, Binormals[i].SelectMany(x => x.ToBytes()).ToArray()); offset += binormalSize; // Binormals
@@ -1584,6 +2418,11 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 // UV attribute
                 GL.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, Vector2.SizeInBytes, offset); offset += uvSize;
                 GL.EnableVertexAttribArray(2);
+
+                // Primary UV attribute. Attribute 2 keeps the legacy UV stream so
+                // existing shaders remain unchanged; Fire can consume both sets.
+                GL.VertexAttribPointer(8, 2, VertexAttribPointerType.Float, false, Vector2.SizeInBytes, offset); offset += primaryUvSize;
+                GL.EnableVertexAttribArray(8);
 
                 // Color attribute
                 GL.VertexAttribPointer(3, 4, VertexAttribPointerType.Float, false, Vector4.SizeInBytes, offset); offset += colorSize;
@@ -1628,10 +2467,12 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             }
 
             Matrix4[] skinMatrices = null;
+            Matrix4[] boneWorldMatrices = null;
             bool canSkin = armature != null && armature.Bones.Count > 0;
             int boneCount = 0;
             if (canSkin)
             {
+                boneWorldMatrices = armature.GetWorldMatrices();
                 if (RenderOptions.UseJointInfoMatrices)
                 {
                     skinMatrices = armature.GetSkinMatricesForJointInfo(Armature.MaxSkinBones, out boneCount);
@@ -1651,6 +2492,11 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
             for (int i = 0; i < VAOs.Length; i++)
             {
+                if (i < SubmeshVisible.Count && !SubmeshVisible[i])
+                {
+                    continue;
+                }
+
                 if (RenderOptions.OutlinePass)
                 {
                     if (i == selectedSubmeshIndex)
@@ -1672,7 +2518,8 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                     bool drawTransparent = RenderOptions.TransparentPass && mat.IsTransparent;
                     if (drawOpaque || drawTransparent)
                     {
-                        mat.Use(view, modelMat, proj, HasVertexColors[i], HasTangents[i], HasBinormals[i]);
+                        var eyePointLightPosition = ResolveEyePointLightPosition(mat.EyePointLightIndex, boneWorldMatrices);
+                        mat.Use(view, modelMat, proj, HasVertexColors[i], HasTangents[i], HasBinormals[i], HasUnitUvDomain(i), eyePointLightPosition);
                         mat.ApplySkinning(canSkin && HasSkinning[i], boneCount, skinMatrices);
                     }
                     else if (!RenderOptions.TransparentPass)
@@ -1683,6 +2530,14 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
                 // Draw the geometry
                 GL.BindVertexArray(VAOs[i]);
+                bool requiresDoubleSidedDrawing = IsPokemonModel() ||
+                    (i < SubmeshNames.Count &&
+                     GetMeshShapeNameFromSubmeshName(SubmeshNames[i]).Contains("_eyelash_", StringComparison.OrdinalIgnoreCase));
+                bool restoreCullFace = requiresDoubleSidedDrawing && GL.IsEnabled(EnableCap.CullFace);
+                if (restoreCullFace)
+                {
+                    GL.Disable(EnableCap.CullFace);
+                }
                 if (!RenderOptions.TransparentPass)
                 {
                     GL.DrawElements(PrimitiveType.Triangles, Indices[i].Length, DrawElementsType.UnsignedInt, 0);
@@ -1691,9 +2546,35 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 {
                     GL.DrawElements(PrimitiveType.Triangles, Indices[i].Length, DrawElementsType.UnsignedInt, 0);
                 }
+                if (restoreCullFace)
+                {
+                    GL.Enable(EnableCap.CullFace);
+                }
 
                 GL.BindVertexArray(0);
             }
+        }
+
+        private Vector3? ResolveEyePointLightPosition(int pointLightIndex, Matrix4[] boneWorldMatrices)
+        {
+            if (pointLightIndex <= 0 || armature == null || boneWorldMatrices == null)
+            {
+                return null;
+            }
+
+            var boneName = $"pointlight{pointLightIndex}";
+            for (int i = 0; i < armature.Bones.Count && i < boneWorldMatrices.Length; i++)
+            {
+                if (!string.Equals(armature.Bones[i].Name, boneName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var modelPosition = boneWorldMatrices[i].ExtractTranslation();
+                return Vector3.TransformPosition(modelPosition, modelMat);
+            }
+
+            return null;
         }
 
         public void DrawSkeleton(Matrix4 view, Matrix4 proj)
@@ -1813,14 +2694,187 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             GL.BindVertexArray(0);
         }
 
-        public void ApplyAnimation(Animation animation, float frame)
+        public void ApplyAnimation(
+            Animation animation,
+            float frame,
+            Animation? additiveOverlay = null,
+            float additiveOverlayFrame = 0f,
+            Animation? mouthOverlay = null,
+            float mouthOverlayFrame = 0f,
+            Animation? upperFaceOverlay = null,
+            float upperFaceOverlayFrame = 0f)
         {
-            armature?.ApplyAnimation(animation, frame);
+            armature?.ApplyAnimation(
+                animation,
+                frame,
+                additiveOverlay,
+                additiveOverlayFrame,
+                mouthOverlay,
+                mouthOverlayFrame,
+                upperFaceOverlay,
+                upperFaceOverlayFrame);
+            ApplyActionClip(
+                upperFaceOverlay?.ActionClip ?? mouthOverlay?.ActionClip ?? additiveOverlay?.ActionClip ?? animation.ActionClip,
+                upperFaceOverlay?.ActionClip != null
+                    ? upperFaceOverlayFrame
+                    : mouthOverlay?.ActionClip != null
+                        ? mouthOverlayFrame
+                        : additiveOverlay?.ActionClip != null
+                            ? additiveOverlayFrame
+                            : frame);
         }
 
         public void ResetPose()
         {
             armature?.ResetPose();
+            ResetActionClipState();
+        }
+
+        public void Dispose()
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            disposed = true;
+            ResetActionClipState();
+
+            foreach (var material in materials ?? Array.Empty<Material>())
+            {
+                material?.Dispose();
+            }
+            materials = Array.Empty<Material>();
+            materialMap.Clear();
+
+            foreach (var vao in VAOs ?? Array.Empty<int>())
+            {
+                if (vao != 0)
+                {
+                    GL.DeleteVertexArray(vao);
+                }
+            }
+            foreach (var vbo in VBOs ?? Array.Empty<int>())
+            {
+                if (vbo != 0)
+                {
+                    GL.DeleteBuffer(vbo);
+                }
+            }
+            foreach (var ebo in EBOs ?? Array.Empty<int>())
+            {
+                if (ebo != 0)
+                {
+                    GL.DeleteBuffer(ebo);
+                }
+            }
+
+            VAOs = Array.Empty<int>();
+            VBOs = Array.Empty<int>();
+            EBOs = Array.Empty<int>();
+            DiagnosticLog.Write($"Model disposed: name={Name}");
+        }
+
+        private void ApplyActionClip(ActionClipAnimation? clip, float frame)
+        {
+            if (!ReferenceEquals(appliedActionClip, clip))
+            {
+                ResetActionClipState();
+                appliedActionClip = clip;
+                if (clip != null)
+                {
+                    DiagnosticLog.Write($"Action clip apply: model={Name}, file={Path.GetFileName(clip.SourcePath)}, visibilityTracks={clip.VisibilityTracks.Count}, materialVector4Tracks={clip.Vector4Tracks.Count}");
+                }
+            }
+
+            if (clip == null)
+            {
+                return;
+            }
+
+            foreach (var track in clip.VisibilityTracks)
+            {
+                bool visible = track.Sample(frame);
+                for (int i = 0; i < SubmeshNames.Count && i < SubmeshVisible.Count; i++)
+                {
+                    if (string.Equals(GetMeshShapeNameFromSubmeshName(SubmeshNames[i]), track.TargetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        SubmeshVisible[i] = visible;
+                    }
+                }
+            }
+
+            bool closedEyelidVisible = clip.VisibilityTracks.Any(track =>
+                IsClosedEyelashTarget(track.TargetName) && track.Sample(frame));
+            if (closedEyelidVisible)
+            {
+                for (int i = 0; i < SubmeshNames.Count && i < SubmeshVisible.Count; i++)
+                {
+                    var shapeName = GetMeshShapeNameFromSubmeshName(SubmeshNames[i]);
+                    if (shapeName.Contains("_eye_mesh_shape", StringComparison.OrdinalIgnoreCase))
+                    {
+                        SubmeshVisible[i] = false;
+                    }
+                }
+            }
+
+            foreach (var track in clip.Vector4Tracks)
+            {
+                if (!HasActionClipTarget(track.TargetName) || !materialMap.TryGetValue(track.MaterialName, out var material))
+                {
+                    continue;
+                }
+
+                _ = material.TryGetShaderVector4(track.ParameterName, out var fallback);
+                material.SetAnimatedVector4(track.ParameterName, track.Sample(frame, fallback));
+            }
+        }
+
+        private static bool IsClosedEyelashTarget(string targetName)
+        {
+            if (string.IsNullOrWhiteSpace(targetName))
+            {
+                return false;
+            }
+
+            const string marker = "_eyelash_";
+            int markerIndex = targetName.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            int variantIndex = markerIndex + marker.Length;
+            if (markerIndex < 0 || variantIndex >= targetName.Length)
+            {
+                return false;
+            }
+
+            char variant = char.ToLowerInvariant(targetName[variantIndex]);
+            // Only a real one-letter mesh variant (for example eyelash_b_mesh_shape)
+            // replaces the normal open-eye mesh. "eyelash_mesh_shape" has no variant.
+            bool hasVariantBoundary = variantIndex + 1 == targetName.Length || targetName[variantIndex + 1] == '_';
+            return hasVariantBoundary && variant != 'a';
+        }
+
+        private bool HasActionClipTarget(string targetName)
+        {
+            if (string.IsNullOrWhiteSpace(targetName))
+            {
+                return false;
+            }
+
+            return SubmeshNames.Any(name =>
+                string.Equals(GetMeshShapeNameFromSubmeshName(name), targetName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private void ResetActionClipState()
+        {
+            for (int i = 0; i < SubmeshVisible.Count; i++)
+            {
+                SubmeshVisible[i] = i < DefaultSubmeshVisible.Count ? DefaultSubmeshVisible[i] : true;
+            }
+
+            foreach (var material in materials ?? Array.Empty<Material>())
+            {
+                material?.ClearAnimationOverrides();
+            }
+            appliedActionClip = null;
         }
 
 
@@ -1885,6 +2939,31 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             };
         }
 
+        private bool HasUnitUvDomain(int submeshIndex)
+        {
+            if (submeshIndex < 0 || submeshIndex >= UVs.Count || submeshIndex >= Indices.Count)
+            {
+                return true;
+            }
+
+            var uvs = UVs[submeshIndex];
+            foreach (var index in Indices[submeshIndex])
+            {
+                if (index >= uvs.Length)
+                {
+                    continue;
+                }
+
+                var uv = uvs[index];
+                if (uv.X < -0.0001f || uv.X > 1.0001f || uv.Y < -0.0001f || uv.Y > 1.0001f)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private void DrawOutline(Matrix4 view, Matrix4 proj, int indexCount, bool enableSkinning, int boneCount, Matrix4[] skinMatrices)
         {
             var outlineShader = ShaderPool.Instance.GetShader("Outline");
@@ -1907,12 +2986,26 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             outlineShader.SetVector3("OutlineColor", RenderOptions.OutlineColor);
             outlineShader.SetFloat("OutlineAlpha", RenderOptions.OutlineAlpha);
 
+            // The selection wireframe is drawn over the same triangles as the
+            // shaded mesh. Pull the lines forward so animation and camera
+            // movement cannot make the two coplanar depth values flicker.
+            bool cullFaceWasEnabled = GL.IsEnabled(EnableCap.CullFace);
+            bool polygonOffsetLineWasEnabled = GL.IsEnabled(EnableCap.PolygonOffsetLine);
             GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
             GL.Disable(EnableCap.CullFace);
+            GL.Enable(EnableCap.PolygonOffsetLine);
+            GL.PolygonOffset(-1.0f, -1.0f);
             GL.LineWidth(1.5f);
             GL.DrawElements(PrimitiveType.Triangles, indexCount, DrawElementsType.UnsignedInt, 0);
             GL.LineWidth(1.0f);
-            GL.Enable(EnableCap.CullFace);
+            if (!polygonOffsetLineWasEnabled)
+            {
+                GL.Disable(EnableCap.PolygonOffsetLine);
+            }
+            if (cullFaceWasEnabled)
+            {
+                GL.Enable(EnableCap.CullFace);
+            }
             GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Fill);
 
             outlineShader.Unbind();

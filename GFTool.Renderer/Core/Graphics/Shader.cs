@@ -1,16 +1,16 @@
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 namespace GFTool.Renderer.Core.Graphics
 {
     public class Shader
     {
         public readonly int Handle;
+        public bool IsValid => Handle != 0 && uniformLocations != null;
         private readonly string Name;
 
-        private readonly Dictionary<string, int> uniformLocations = null;
+        private readonly Dictionary<string, int>? uniformLocations;
         private readonly HashSet<string> missingUniforms = new HashSet<string>();
 
         public Shader(string name, string vertPath, string fragPath)
@@ -109,6 +109,7 @@ namespace GFTool.Renderer.Core.Graphics
 
         public void Bind()
         {
+            if (!IsValid) return;
             GL.UseProgram(Handle);
         }
 
@@ -120,7 +121,7 @@ namespace GFTool.Renderer.Core.Graphics
         public void SetBool(string name, bool data)
         {
             if (HasUniform(name))
-                GL.Uniform1(uniformLocations[name], data ? 1 : 0);
+                GL.Uniform1(uniformLocations![name], data ? 1 : 0);
         }
 
         public void SetBoolIfExists(string name, bool data)
@@ -132,7 +133,7 @@ namespace GFTool.Renderer.Core.Graphics
         public void SetInt(string name, int data)
         {
             if (HasUniform(name))
-                GL.Uniform1(uniformLocations[name], data);
+                GL.Uniform1(uniformLocations![name], data);
         }
 
         public void SetIntIfExists(string name, int data)
@@ -144,7 +145,7 @@ namespace GFTool.Renderer.Core.Graphics
         public void SetFloat(string name, float data)
         {
             if (HasUniform(name))
-                GL.Uniform1(uniformLocations[name], data);
+                GL.Uniform1(uniformLocations![name], data);
         }
 
         public void SetFloatIfExists(string name, float data)
@@ -156,7 +157,7 @@ namespace GFTool.Renderer.Core.Graphics
         public void SetMatrix4(string name, Matrix4 data)
         {
             if (HasUniform(name))
-                GL.UniformMatrix4(uniformLocations[name], false, ref data);
+                GL.UniformMatrix4(uniformLocations![name], false, ref data);
         }
 
         public void SetMatrix4ArrayIfExists(string name, Matrix4[] data)
@@ -180,7 +181,7 @@ namespace GFTool.Renderer.Core.Graphics
         public void SetVector3(string name, Vector3 data)
         {
             if (HasUniform(name))
-                GL.Uniform3(uniformLocations[name], data);
+                GL.Uniform3(uniformLocations![name], data);
         }
 
         public void SetVector3IfExists(string name, Vector3 data)
@@ -192,7 +193,7 @@ namespace GFTool.Renderer.Core.Graphics
         public void SetVector2(string name, Vector2 data)
         {
             if (HasUniform(name))
-                GL.Uniform2(uniformLocations[name], data);
+                GL.Uniform2(uniformLocations![name], data);
         }
 
         public void SetVector2IfExists(string name, Vector2 data)
@@ -204,7 +205,7 @@ namespace GFTool.Renderer.Core.Graphics
         public void SetVector4(string name, Vector4 data)
         {
             if (HasUniform(name))
-                GL.Uniform4(uniformLocations[name], data);
+                GL.Uniform4(uniformLocations![name], data);
         }
 
         public void SetVector4IfExists(string name, Vector4 data)

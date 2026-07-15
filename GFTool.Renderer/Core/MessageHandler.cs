@@ -50,6 +50,7 @@ namespace GFTool.Renderer.Core
         public void AddMessage(MessageType type, string content)
         {
             MessageCallback?.Invoke(this, new Message(type, content));
+            DiagnosticLog.Write($"[{type}] {content}");
             TryWriteLog(type, content);
         }
 

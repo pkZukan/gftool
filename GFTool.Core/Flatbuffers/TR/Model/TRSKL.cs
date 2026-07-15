@@ -30,8 +30,8 @@ namespace Trinity.Core.Flatbuffers.TR.Model
         [FlatBufferItem(1)] public SRT Transform { get; set; } = new SRT();
         [FlatBufferItem(2)] public Vector3f ScalePivot { get; set; } = new Vector3f();
         [FlatBufferItem(3)] public Vector3f RotatePivot { get; set; } = new Vector3f();
-        [FlatBufferItem(4)] public int ParentNodeIndex { get; set; } = -1;
-        [FlatBufferItem(5)] public int JointInfoIndex { get; set; } = -1;
+        [FlatBufferItem(4, DefaultValue = -1)] public int ParentNodeIndex { get; set; } = -1;
+        [FlatBufferItem(5, DefaultValue = -1)] public int JointInfoIndex { get; set; } = -1;
         [FlatBufferItem(6)] public string ParentNodeName { get; set; } = string.Empty;
         [FlatBufferItem(7)] public uint Priority { get; set; } = 0;
         [FlatBufferItem(8)] public bool PriorityPass { get; set; } = false;
@@ -65,7 +65,7 @@ namespace Trinity.Core.Flatbuffers.TR.Model
         [FlatBufferItem(1)] public TRTransformNode[] TransformNodes { get; set; } = Array.Empty<TRTransformNode>();
         [FlatBufferItem(2)] public TRJointInfo[] JointInfos { get; set; } = Array.Empty<TRJointInfo>();
         [FlatBufferItem(3)] public TRHelperBoneInfo[] HelperBones { get; set; } = Array.Empty<TRHelperBoneInfo>();
-        [FlatBufferItem(4)] public int SkinningPaletteOffset { get; set; } = -1;
+        [FlatBufferItem(4, DefaultValue = -1)] public int SkinningPaletteOffset { get; set; } = -1;
         [FlatBufferItem(5)] public bool IsInteriorMap { get; set; } = false;
     }
 }

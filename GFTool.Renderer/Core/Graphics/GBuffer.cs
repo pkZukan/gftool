@@ -160,6 +160,12 @@ namespace GFTool.Renderer.Core.Graphics
             Clear();
 
             var gbShader = ShaderPool.Instance.GetShader("gbuffer");
+            if (gbShader == null)
+            {
+                MessageHandler.Instance.AddMessage(MessageType.ERROR, "Cannot draw GBuffer because shader \"gbuffer\" is unavailable.");
+                return;
+            }
+
             gbShader.Bind();
 
             // Copy depth buffer over for grid/overlay depth testing

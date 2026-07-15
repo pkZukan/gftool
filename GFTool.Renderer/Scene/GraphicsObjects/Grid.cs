@@ -14,7 +14,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         private int vbo;
         private int vertexCount;
 
-        private Shader shader;
+        private Shader? shader;
 
         public override void Setup()
         {

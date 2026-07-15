@@ -2,13 +2,37 @@
 
 uniform sampler2D BaseColorMap;
 uniform sampler2D LayerMaskMap;
+uniform sampler2D EyeMaskMap;
 uniform sampler2D NormalMap;
 uniform sampler2D NormalMap1;
 uniform sampler2D RoughnessMap;
 uniform sampler2D AOMap;
 
+uniform vec4 BaseColor;
+uniform vec4 BaseColorLayer1;
+uniform vec4 BaseColorLayer2;
+uniform vec4 BaseColorLayer3;
+uniform vec4 BaseColorLayer4;
+uniform vec4 EyeHighlightColor;
+uniform float LayerMaskScale1;
+uniform float LayerMaskScale2;
+uniform float LayerMaskScale3;
+uniform float LayerMaskScale4;
+uniform vec4 UVScaleOffset;
+uniform vec4 UVScaleOffset1;
+uniform vec2 EyeUVClamp;
+uniform bool EnableHighlight;
+uniform bool EnableEyePointLight;
+uniform float RoughnessHighlight;
+uniform float RoughnessClearCoat;
+uniform float MetallicHighlight;
+uniform vec3 EyePointLightPosition;
+
 uniform bool EnableBaseColorMap;
 uniform bool EnableLayerMaskMap;
+uniform bool EnableEyeMaskMap;
+uniform bool EnableEyeBaseSclera;
+uniform bool ReplaceBaseColorWithLayers;
 uniform bool EnableNormalMap;
 uniform bool EnableNormalMap1;
 uniform bool EnableRoughnessMap;
@@ -62,40 +86,78 @@ mat3 CotangentFrame(vec3 n, vec3 p, vec2 uv)
     return mat3(t * invmax, b * invmax, n);
 }
 
+vec3 linearToSrgb(vec3 color)
+{
+    vec3 low = color * 12.92;
+    vec3 high = 1.055 * pow(max(color, vec3(0.0)), vec3(1.0 / 2.4)) - 0.055;
+    return clamp(mix(low, high, step(vec3(0.0031308), color)), 0.0, 1.0);
+}
+
+vec3 composeEyeLayers(vec3 baseColor, vec4 layerMask)
+{
+    vec3 color = baseColor;
+    vec3 layer1 = BaseColorLayer1.rgb;
+    vec3 layer2 = BaseColorLayer2.rgb;
+    vec3 layer3 = BaseColorLayer3.rgb;
+    vec3 layer4 = BaseColorLayer4.rgb;
+    color = mix(color, ReplaceBaseColorWithLayers ? layer1 : color * layer1, layerMask.r);
+    color = mix(color, ReplaceBaseColorWithLayers ? layer2 : color * layer2, layerMask.g);
+    color = mix(color, ReplaceBaseColorWithLayers ? layer3 : color * layer3, layerMask.b);
+    color = mix(color, ReplaceBaseColorWithLayers ? layer4 : color * layer4, layerMask.a);
+    return color;
+}
+
+vec2 transformedEyeUv(vec2 source, vec4 transform)
+{
+    if (dot(abs(transform.xy), vec2(1.0)) < 0.0001)
+        transform.xy = vec2(1.0);
+
+    vec2 uv = vec2(
+        source.x * transform.x - transform.z,
+        1.0 - (source.y * transform.y - transform.w));
+    return mix(uv, clamp(uv, vec2(0.0), vec2(1.0)), EyeUVClamp);
+}
+
 void main()
 {
-    vec2 uv = vec2(TexCoord.x, 1.0f - TexCoord.y);
+    vec2 animatedUv = transformedEyeUv(TexCoord, UVScaleOffset);
+    vec2 animatedUv1 = transformedEyeUv(TexCoord, UVScaleOffset1);
+    vec2 baseUv = animatedUv;
 
     bool useLayerMask = EnableLayerMaskMap && NumMaterialLayer;
-    vec4 layerMask = vec4(0.0);
+    vec4 layerMask = useLayerMask ? texture(LayerMaskMap, animatedUv) : vec4(0.0);
+    vec4 scaledLayerMask = clamp(
+        layerMask * vec4(LayerMaskScale1, LayerMaskScale2, LayerMaskScale3, LayerMaskScale4),
+        0.0,
+        1.0);
+
+    vec3 baseColor = (EnableBaseColorMap ? texture(BaseColorMap, baseUv).rgb : vec3(1.0)) * BaseColor.rgb;
     if (useLayerMask)
     {
-        layerMask = texture(LayerMaskMap, uv);
-    }
-    float layerWeight = 1.0;
-    if (useLayerMask)
-    {
-        layerWeight = clamp(1.0 - dot(vec4(1.0), layerMask), 0.0, 1.0);
-        layerWeight = mix(layerWeight, 1.0, layerMask.r);
+        baseColor = composeEyeLayers(baseColor, scaledLayerMask);
     }
 
-    vec3 baseColor = EnableBaseColorMap ? texture(BaseColorMap, uv).rgb : vec3(1.0);
+    float eyeGlint = EnableHighlight && EnableEyeMaskMap
+        ? smoothstep(0.08, 0.92, texture(EyeMaskMap, animatedUv).r)
+        : 0.0;
+
     vec3 vertexColor = EnableVertexColor ? Color.rgb : vec3(1.0);
     vec3 albedo = EnableVertexColor
         ? mix(vertexColor, baseColor, EnableBaseColorMap ? 0.5 : 0.0)
         : baseColor;
-    albedo *= layerWeight;
 
-    float roughness = EnableRoughnessMap ? texture(RoughnessMap, uv).r : 0.15;
+    float roughness = EnableRoughnessMap ? texture(RoughnessMap, baseUv).r : 0.15;
+    if (EnableHighlight)
+        roughness = min(roughness, clamp(RoughnessHighlight, 0.02, 1.0));
     roughness = clamp(roughness, 0.02, 1.0);
 
-    float ao = EnableAOMap ? texture(AOMap, uv).r : 1.0;
+    float ao = EnableAOMap ? texture(AOMap, baseUv).r : 1.0;
 
     vec3 n = normalize(Normal);
     vec3 tangentNormal = vec3(0.0, 0.0, 1.0);
     if (EnableNormalMap && HasTangents)
     {
-        vec4 nm = texture(NormalMap, uv);
+        vec4 nm = texture(NormalMap, animatedUv);
         vec2 rg = nm.rg * 2.0 - 1.0;
         if (ReconstructNormalZ)
         {
@@ -111,7 +173,7 @@ void main()
     }
     if (EnableNormalMap1 && useLayerMask && HasTangents)
     {
-        vec4 nm1 = texture(NormalMap1, uv);
+        vec4 nm1 = texture(NormalMap1, animatedUv1);
         vec2 rg1 = nm1.rg * 2.0 - 1.0;
         vec3 n1;
         if (ReconstructNormalZ)
@@ -152,10 +214,22 @@ void main()
     float iorScale = clamp(IOR - 1.0, 0.0, 1.0);
     specPower *= mix(1.0, 1.6, iorScale);
     float spec = pow(max(dot(n, halfDir), 0.0), specPower);
-    float clearCoat = pow(max(dot(n, halfDir), 0.0), specPower * 2.0) * 0.35;
+    float clearCoat = pow(max(dot(n, halfDir), 0.0), specPower * 2.0) * mix(0.35, 0.62, clamp(MetallicHighlight, 0.0, 1.0));
+    float pointHighlight = 0.0;
+    vec3 pointVector = EyePointLightPosition - FragPos;
+    if (EnableEyePointLight && dot(pointVector, pointVector) > 0.000001)
+    {
+        vec3 pointLightDir = normalize(pointVector);
+        float pointRoughness = clamp(RoughnessClearCoat, 0.08, 1.0);
+        float pointPower = max(8.0 / (pointRoughness * pointRoughness) - 2.0, 64.0);
+        pointHighlight = pow(max(dot(n, pointLightDir), 0.0), pointPower);
+        pointHighlight = smoothstep(0.02, 0.8, pointHighlight);
+        pointHighlight *= mix(0.4, 1.0, clamp(MetallicHighlight, 0.0, 1.0));
+    }
 
     vec3 emission = EmissionColor * EmissionStrength * clamp(ParallaxInside, 0.0, 1.0);
     vec3 color = AmbientColor * albedo + LightColor * wrappedNdotL * albedo + emission;
+    color = mix(color, linearToSrgb(EyeHighlightColor.rgb), clamp(max(eyeGlint, pointHighlight), 0.0, 0.94));
 
     gAlbedo = color;
     gNormal = n * 0.5 + 0.5;

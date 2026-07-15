@@ -7,6 +7,17 @@ uniform sampler2D RoughnessMap;
 uniform sampler2D AOMap;
 uniform sampler2D MetallicMap;
 
+uniform vec4 BaseColor;
+uniform vec4 BaseColorLayer1;
+uniform vec4 BaseColorLayer2;
+uniform vec4 BaseColorLayer3;
+uniform vec4 BaseColorLayer4;
+uniform float LayerMaskScale1;
+uniform float LayerMaskScale2;
+uniform float LayerMaskScale3;
+uniform float LayerMaskScale4;
+uniform vec4 UVScaleOffset;
+
 uniform bool EnableBaseColorMap;
 uniform bool EnableLayerMaskMap;
 uniform bool EnableNormalMap;
@@ -16,6 +27,7 @@ uniform bool NumMaterialLayer;
 uniform bool EnableSSSMaskMap;
 uniform bool EnableMetallicMap;
 uniform bool EnableVertexColor;
+uniform bool EnableThinRefraction;
 
 uniform vec3 LightDirection;
 uniform vec3 LightColor;
@@ -29,10 +41,7 @@ uniform bool TwoSidedDiffuse;
 uniform float LightWrap;
 uniform float SpecularScale;
 
-layout (location = 0) out vec3 gAlbedo;
-layout (location = 1) out vec3 gNormal;
-layout (location = 2) out vec3 gSpecular;
-layout (location = 3) out vec3 gAO;
+layout (location = 0) out vec4 outColor;
 
 in vec3 FragPos;
 in vec3 Normal;
@@ -44,24 +53,28 @@ in vec3 Binormal;
 
 void main()
 {
-    vec2 uv = vec2(TexCoord.x, 1.0f - TexCoord.y);
+    vec4 uvTransform = UVScaleOffset;
+    if (dot(abs(uvTransform.xy), vec2(1.0)) < 0.0001)
+        uvTransform.xy = vec2(1.0);
+    vec2 uv = vec2(TexCoord.x, 1.0f - TexCoord.y) * uvTransform.xy + uvTransform.zw;
     bool useLayerMask = EnableLayerMaskMap && NumMaterialLayer;
-    vec4 layerMask = vec4(0.0);
-    if (useLayerMask)
-    {
-        layerMask = texture(LayerMaskMap, uv);
-    }
-    float layerWeight = 1.0;
-    if (useLayerMask)
-    {
-        layerWeight = clamp(1.0 - dot(vec4(1.0), layerMask), 0.0, 1.0);
-        layerWeight = mix(layerWeight, 1.0, layerMask.r);
-    }
+    vec4 layerMask = useLayerMask ? texture(LayerMaskMap, uv) : vec4(0.0);
+    layerMask = clamp(
+        layerMask * vec4(LayerMaskScale1, LayerMaskScale2, LayerMaskScale3, LayerMaskScale4),
+        0.0,
+        1.0);
 
-    vec3 baseColor = EnableBaseColorMap ? texture(BaseColorMap, uv).rgb : vec3(1.0);
+    vec4 baseSample = (EnableBaseColorMap ? texture(BaseColorMap, uv) : vec4(1.0)) * BaseColor;
+    vec3 baseColor = baseSample.rgb;
+    if (useLayerMask)
+    {
+        baseColor = mix(baseColor, clamp(BaseColorLayer1.rgb, 0.0, 1.0), layerMask.r);
+        baseColor = mix(baseColor, clamp(BaseColorLayer2.rgb, 0.0, 1.0), layerMask.g);
+        baseColor = mix(baseColor, clamp(BaseColorLayer3.rgb, 0.0, 1.0), layerMask.b);
+        baseColor = mix(baseColor, clamp(BaseColorLayer4.rgb, 0.0, 1.0), layerMask.a);
+    }
     vec3 vertexColor = EnableVertexColor ? Color.rgb : vec3(1.0);
     vec3 albedo = baseColor * vertexColor;
-    albedo *= layerWeight;
 
     float roughness = EnableRoughnessMap ? texture(RoughnessMap, uv).r : 0.35;
     roughness = clamp(roughness, 0.04, 1.0);
@@ -111,8 +124,17 @@ void main()
     vec3 specColor = mix(vec3(0.04), albedo, metallic);
     vec3 color = AmbientColor * albedo + LightColor * wrappedNdotL * diffuse;
 
-    gAlbedo = color;
-    gNormal = n * 0.5 + 0.5;
-    gSpecular = spec * specColor * SpecularScale;
-    gAO = vec3(ao);
+    color += spec * specColor * SpecularScale;
+    color *= ao;
+
+    float alpha = baseSample.a * (EnableVertexColor ? Color.a : 1.0);
+    if (EnableThinRefraction)
+    {
+        float fresnel = pow(1.0 - clamp(abs(dot(n, viewDir)), 0.0, 1.0), 3.0);
+        alpha = mix(0.035, 0.16, fresnel) * alpha;
+        color = mix(vec3(1.0), color, 0.2);
+    }
+    if (alpha <= 0.003)
+        discard;
+    outColor = vec4(color, clamp(alpha, 0.0, 1.0));
 }

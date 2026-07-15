@@ -17,6 +17,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Shaders\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
     <None Update="Shaders\EyeClearCoat.fsh">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

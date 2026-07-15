@@ -11,14 +11,18 @@ namespace GFTool.RenderControl_WinForms
 {
     public partial class RenderControl : GLControl
     {
-        public RenderContext renderer { get; private set; }
+        public RenderContext renderer { get; private set; } = null!;
+        public bool RendererInitialized => renderer != null;
         public Timer timer { get; private set; }
         public event EventHandler? RendererReady;
 
         Point prevMousePos;
         private bool useIdleRenderLoop = false;
         private bool isDragging = false;
+        private bool isRendering = false;
         private bool skipNextDelta = false;
+        private bool renderErrorShown = false;
+        private bool contextErrorLogged = false;
         private long lastUpdateTicks = 0;
         private float pendingRotateX = 0f;
         private float pendingRotateY = 0f;
@@ -44,15 +48,35 @@ namespace GFTool.RenderControl_WinForms
             base.OnLoad(e);
 
             if (!IsDesignMode())
-                renderer = new RenderContext(Context, Width, Height);
+            {
+                try
+                {
+                    if (!TryMakeCurrent())
+                    {
+                        throw new InvalidOperationException("OpenGL context is not ready.");
+                    }
+
+                    renderer = new RenderContext(Context, Width, Height);
+                }
+                catch (Exception ex)
+                {
+                    timer.Enabled = false;
+                    MessageHandler.Instance.AddMessage(MessageType.ERROR, $"Renderer failed to initialize: {ex.Message}");
+                    MessageBox.Show(
+                        $"Renderer failed to initialize:\n\n{ex.Message}\n\nIf this is a release build, make sure the Shaders folder is next to TrinityModelViewer.exe and your GPU driver supports OpenGL 3.3.",
+                        "Trinity Model Viewer",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    return;
+                }
+            }
 
             if (!IsDesignMode())
             {
                 RendererReady?.Invoke(this, EventArgs.Empty);
                 TryEnableVsync();
-                useIdleRenderLoop = true;
-                timer.Enabled = false;
-                Application.Idle += RenderLoop;
+                useIdleRenderLoop = false;
+                timer.Enabled = true;
             }
         }
 
@@ -67,21 +91,53 @@ namespace GFTool.RenderControl_WinForms
         {
             base.OnPaint(e);
 
-            if (!IsDesignMode() && !useIdleRenderLoop)
-                renderer?.Update();
+            if (IsDesignMode() || useIdleRenderLoop || renderer == null || isRendering || !CanUseContext())
+            {
+                return;
+            }
+
+            try
+            {
+                isRendering = true;
+                if (!TryMakeCurrent())
+                {
+                    return;
+                }
+
+                renderer.Update();
+            }
+            catch (Exception ex)
+            {
+                HandleRenderError(ex);
+            }
+            finally
+            {
+                isRendering = false;
+            }
         }
 
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
-            if (IsDesignMode() || renderer == null)
+            if (IsDesignMode() || renderer == null || isRendering || !CanUseContext())
             {
                 return;
             }
 
-            MakeCurrent();
-            renderer.Resize(Math.Max(1, Width), Math.Max(1, Height));
-            Invalidate();
+            try
+            {
+                if (!TryMakeCurrent())
+                {
+                    return;
+                }
+
+                renderer.Resize(Math.Max(1, Width), Math.Max(1, Height));
+                Invalidate();
+            }
+            catch (Exception ex)
+            {
+                HandleRenderError(ex);
+            }
         }
 
         protected override void OnMouseMove(MouseEventArgs e)
@@ -164,17 +220,18 @@ namespace GFTool.RenderControl_WinForms
 
         private void movementTimer_Tick(object sender, EventArgs e)
         {
-            if (!IsDesignMode())
+            if (!IsDesignMode() && renderer != null && !renderErrorShown && CanUseContext())
             {
                 float deltaSeconds = GetDeltaSeconds();
-                renderer?.UpdateMovementControls(deltaSeconds * GetSpeedMultiplier());
+                renderer.UpdateMovementControls(deltaSeconds * GetSpeedMultiplier());
+                ApplyPendingCameraInput();
                 Invalidate();
             }
         }
 
         private void RenderLoop(object? sender, EventArgs e)
         {
-            if (IsDesignMode() || renderer == null) return;
+            if (IsDesignMode() || renderer == null || isRendering || !CanUseContext()) return;
 
             while (IsApplicationIdle())
             {
@@ -182,7 +239,25 @@ namespace GFTool.RenderControl_WinForms
                 renderer.UpdateMovementControls(deltaSeconds * GetSpeedMultiplier());
 
                 ApplyPendingCameraInput();
-                renderer.Update();
+                try
+                {
+                    isRendering = true;
+                    if (!TryMakeCurrent())
+                    {
+                        return;
+                    }
+
+                    renderer.Update();
+                }
+                catch (Exception ex)
+                {
+                    HandleRenderError(ex);
+                    return;
+                }
+                finally
+                {
+                    isRendering = false;
+                }
             }
         }
 
@@ -279,6 +354,77 @@ namespace GFTool.RenderControl_WinForms
         private bool IsApplicationIdle()
         {
             return !PeekMessage(out _, IntPtr.Zero, 0, 0, 0);
+        }
+
+        private bool CanUseContext()
+        {
+            return IsHandleCreated &&
+                   !IsDisposed &&
+                   !Disposing &&
+                   Width > 0 &&
+                   Height > 0 &&
+                   Context != null;
+        }
+
+        private bool TryMakeCurrent()
+        {
+            if (!CanUseContext())
+            {
+                return false;
+            }
+
+            try
+            {
+                MakeCurrent();
+                return true;
+            }
+            catch (Exception ex) when (IsContextCurrentError(ex))
+            {
+                LogContextErrorOnce(ex);
+                return false;
+            }
+        }
+
+        private void HandleRenderError(Exception ex)
+        {
+            if (IsContextCurrentError(ex))
+            {
+                LogContextErrorOnce(ex);
+                return;
+            }
+
+            timer.Enabled = false;
+            MessageHandler.Instance.AddMessage(MessageType.ERROR, $"Renderer failed while drawing: {ex.Message}");
+
+            if (renderErrorShown)
+            {
+                return;
+            }
+
+            renderErrorShown = true;
+            MessageBox.Show(
+                $"Renderer failed while drawing:\n\n{ex.Message}\n\nRendering has been paused instead of closing the app.",
+                "Trinity Model Viewer",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+
+        private static bool IsContextCurrentError(Exception ex)
+        {
+            var message = ex.Message ?? string.Empty;
+            return message.Contains("Failed to make context current", StringComparison.OrdinalIgnoreCase) ||
+                   message.Contains("SwapBuffers", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void LogContextErrorOnce(Exception ex)
+        {
+            if (contextErrorLogged)
+            {
+                return;
+            }
+
+            contextErrorLogged = true;
+            MessageHandler.Instance.AddMessage(MessageType.WARNING, $"Skipped a frame because the OpenGL context was temporarily unavailable: {ex.Message}");
         }
 
         [StructLayout(LayoutKind.Sequential)]

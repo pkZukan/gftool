@@ -26,5 +26,6 @@ namespace GFTool.Renderer.Core
         public static bool UseSkinningPaletteMatrices { get; set; } = false;
         public static bool MapBlendIndicesViaJointInfo { get; set; } = false;
         public static bool UseJointInfoMatrices { get; set; } = false;
+        public static bool SuppressLayeredFacialPoseTracks { get; set; } = false;
     }
 }

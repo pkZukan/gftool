@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FlatSharp;
+using GFTool.Renderer.Core;
 using OpenTK.Mathematics;
 using Trinity.Core.Flatbuffers.GF.Animation;
 using Trinity.Core.Flatbuffers.Utils;
@@ -22,6 +23,21 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         public uint FrameRate { get; }
         public int TrackCount => tracks.Count;
         public IReadOnlyList<string> TrackNames => trackOrder;
+        public int MouthPoseTrackCount { get; }
+        public int ActiveMouthPoseTrackCount { get; }
+        public int ZeroEndpointPlaceholderTrackCount { get; }
+        public int AnimatedBetweenPlaceholderEndpointsTrackCount { get; }
+        public bool UsesZeroEndpointPlaceholderEncoding =>
+            ZeroEndpointPlaceholderTrackCount >= 8 && ZeroEndpointPlaceholderTrackCount * 4 >= trackOrder.Count;
+        public bool UsesAdditivePoseEncoding => UsesZeroEndpointPlaceholderEncoding;
+        public ActionClipAnimation? ActionClip { get; private set; }
+        public bool AllowsMouthPoseTracks => IsMouthPoseAnimationName(Name);
+        public bool AllowsUpperFacePoseTracks => IsUpperFacePoseAnimationName(Name);
+        public bool IsFacialOverlay => AllowsMouthPoseTracks || AllowsUpperFacePoseTracks;
+        public bool UsesEmbeddedMouthPoseTracks =>
+            ContainsToken(Name, "speak") && ActiveMouthPoseTrackCount > 0;
+        public bool RequiresAnimatedMouthOverlay =>
+            ContainsToken(Name, "speak") && ActiveMouthPoseTrackCount == 0;
 
         private readonly Dictionary<string, BoneTrack> tracks = new Dictionary<string, BoneTrack>(StringComparer.OrdinalIgnoreCase);
         private readonly List<string> trackOrder = new List<string>();
@@ -55,21 +71,59 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                     }
                 }
             }
+
+            float lastFrame = Math.Max(0f, FrameCount - 1f);
+            float middleFrame = lastFrame * 0.5f;
+            foreach (var trackName in trackOrder)
+            {
+                bool isMouthTrack = IsMouthPoseBoneName(trackName);
+                if (IsMouthPoseBoneName(trackName))
+                {
+                    MouthPoseTrackCount++;
+                }
+
+                if (!tracks.TryGetValue(trackName, out var track))
+                {
+                    continue;
+                }
+
+                bool zeroEndpointTrack = IsZeroPlaceholderTrack(track, lastFrame);
+                bool activeAtMiddle = zeroEndpointTrack && !IsZeroPlaceholderPose(track, middleFrame);
+                if (isMouthTrack &&
+                    (!zeroEndpointTrack || activeAtMiddle || HasNonZeroPlaceholderPose(track, lastFrame)))
+                {
+                    ActiveMouthPoseTrackCount++;
+                }
+
+                if (zeroEndpointTrack)
+                {
+                    ZeroEndpointPlaceholderTrackCount++;
+                    if (activeAtMiddle)
+                    {
+                        AnimatedBetweenPlaceholderEndpointsTrackCount++;
+                    }
+                }
+            }
         }
 
-        public float GetFrame(float timeSeconds)
+        public float GetFrame(float timeSeconds, bool forceLoop = false)
         {
             float frameRate = FrameRate > 0 ? FrameRate : 30f;
             float frame = timeSeconds * frameRate;
             if (FrameCount > 0)
             {
-                if (LoopType == PlayType.Looped)
+                if (LoopType == PlayType.Looped || forceLoop)
                 {
                     frame %= FrameCount;
                 }
                 frame = Math.Clamp(frame, 0f, Math.Max(0f, FrameCount - 1));
             }
             return frame;
+        }
+
+        public void AttachActionClip(ActionClipAnimation actionClip)
+        {
+            ActionClip = actionClip;
         }
 
         public bool TryGetPose(string boneName, float frame, out Vector3? scale, out Quaternion? rotation, out Vector3? translation)
@@ -92,6 +146,48 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         public bool HasTrack(string boneName)
         {
             return TryGetTrack(boneName, out _);
+        }
+
+        public bool ShouldApplyPoseTrack(string boneName)
+        {
+            if (!RenderOptions.SuppressLayeredFacialPoseTracks)
+            {
+                return true;
+            }
+
+            if (IsMouthPoseBoneName(boneName))
+            {
+                return AllowsMouthPoseTracks || UsesEmbeddedMouthPoseTracks;
+            }
+
+            if (IsUpperFacePoseBoneName(boneName))
+            {
+                return AllowsUpperFacePoseTracks;
+            }
+
+            return true;
+        }
+
+        public bool ShouldApplyAsMouthOverlay(string boneName)
+        {
+            return AllowsMouthPoseTracks && IsMouthPoseBoneName(boneName);
+        }
+
+        public bool ShouldApplyAsUpperFaceOverlay(string boneName)
+        {
+            return AllowsUpperFacePoseTracks && IsUpperFacePoseBoneName(boneName);
+        }
+
+        public bool ShouldIgnoreZeroPlaceholderPose(
+            string boneName,
+            Vector3? scale,
+            Quaternion? rotation,
+            Vector3? translation)
+        {
+            return UsesZeroEndpointPlaceholderEncoding &&
+                   TryGetTrack(boneName, out var track) &&
+                   IsZeroPlaceholderTrack(track, Math.Max(0f, FrameCount - 1f)) &&
+                   IsZeroPlaceholderPose(scale, rotation, translation);
         }
 
         private bool TryGetTrack(string boneName, out BoneTrack track)
@@ -147,6 +243,103 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             }
 
             return name.Trim();
+        }
+
+        private static bool IsMouthPoseAnimationName(string name)
+        {
+            // "speak" and "sitspeak" clips are full-body dialogue motions (often
+            // over 100 tracks). Only the dedicated 081xx mouth clips are overlays.
+            return ContainsToken(name, "mouth");
+        }
+
+        private static bool IsUpperFacePoseAnimationName(string name)
+        {
+            return ContainsToken(name, "face") ||
+                   ContainsToken(name, "eye") ||
+                   ContainsToken(name, "eyeblink") ||
+                   ContainsToken(name, "iris");
+        }
+
+        public static bool IsLayeredFacialPoseBoneName(string name)
+        {
+            return IsMouthPoseBoneName(name) || IsUpperFacePoseBoneName(name);
+        }
+
+        public static bool IsMouthPoseBoneName(string name)
+        {
+            return ContainsToken(name, "mouth") ||
+                   ContainsToken(name, "lip") ||
+                   ContainsToken(name, "jaw") ||
+                   ContainsToken(name, "teeth") ||
+                   ContainsToken(name, "tongue");
+        }
+
+        public static bool IsUpperFacePoseBoneName(string name)
+        {
+            return ContainsToken(name, "eyelid") ||
+                   ContainsToken(name, "eyebrow") ||
+                   ContainsToken(name, "brow") ||
+                   ContainsToken(name, "iris");
+        }
+
+        private static bool ContainsToken(string text, string token)
+        {
+            return !string.IsNullOrWhiteSpace(text) &&
+                   text.Contains(token, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsZeroPlaceholderTrack(BoneTrack track, float lastFrame)
+        {
+            return IsZeroPlaceholderPose(track, 0f) &&
+                   IsZeroPlaceholderPose(track, lastFrame);
+        }
+
+        private static bool HasNonZeroPlaceholderPose(BoneTrack track, float lastFrame)
+        {
+            int frameCount = Math.Max(1, (int)MathF.Ceiling(lastFrame));
+            for (int frame = 1; frame < frameCount; frame++)
+            {
+                if (!IsZeroPlaceholderPose(track, frame))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsZeroPlaceholderPose(BoneTrack track, float frame)
+        {
+            var scale = SampleVector(track.Scale, frame);
+            var rotation = SampleRotation(track.Rotate, frame);
+            var translation = SampleVector(track.Translate, frame);
+            return IsZeroPlaceholderPose(scale, rotation, translation);
+        }
+
+        private static bool IsZeroPlaceholderPose(
+            Vector3? scale,
+            Quaternion? rotation,
+            Vector3? translation)
+        {
+            if (!scale.HasValue || !rotation.HasValue || !translation.HasValue)
+            {
+                return false;
+            }
+
+            const float epsilon = 0.0001f;
+            var s = scale.Value;
+            var r = rotation.Value;
+            var t = translation.Value;
+            return MathF.Abs(s.X) < epsilon &&
+                   MathF.Abs(s.Y) < epsilon &&
+                   MathF.Abs(s.Z) < epsilon &&
+                   MathF.Abs(t.X) < epsilon &&
+                   MathF.Abs(t.Y) < epsilon &&
+                   MathF.Abs(t.Z) < epsilon &&
+                   MathF.Abs(r.X) < epsilon &&
+                   MathF.Abs(r.Y) < epsilon &&
+                   MathF.Abs(r.Z) < epsilon &&
+                   MathF.Abs(MathF.Abs(r.W) - 1f) < epsilon;
         }
 
         private static Vector3? SampleVector(FlatBufferUnion<FixedVectorTrack, DynamicVectorTrack, Framed16VectorTrack, Framed8VectorTrack> channel, float frame)

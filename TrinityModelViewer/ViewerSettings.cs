@@ -14,7 +14,7 @@ namespace TrinityModelViewer
             Legacy = 2
         }
 
-        public bool DarkMode { get; set; }
+        public bool DarkMode { get; set; } = true;
         public bool EnableNormalMaps { get; set; } = true;
         public bool EnableAO { get; set; } = true;
         public bool EnableVertexColors { get; set; } = false;

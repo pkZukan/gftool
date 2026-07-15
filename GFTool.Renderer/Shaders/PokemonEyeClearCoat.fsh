@@ -56,10 +56,11 @@ uniform vec3 EmissionColor;
 uniform float EmissionStrength;
 uniform float ParallaxInside;
 uniform float IOR;
-uniform float LensOpacity;
-uniform float AlbedoAlpha;
 
-layout (location = 0) out vec4 outColor;
+layout (location = 0) out vec3 gAlbedo;
+layout (location = 1) out vec3 gNormal;
+layout (location = 2) out vec3 gSpecular;
+layout (location = 3) out vec3 gAO;
 
 in vec3 FragPos;
 in vec3 Normal;
@@ -68,6 +69,22 @@ in vec4 Color;
 in vec3 Tangent;
 in vec3 Bitangent;
 in vec3 Binormal;
+
+mat3 CotangentFrame(vec3 n, vec3 p, vec2 uv)
+{
+    vec3 dp1 = dFdx(p);
+    vec3 dp2 = dFdy(p);
+    vec2 duv1 = dFdx(uv);
+    vec2 duv2 = dFdy(uv);
+
+    vec3 dp2perp = cross(dp2, n);
+    vec3 dp1perp = cross(n, dp1);
+    vec3 t = dp2perp * duv1.x + dp1perp * duv2.x;
+    vec3 b = dp2perp * duv1.y + dp1perp * duv2.y;
+
+    float invmax = inversesqrt(max(dot(t, t), dot(b, b)));
+    return mat3(t * invmax, b * invmax, n);
+}
 
 vec3 linearToSrgb(vec3 color)
 {
@@ -79,14 +96,18 @@ vec3 linearToSrgb(vec3 color)
 vec3 composeEyeLayers(vec3 baseColor, vec4 layerMask)
 {
     vec3 color = baseColor;
-    vec3 layer1 = BaseColorLayer1.rgb;
-    vec3 layer2 = BaseColorLayer2.rgb;
-    vec3 layer3 = BaseColorLayer3.rgb;
-    vec3 layer4 = BaseColorLayer4.rgb;
-    color = mix(color, ReplaceBaseColorWithLayers ? layer1 : color * layer1, layerMask.r);
-    color = mix(color, ReplaceBaseColorWithLayers ? layer2 : color * layer2, layerMask.g);
-    color = mix(color, ReplaceBaseColorWithLayers ? layer3 : color * layer3, layerMask.b);
-    color = mix(color, ReplaceBaseColorWithLayers ? layer4 : color * layer4, layerMask.a);
+    vec3 layer1 = linearToSrgb(BaseColorLayer1.rgb);
+    vec3 layer2 = linearToSrgb(BaseColorLayer2.rgb);
+    vec3 layer3 = linearToSrgb(BaseColorLayer3.rgb);
+    vec3 layer4 = linearToSrgb(BaseColorLayer4.rgb);
+    vec3 target1 = ReplaceBaseColorWithLayers ? layer1 : baseColor * layer1;
+    vec3 target2 = ReplaceBaseColorWithLayers ? layer2 : baseColor * layer2;
+    vec3 target3 = ReplaceBaseColorWithLayers ? layer3 : baseColor * layer3;
+    vec3 target4 = ReplaceBaseColorWithLayers ? layer4 : baseColor * layer4;
+    color = mix(color, target1, layerMask.r);
+    color = mix(color, target2, layerMask.g);
+    color = mix(color, target3, layerMask.b);
+    color = mix(color, target4, layerMask.a);
     return color;
 }
 
@@ -94,7 +115,6 @@ vec2 transformedEyeUv(vec2 source, vec4 transform)
 {
     if (dot(abs(transform.xy), vec2(1.0)) < 0.0001)
         transform.xy = vec2(1.0);
-
     vec2 uv = vec2(
         source.x * transform.x - transform.z,
         1.0 - (source.y * transform.y - transform.w));
@@ -119,11 +139,9 @@ void main()
     {
         baseColor = composeEyeLayers(baseColor, scaledLayerMask);
     }
-
     float eyeGlint = EnableHighlight && EnableEyeMaskMap
         ? smoothstep(0.08, 0.92, texture(EyeMaskMap, animatedUv).r)
         : 0.0;
-
     vec3 vertexColor = EnableVertexColor ? Color.rgb : vec3(1.0);
     vec3 albedo = EnableVertexColor
         ? mix(vertexColor, baseColor, EnableBaseColorMap ? 0.5 : 0.0)
@@ -154,7 +172,7 @@ void main()
         if (FlipNormalY)
             tangentNormal.y = -tangentNormal.y;
     }
-    if (EnableNormalMap1 && useLayerMask && HasTangents)
+    if (EnableNormalMap1 && HasTangents)
     {
         vec4 nm1 = texture(NormalMap1, animatedUv1);
         vec2 rg1 = nm1.rg * 2.0 - 1.0;
@@ -170,7 +188,10 @@ void main()
         }
         if (FlipNormalY)
             n1.y = -n1.y;
-        tangentNormal = normalize(mix(tangentNormal, n1, layerMask.g));
+        float normal1Mask = EnableEyeMaskMap
+            ? texture(EyeMaskMap, animatedUv).r
+            : (useLayerMask ? layerMask.g : 0.0);
+        tangentNormal = normalize(mix(tangentNormal, n1, normal1Mask));
     }
     if ((EnableNormalMap || EnableNormalMap1) && HasTangents)
     {
@@ -200,7 +221,7 @@ void main()
     float clearCoat = pow(max(dot(n, halfDir), 0.0), specPower * 2.0) * mix(0.35, 0.62, clamp(MetallicHighlight, 0.0, 1.0));
     float pointHighlight = 0.0;
     vec3 pointVector = EyePointLightPosition - FragPos;
-    if (EnableEyePointLight && dot(pointVector, pointVector) > 0.000001)
+    if (EnableHighlight && EnableEyePointLight && dot(pointVector, pointVector) > 0.000001)
     {
         vec3 pointLightDir = normalize(pointVector);
         float pointRoughness = clamp(RoughnessClearCoat, 0.08, 1.0);
@@ -213,10 +234,9 @@ void main()
     vec3 emission = EmissionColor * EmissionStrength * clamp(ParallaxInside, 0.0, 1.0);
     vec3 color = AmbientColor * albedo + LightColor * wrappedNdotL * albedo + emission;
     color = mix(color, linearToSrgb(EyeHighlightColor.rgb), clamp(max(eyeGlint, pointHighlight), 0.0, 0.94));
-    vec3 specColor = vec3(0.8) * SpecularScale;
-    color += (spec + clearCoat) * specColor;
-    color *= ao;
 
-    float alpha = clamp(AlbedoAlpha * LensOpacity, 0.0, 1.0);
-    outColor = vec4(color, alpha);
+    gAlbedo = color;
+    gNormal = n * 0.5 + 0.5;
+    gSpecular = (spec + clearCoat) * vec3(0.8) * SpecularScale;
+    gAO = vec3(ao);
 }

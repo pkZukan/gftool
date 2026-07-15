@@ -6,6 +6,13 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <Version>0.3.46</Version>
+    <AssemblyVersion>0.3.46.0</AssemblyVersion>
+    <FileVersion>0.3.46.0</FileVersion>
+    <InformationalVersion>0.3.46.20260715</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <Product>Trinity Model Viewer</Product>
+    <Description>Minimal Trinity model viewer with improved Trinity material support.</Description>
   </PropertyGroup>
 
   <ItemGroup>

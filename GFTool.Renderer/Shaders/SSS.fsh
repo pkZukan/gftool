@@ -15,6 +15,7 @@ uniform bool EnableAOMap;
 uniform bool NumMaterialLayer;
 uniform bool EnableSSSMaskMap;
 uniform bool EnableVertexColor;
+uniform vec4 BaseColor;
 
 uniform vec3 LightDirection;
 uniform vec3 LightColor;
@@ -59,7 +60,7 @@ void main()
         layerWeight = mix(layerWeight, 1.0, layerMask.r);
     }
 
-    vec3 baseColor = EnableBaseColorMap ? texture(BaseColorMap, uv).rgb : vec3(1.0);
+    vec3 baseColor = (EnableBaseColorMap ? texture(BaseColorMap, uv).rgb : vec3(1.0)) * BaseColor.rgb;
     vec3 vertexColor = EnableVertexColor ? Color.rgb : vec3(1.0);
     vec3 albedo = baseColor * vertexColor;
     albedo *= layerWeight;

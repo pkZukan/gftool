@@ -1,6 +1,3 @@
-
-using System.Xml.Linq;
-
 namespace GFTool.Renderer.Core.Graphics
 {
     public class ShaderPool
@@ -14,25 +11,31 @@ namespace GFTool.Renderer.Core.Graphics
 
         private ShaderPool()
         {
-            shaderPath = "Shaders/";
+            shaderPath = Path.Combine(AppContext.BaseDirectory, "Shaders");
         }
 
         private bool AddShader(string name)
         {
-            var vsh = shaderPath + name + ".vsh";
-            var fsh = shaderPath + name + ".fsh";
+            var vsh = Path.Combine(shaderPath, name + ".vsh");
+            var fsh = Path.Combine(shaderPath, name + ".fsh");
             if (!File.Exists(vsh) || !File.Exists(fsh))
             {
-                MessageHandler.Instance.AddMessage(MessageType.ERROR, string.Format("Shader \"{0}\" not supported.", name));
+                MessageHandler.Instance.AddMessage(MessageType.ERROR, $"Shader \"{name}\" not found in \"{shaderPath}\".");
                 return false;
             }
-            shaders[name] = new Shader(name, vsh, fsh);
+            var shader = new Shader(name, vsh, fsh);
+            if (!shader.IsValid)
+            {
+                return false;
+            }
+
+            shaders[name] = shader;
             MessageHandler.Instance.AddMessage(MessageType.LOG, string.Format("Shader \"{0}\" loaded into pool.", name));
 
             return true;
         }
 
-        public Shader GetShader(string name)
+        public Shader? GetShader(string name)
         {
             if (!shaders.ContainsKey(name))
             {
@@ -46,6 +49,11 @@ namespace GFTool.Renderer.Core.Graphics
         public void Bind(string name)
         {
             var shader = GetShader(name);
+            if (shader == null)
+            {
+                return;
+            }
+
             shader.Bind();
         }
     }

@@ -15,7 +15,9 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
     public class Armature
     {
         public const int MaxSkinBones = 192;
+        private const float MinScaleComponent = 0.000001f;
         private Matrix4[]? activePoseWorld;
+        private readonly HashSet<string> scaleFallbackWarnings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         public class Bone
         {
@@ -217,8 +219,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             {
                 // Row vector math: v' = v * invBind * poseWorld. Matrices are transposed on upload for GLSL.
                 var bone = Bones[i];
-                var invBind = bone.HasJointInverseBind ? bone.JointInverseBindWorld : bone.InverseBindWorld;
-                result[i] = invBind * world[i];
+                result[i] = bone.InverseBindWorld * world[i];
             }
             for (int i = boneCount; i < result.Length; i++)
             {
@@ -248,8 +249,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 else
                 {
                     var bone = Bones[boneIndex];
-                    var invBind = bone.HasJointInverseBind ? bone.JointInverseBindWorld : bone.InverseBindWorld;
-                    result[i] = invBind * world[boneIndex];
+                    result[i] = bone.InverseBindWorld * world[boneIndex];
                 }
             }
             for (int i = boneCount; i < result.Length; i++)
@@ -280,8 +280,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 }
 
                 var bone = Bones[boneIndex];
-                var invBind = bone.HasJointInverseBind ? bone.JointInverseBindWorld : bone.InverseBindWorld;
-                result[i] = invBind * world[boneIndex];
+                result[i] = bone.InverseBindWorld * world[boneIndex];
             }
             for (int i = boneCount; i < result.Length; i++)
             {
@@ -391,7 +390,15 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             activePoseWorld = null;
         }
 
-        public void ApplyAnimation(Animation animation, float frame)
+        public void ApplyAnimation(
+            Animation animation,
+            float frame,
+            Animation? additiveOverlay = null,
+            float additiveOverlayFrame = 0f,
+            Animation? mouthOverlay = null,
+            float mouthOverlayFrame = 0f,
+            Animation? upperFaceOverlay = null,
+            float upperFaceOverlayFrame = 0f)
         {
             if (animation == null)
             {
@@ -403,7 +410,18 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
             for (int i = 0; i < Bones.Count; i++)
             {
-                poseWorld[i] = ComputePoseWorld(i, animation, frame, poseWorld, computed);
+                poseWorld[i] = ComputePoseWorld(
+                    i,
+                    animation,
+                    frame,
+                    additiveOverlay,
+                    additiveOverlayFrame,
+                    mouthOverlay,
+                    mouthOverlayFrame,
+                    upperFaceOverlay,
+                    upperFaceOverlayFrame,
+                    poseWorld,
+                    computed);
             }
 
             // Keep the exact pose world matrices for skinning (avoids TRS extract/rebuild artifacts).
@@ -416,7 +434,9 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 if (bone.ParentIndex >= 0 && bone.ParentIndex < Bones.Count && bone.ParentIndex != i)
                 {
                     var parentWorld = poseWorld[bone.ParentIndex];
-                    local = poseWorld[i] * Matrix4.Invert(parentWorld);
+                    local = TryInvert(parentWorld, out var inverseParentWorld)
+                        ? poseWorld[i] * inverseParentWorld
+                        : bone.RestLocalMatrix;
                 }
 
                 bone.Transform.Position = local.ExtractTranslation();
@@ -425,7 +445,18 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             }
         }
 
-        private Matrix4 ComputePoseWorld(int index, Animation animation, float frame, Matrix4[] poseWorld, bool[] computed)
+        private Matrix4 ComputePoseWorld(
+            int index,
+            Animation animation,
+            float frame,
+            Animation? additiveOverlay,
+            float additiveOverlayFrame,
+            Animation? mouthOverlay,
+            float mouthOverlayFrame,
+            Animation? upperFaceOverlay,
+            float upperFaceOverlayFrame,
+            Matrix4[] poseWorld,
+            bool[] computed)
         {
             if (computed[index])
             {
@@ -441,10 +472,50 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             var baseRot = restLocal.ExtractRotation();
             var baseScale = restLocal.ExtractScale();
 
-            Vector3? scale;
-            Quaternion? rotation;
-            Vector3? translation;
-            if (!animation.TryGetPose(bone.Name, frame, out scale, out rotation, out translation))
+            Vector3? scale = null;
+            Quaternion? rotation = null;
+            Vector3? translation = null;
+            Animation? sampledAnimation = null;
+            bool sampledOverlay = mouthOverlay != null &&
+                                  mouthOverlay.ShouldApplyAsMouthOverlay(bone.Name) &&
+                                  mouthOverlay.TryGetPose(bone.Name, mouthOverlayFrame, out scale, out rotation, out translation);
+            if (sampledOverlay)
+            {
+                sampledAnimation = mouthOverlay;
+            }
+            if (!sampledOverlay)
+            {
+                sampledOverlay = upperFaceOverlay != null &&
+                                 upperFaceOverlay.ShouldApplyAsUpperFaceOverlay(bone.Name) &&
+                                 upperFaceOverlay.TryGetPose(bone.Name, upperFaceOverlayFrame, out scale, out rotation, out translation);
+                if (sampledOverlay)
+                {
+                    sampledAnimation = upperFaceOverlay;
+                }
+            }
+
+            bool suppressBaseMouthTrack = mouthOverlay != null && Animation.IsMouthPoseBoneName(bone.Name);
+            bool suppressBaseUpperFaceTrack = upperFaceOverlay != null && Animation.IsUpperFacePoseBoneName(bone.Name);
+            if (!sampledOverlay &&
+                (suppressBaseMouthTrack ||
+                 suppressBaseUpperFaceTrack ||
+                 !animation.ShouldApplyPoseTrack(bone.Name) ||
+                 !animation.TryGetPose(bone.Name, frame, out scale, out rotation, out translation)))
+            {
+                scale = null;
+                rotation = null;
+                translation = null;
+            }
+            else if (!sampledOverlay)
+            {
+                sampledAnimation = animation;
+            }
+
+            if (sampledAnimation?.ShouldIgnoreZeroPlaceholderPose(
+                    bone.Name,
+                    scale,
+                    rotation,
+                    translation) == true)
             {
                 scale = null;
                 rotation = null;
@@ -454,7 +525,36 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             var loc = translation ?? baseLoc;
             var rot = rotation ?? baseRot;
             // Animation scale tracks are local scale values; applying them in world space introduces shearing/stretching.
-            var localScale = scale ?? baseScale;
+            var localScale = ResolveAnimationScale(bone, scale, baseScale);
+
+            if (!sampledOverlay &&
+                additiveOverlay?.UsesAdditivePoseEncoding == true &&
+                additiveOverlay.ShouldApplyPoseTrack(bone.Name) &&
+                additiveOverlay.TryGetPose(
+                    bone.Name,
+                    additiveOverlayFrame,
+                    out var additiveScale,
+                    out var additiveRotation,
+                    out var additiveTranslation) &&
+                !additiveOverlay.ShouldIgnoreZeroPlaceholderPose(
+                    bone.Name,
+                    additiveScale,
+                    additiveRotation,
+                    additiveTranslation))
+            {
+                if (additiveTranslation.HasValue)
+                {
+                    loc += additiveTranslation.Value;
+                }
+                if (additiveRotation.HasValue)
+                {
+                    rot = Quaternion.Normalize(additiveRotation.Value * rot);
+                }
+                if (additiveScale.HasValue)
+                {
+                    localScale += additiveScale.Value;
+                }
+            }
 
             var matrix = Matrix4.CreateScale(localScale)
                         * Matrix4.CreateFromQuaternion(rot)
@@ -463,15 +563,44 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             Matrix4 world = matrix;
             if (bone.ParentIndex >= 0 && bone.ParentIndex < Bones.Count && bone.ParentIndex != index)
             {
-                var parentWorld = ComputePoseWorld(bone.ParentIndex, animation, frame, poseWorld, computed);
+                var parentWorld = ComputePoseWorld(
+                    bone.ParentIndex,
+                    animation,
+                    frame,
+                    additiveOverlay,
+                    additiveOverlayFrame,
+                    mouthOverlay,
+                    mouthOverlayFrame,
+                    upperFaceOverlay,
+                    upperFaceOverlayFrame,
+                    poseWorld,
+                    computed);
                 if (bone.UseSegmentScaleCompensate)
                 {
                     var parent = Bones[bone.ParentIndex];
                     Matrix4 parentLocal = parentWorld;
                     if (parent.ParentIndex >= 0 && parent.ParentIndex < Bones.Count && parent.ParentIndex != bone.ParentIndex)
                     {
-                        var grandParentWorld = ComputePoseWorld(parent.ParentIndex, animation, frame, poseWorld, computed);
-                        parentLocal = parentWorld * Matrix4.Invert(grandParentWorld);
+                        var grandParentWorld = ComputePoseWorld(
+                            parent.ParentIndex,
+                            animation,
+                            frame,
+                            additiveOverlay,
+                            additiveOverlayFrame,
+                            mouthOverlay,
+                            mouthOverlayFrame,
+                            upperFaceOverlay,
+                            upperFaceOverlayFrame,
+                            poseWorld,
+                            computed);
+                        if (TryInvert(grandParentWorld, out var inverseGrandParentWorld))
+                        {
+                            parentLocal = parentWorld * inverseGrandParentWorld;
+                        }
+                        else
+                        {
+                            parentLocal = parent.RestLocalMatrix;
+                        }
                     }
 
                     var parentScale = parentLocal.ExtractScale();
@@ -486,6 +615,69 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             computed[index] = true;
             poseWorld[index] = world;
             return world;
+        }
+
+        private Vector3 ResolveAnimationScale(Bone bone, Vector3? sampledScale, Vector3 baseScale)
+        {
+            if (!sampledScale.HasValue)
+            {
+                return baseScale;
+            }
+
+            var scale = sampledScale.Value;
+            bool replacedX = !IsUsableScale(scale.X);
+            bool replacedY = !IsUsableScale(scale.Y);
+            bool replacedZ = !IsUsableScale(scale.Z);
+            if (!replacedX && !replacedY && !replacedZ)
+            {
+                return scale;
+            }
+
+            var resolved = new Vector3(
+                replacedX ? ResolveScaleFallback(baseScale.X) : scale.X,
+                replacedY ? ResolveScaleFallback(baseScale.Y) : scale.Y,
+                replacedZ ? ResolveScaleFallback(baseScale.Z) : scale.Z);
+
+            if (scaleFallbackWarnings.Add(bone.Name))
+            {
+                DiagnosticLog.Write(
+                    $"Animation scale fallback: bone={bone.Name}, sampled=({scale.X}, {scale.Y}, {scale.Z}), " +
+                    $"rest=({baseScale.X}, {baseScale.Y}, {baseScale.Z}), resolved=({resolved.X}, {resolved.Y}, {resolved.Z})");
+            }
+
+            return resolved;
+        }
+
+        private static bool IsUsableScale(float value)
+        {
+            return !float.IsNaN(value) && !float.IsInfinity(value) && MathF.Abs(value) >= MinScaleComponent;
+        }
+
+        private static float ResolveScaleFallback(float value)
+        {
+            return IsUsableScale(value) ? value : 1f;
+        }
+
+        private static bool TryInvert(Matrix4 matrix, out Matrix4 inverse)
+        {
+            if (float.IsNaN(matrix.Determinant) ||
+                float.IsInfinity(matrix.Determinant) ||
+                MathF.Abs(matrix.Determinant) < MinScaleComponent)
+            {
+                inverse = Matrix4.Identity;
+                return false;
+            }
+
+            try
+            {
+                inverse = Matrix4.Invert(matrix);
+                return true;
+            }
+            catch (InvalidOperationException)
+            {
+                inverse = Matrix4.Identity;
+                return false;
+            }
         }
 
         public int GetVisibleParentIndex(int index)
@@ -544,24 +736,40 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             var computed = new bool[Bones.Count];
             for (int i = 0; i < Bones.Count; i++)
             {
-                bindWorld[i] = ComputeBindWorld(i, useTrsklInverseBind, bindWorld, computed);
+                bindWorld[i] = ComputeBindWorld(i, bindWorld, computed);
             }
 
+            var fallbackBones = new List<string>();
             for (int i = 0; i < Bones.Count; i++)
             {
-                if (useTrsklInverseBind && Bones[i].HasJointInverseBind)
+                var bone = Bones[i];
+                var computedInverseBind = Matrix4.Invert(bindWorld[i]);
+                // A usable inverse bind must leave the mesh unchanged in the skeleton rest pose.
+                if (useTrsklInverseBind &&
+                    bone.HasJointInverseBind &&
+                    IsValidInverseBind(bone.JointInverseBindWorld, bindWorld[i]))
                 {
-                    Bones[i].InverseBindWorld = Bones[i].JointInverseBindWorld;
+                    bone.InverseBindWorld = bone.JointInverseBindWorld;
                 }
                 else
                 {
-                    Bones[i].InverseBindWorld = Matrix4.Invert(bindWorld[i]);
+                    bone.InverseBindWorld = computedInverseBind;
+                    if (useTrsklInverseBind && bone.HasJointInverseBind)
+                    {
+                        fallbackBones.Add(bone.Name);
+                    }
                 }
             }
 
+            if (fallbackBones.Count > 0)
+            {
+                DiagnosticLog.Write(
+                    $"TRSKL inverse bind fallback: count={fallbackBones.Count}, bones={string.Join(", ", fallbackBones.Take(16))}" +
+                    (fallbackBones.Count > 16 ? ", ..." : string.Empty));
+            }
         }
 
-        private Matrix4 ComputeBindWorld(int index, bool useTrsklInverseBind, Matrix4[] world, bool[] computed)
+        private Matrix4 ComputeBindWorld(int index, Matrix4[] world, bool[] computed)
         {
             if (computed[index])
             {
@@ -569,15 +777,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             }
 
             var bone = Bones[index];
-            Matrix4 local;
-            if (useTrsklInverseBind && bone.HasJointInverseBind)
-            {
-                local = Matrix4.Invert(bone.JointInverseBindWorld);
-            }
-            else
-            {
-                local = bone.RestLocalMatrix;
-            }
+            Matrix4 local = bone.RestLocalMatrix;
 
             if (bone.ParentIndex >= 0 && bone.ParentIndex < Bones.Count && bone.ParentIndex != index)
             {
@@ -589,7 +789,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                         parent.RestScale.Y != 0f ? 1f / parent.RestScale.Y : 1f,
                         parent.RestScale.Z != 0f ? 1f / parent.RestScale.Z : 1f);
                 }
-                var parentWorld = ComputeBindWorld(bone.ParentIndex, useTrsklInverseBind, world, computed);
+                var parentWorld = ComputeBindWorld(bone.ParentIndex, world, computed);
                 world[index] = local * parentWorld;
             }
             else
@@ -599,6 +799,17 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
             computed[index] = true;
             return world[index];
+        }
+
+        private static bool IsValidInverseBind(Matrix4 inverseBind, Matrix4 bindWorld)
+        {
+            const float epsilon = 0.001f;
+            var residual = inverseBind * bindWorld;
+            return
+                MathF.Abs(residual.M11 - 1f) <= epsilon && MathF.Abs(residual.M12) <= epsilon && MathF.Abs(residual.M13) <= epsilon && MathF.Abs(residual.M14) <= epsilon &&
+                MathF.Abs(residual.M21) <= epsilon && MathF.Abs(residual.M22 - 1f) <= epsilon && MathF.Abs(residual.M23) <= epsilon && MathF.Abs(residual.M24) <= epsilon &&
+                MathF.Abs(residual.M31) <= epsilon && MathF.Abs(residual.M32) <= epsilon && MathF.Abs(residual.M33 - 1f) <= epsilon && MathF.Abs(residual.M34) <= epsilon &&
+                MathF.Abs(residual.M41) <= epsilon && MathF.Abs(residual.M42) <= epsilon && MathF.Abs(residual.M43) <= epsilon && MathF.Abs(residual.M44 - 1f) <= epsilon;
         }
 
         private static Matrix4 CreateMatrixFromAxis(Vector3 axisX, Vector3 axisY, Vector3 axisZ, Vector3 axisW)

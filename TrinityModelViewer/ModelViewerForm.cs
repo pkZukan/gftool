@@ -6,6 +6,8 @@ using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text;
+using System.Text.RegularExpressions;
 using GfAnim = Trinity.Core.Flatbuffers.GF.Animation;
 using Trinity.Core.Utils;
 using Point = System.Drawing.Point;
@@ -43,15 +45,37 @@ namespace TrinityModelViewer
             public List<int> SubmeshIndices { get; } = new List<int>();
             public Dictionary<string, List<int>> MaterialMap { get; } = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
         }
+
+        private sealed class CcDataReferences
+        {
+            public string? ModelPath { get; set; }
+            public List<string> ResourcePaths { get; } = new List<string>();
+            public List<string> AnimationDirectories { get; } = new List<string>();
+        }
+
+        private sealed class ModelPackageContext
+        {
+            public string? OriginalInputPath { get; init; }
+            public IReadOnlyList<string> IndexedResources { get; init; } = Array.Empty<string>();
+        }
+
         private Dictionary<TreeNode, Model> modelMap = new Dictionary<TreeNode, Model>();
         private ViewerSettings settings;
         private ToolStripMenuItem? lastModelToolStripMenuItem;
         private Image? texturePreviewImage;
         private Image? uvPreviewImage;
+        private Image? sceneTexturePreviewImage;
+        private TabPage? sceneTexturesTabPage;
+        private DataGridView? sceneTexturesGrid;
+        private PictureBox? sceneTexturePreviewBox;
+        private TabPage? modelDetailsTabPage;
+        private DataGridView? modelDetailsGrid;
         private Model? currentMaterialsModel;
         private Material? currentMaterial;
         private readonly List<GFTool.Renderer.Scene.GraphicsObjects.Animation> animations = new List<GFTool.Renderer.Scene.GraphicsObjects.Animation>();
         private readonly HashSet<string> loadedAnimationPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, GFTool.Renderer.Scene.GraphicsObjects.Animation> loadedAnimationsByPath = new Dictionary<string, GFTool.Renderer.Scene.GraphicsObjects.Animation>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<Model, ModelPackageContext> modelPackageContexts = new Dictionary<Model, ModelPackageContext>();
         private readonly string[] startupFiles;
         private bool startupFilesLoaded;
         private ContextMenuStrip? textureGridContextMenu;
@@ -64,13 +88,21 @@ namespace TrinityModelViewer
         public ModelViewerForm(string[]? startupFiles)
         {
             InitializeComponent();
+            var version = typeof(ModelViewerForm).Assembly.GetName().Version;
+            if (version != null)
+            {
+                Text = $"Trinity Model Viewer v{version.Major}.{version.Minor}.{version.Build}";
+            }
             settings = ViewerSettings.Load();
             this.startupFiles = startupFiles?.Where(s => !string.IsNullOrWhiteSpace(s)).ToArray() ?? Array.Empty<string>();
             MessageHandler.Instance.DebugLogsEnabled = settings.DebugLogs;
             ApplyRenderSettingsToMenu();
+            SetupSceneTexturesTab();
+            SetupModelDetailsTab();
             ApplyTheme();
             AddSettingsMenu();
             AddLastModelMenu();
+            AddNpcPackageMenu();
             renderCtrl.RendererReady += renderCtrl_RendererReady;
             AllowDrop = true;
             DragEnter += ModelViewerForm_DragEnter;
@@ -109,7 +141,8 @@ namespace TrinityModelViewer
             {
                 MessageType.LOG => "Log",
                 MessageType.WARNING => "Warning",
-                MessageType.ERROR => "Error"
+                MessageType.ERROR => "Error",
+                _ => "Log"
             };
 
             //Only unique errors
@@ -123,6 +156,11 @@ namespace TrinityModelViewer
         #region GL_CONTEXT
         private void glCtxt_Paint(object sender, PaintEventArgs e)
         {
+            if (!renderCtrl.RendererInitialized)
+            {
+                return;
+            }
+
             var cam = renderCtrl.renderer.GetCameraTransform();
             statusLbl.Text = string.Format("Camera: Pos={0}, [Quat={1} Euler={2}]", cam.Position.ToString(), cam.Rotation.ToString(), cam.Rotation.ToEulerAngles().ToString());
         }
@@ -164,9 +202,9 @@ namespace TrinityModelViewer
                 ClearAll();
                 foreach (var path in startupFiles)
                 {
-                    if (path.EndsWith(".trmdl", StringComparison.OrdinalIgnoreCase) && File.Exists(path))
+                    if (IsSupportedModelInput(path) && File.Exists(path))
                     {
-                        AddModelToScene(path);
+                        AddModelInputToScene(path);
                     }
                 }
             }
@@ -221,6 +259,88 @@ namespace TrinityModelViewer
             UpdateLastModelMenu();
         }
 
+        private void AddNpcPackageMenu()
+        {
+            var exportPackage = new ToolStripMenuItem("Export NPC Package...")
+            {
+                ToolTipText = "Export the selected NPC model and all of its indexed resources."
+            };
+            exportPackage.Click += exportNpcPackageToolStripMenuItem_Click;
+
+            fileToolStripMenuItem.DropDownItems.Add(new ToolStripSeparator());
+            fileToolStripMenuItem.DropDownItems.Add(exportPackage);
+        }
+
+        private void exportNpcPackageToolStripMenuItem_Click(object? sender, EventArgs e)
+        {
+            var model = GetModelForAnimationExport();
+            if (model == null)
+            {
+                MessageBox.Show(this, "Select a loaded NPC model first.", "Export NPC Package", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (model.Name.StartsWith("pm", StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show(this, "This exporter is intentionally limited to NPC models.", "Export NPC Package", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using var dialog = new FolderBrowserDialog
+            {
+                Description = "Choose where to create the NPC package folder",
+                UseDescriptionForTitle = true,
+                ShowNewFolderButton = true
+            };
+            if (dialog.ShowDialog(this) != DialogResult.OK)
+            {
+                return;
+            }
+
+            var safeName = Regex.Replace(model.Name, @"[^A-Za-z0-9_.-]+", "_").Trim('_');
+            if (string.IsNullOrWhiteSpace(safeName))
+            {
+                safeName = "npc_model";
+            }
+
+            var packagePath = Path.Combine(dialog.SelectedPath, $"{safeName}_npc_package");
+            if (Directory.Exists(packagePath) || File.Exists(packagePath))
+            {
+                packagePath = Path.Combine(dialog.SelectedPath, $"{safeName}_npc_package_{DateTime.Now:yyyyMMdd_HHmmss}");
+            }
+
+            modelPackageContexts.TryGetValue(model, out var context);
+            try
+            {
+                var result = NpcPackageExporter.Export(
+                    model,
+                    packagePath,
+                    context?.OriginalInputPath,
+                    context?.IndexedResources ?? Array.Empty<string>(),
+                    loadedAnimationPaths.ToArray());
+
+                DiagnosticLog.Section("Export NPC package");
+                DiagnosticLog.Write($"Package: {result.PackagePath}");
+                DiagnosticLog.Write($"Entry point: {result.EntryPoint}");
+                DiagnosticLog.Write($"Files: {result.FileCount}, bytes: {result.TotalBytes}, missing: {result.MissingCount}");
+
+                var missingText = result.MissingCount == 0
+                    ? "All referenced resources were found."
+                    : $"Missing references: {result.MissingCount} (see manifest.json).";
+                MessageBox.Show(
+                    this,
+                    $"NPC package exported.\n\nFolder: {result.PackagePath}\nEntry point: {result.EntryPoint}\nFiles: {result.FileCount}\nSize: {result.TotalBytes:N0} bytes\n{missingText}",
+                    "Export NPC Package",
+                    MessageBoxButtons.OK,
+                    result.MissingCount == 0 ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+            }
+            catch (Exception ex)
+            {
+                DiagnosticLog.WriteException($"NPC package export failed: {packagePath}", ex);
+                MessageBox.Show(this, $"Failed to export NPC package:\n{ex.Message}", "Export NPC Package", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private void OpenSettings()
         {
             using var dialog = new SettingsForm(
@@ -265,7 +385,7 @@ namespace TrinityModelViewer
             }
 
             ClearAll();
-            AddModelToScene(settings.LastModelPath);
+            AddModelInputToScene(settings.LastModelPath);
         }
 
         private void OpenHelp()
@@ -283,6 +403,95 @@ namespace TrinityModelViewer
             MessageBox.Show(this, message, "Controls", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
+        private GFTool.Renderer.Scene.GraphicsObjects.Animation? LoadAnimationFile(string file, string source, out bool loadedNew)
+        {
+            loadedNew = false;
+            if (string.IsNullOrWhiteSpace(file))
+            {
+                return null;
+            }
+
+            file = Path.GetFullPath(file);
+            if (loadedAnimationsByPath.TryGetValue(file, out var existing))
+            {
+                DiagnosticLog.Write($"{source} animation skipped duplicate: {file}");
+                return existing;
+            }
+
+            if (!loadedAnimationPaths.Add(file))
+            {
+                DiagnosticLog.Write($"{source} animation skipped duplicate path without cached animation: {file}");
+                return null;
+            }
+
+            DiagnosticLog.Write($"{source} animation load attempt: {file}");
+            var animFile = FlatBufferConverter.DeserializeFrom<GfAnim.Animation>(file);
+            var anim = new GFTool.Renderer.Scene.GraphicsObjects.Animation(animFile, Path.GetFileNameWithoutExtension(file));
+            animations.Add(anim);
+            loadedAnimationsByPath[file] = anim;
+
+            var item = new ListViewItem(anim.Name) { Tag = anim };
+            animationsList.Items.Add(item);
+            loadedNew = true;
+            DiagnosticLog.Write(
+                $"{source} animation loaded: name={anim.Name}, frames={anim.FrameCount}, fps={anim.FrameRate}, " +
+                $"tracks={anim.TrackCount}, loop={anim.LoopType}, mouthTracks={anim.MouthPoseTrackCount}, " +
+                $"activeMouthTracks={anim.ActiveMouthPoseTrackCount}, " +
+                $"embeddedMouth={anim.UsesEmbeddedMouthPoseTracks}, zeroEndpointTracks={anim.ZeroEndpointPlaceholderTrackCount}, " +
+                $"animatedMiddleTracks={anim.AnimatedBetweenPlaceholderEndpointsTrackCount}, " +
+                $"zeroEndpointEncoding={anim.UsesZeroEndpointPlaceholderEncoding}, additive={anim.UsesAdditivePoseEncoding}, " +
+                $"animatedMouthOverlay={anim.RequiresAnimatedMouthOverlay}");
+            TryAttachActionClip(anim, file);
+
+            if (MessageHandler.Instance.DebugLogsEnabled)
+            {
+                MessageHandler.Instance.AddMessage(MessageType.LOG, $"[Anim] Loaded '{anim.Name}' file='{file}' frames={anim.FrameCount} fps={anim.FrameRate} tracks={anim.TrackCount}");
+            }
+
+            return anim;
+        }
+
+        private static void TryAttachActionClip(GFTool.Renderer.Scene.GraphicsObjects.Animation animation, string animationFile)
+        {
+            try
+            {
+                string tracm = Path.ChangeExtension(animationFile, ".tracm");
+                if (!File.Exists(tracm))
+                {
+                    return;
+                }
+
+                var clip = ActionClipAnimation.Load(tracm);
+                animation.AttachActionClip(clip);
+                string preview = clip.TargetNames.Count == 0
+                    ? "<none>"
+                    : string.Join(", ", clip.TargetNames.Take(16));
+                if (clip.TargetNames.Count > 16)
+                {
+                    preview += $", ... (+{clip.TargetNames.Count - 16})";
+                }
+
+                DiagnosticLog.Write($"Action clip loaded: tracm={Path.GetFileName(tracm)}, frames={clip.FrameCount}, fps={clip.FrameRate}, targets={clip.TargetNames.Count}, visibilityTracks={clip.VisibilityTracks.Count}, materialVector4Tracks={clip.Vector4Tracks.Count}, targetNames={preview}");
+                foreach (var track in clip.VisibilityTracks.Take(24))
+                {
+                    DiagnosticLog.Write($"  visibility animation: target={track.TargetName}, encoding={track.Kind}, frame0={track.Sample(0f)}, frameEnd={track.Sample(Math.Max(0, clip.FrameCount - 1))}");
+                }
+                foreach (var track in clip.Vector4Tracks.Take(16))
+                {
+                    float endFrame = Math.Max(0, clip.FrameCount - 1);
+                    var first = track.Sample(0f, OpenTK.Mathematics.Vector4.Zero);
+                    var quarter = track.Sample(endFrame * 0.25f, first);
+                    var middle = track.Sample(endFrame * 0.50f, first);
+                    var last = track.Sample(endFrame, first);
+                    DiagnosticLog.Write($"  material animation: target={track.TargetName}, material={track.MaterialName}, parameter={track.ParameterName}, frame0=({first.X}, {first.Y}, {first.Z}, {first.W}), frame25%=({quarter.X}, {quarter.Y}, {quarter.Z}, {quarter.W}), frame50%=({middle.X}, {middle.Y}, {middle.Z}, {middle.W}), frameEnd=({last.X}, {last.Y}, {last.Z}, {last.W})");
+                }
+            }
+            catch (Exception ex)
+            {
+                DiagnosticLog.WriteException($"Action clip load failed: {animationFile}", ex);
+            }
+        }
+
         private void loadAnimationButton_Click(object sender, EventArgs e)
         {
             using var ofd = new OpenFileDialog();
@@ -295,24 +504,14 @@ namespace TrinityModelViewer
 
             try
             {
+                DiagnosticLog.Section("Manual animation load");
                 int loaded = 0;
                 foreach (var file in ofd.FileNames.Where(f => !string.IsNullOrWhiteSpace(f)))
                 {
-                    if (!loadedAnimationPaths.Add(file))
+                    var anim = LoadAnimationFile(file, "Manual", out var loadedNew);
+                    if (loadedNew)
                     {
-                        continue;
-                    }
-
-                    var animFile = FlatBufferConverter.DeserializeFrom<GfAnim.Animation>(file);
-                    var anim = new GFTool.Renderer.Scene.GraphicsObjects.Animation(animFile, Path.GetFileNameWithoutExtension(file));
-                    animations.Add(anim);
-                    var item = new ListViewItem(anim.Name) { Tag = anim };
-                    animationsList.Items.Add(item);
-                    loaded++;
-
-                    if (MessageHandler.Instance.DebugLogsEnabled)
-                    {
-                        MessageHandler.Instance.AddMessage(MessageType.LOG, $"[Anim] Loaded '{anim.Name}' file='{file}' frames={anim.FrameCount} fps={anim.FrameRate} tracks={anim.TrackCount}");
+                        loaded++;
                     }
                 }
 
@@ -323,6 +522,7 @@ namespace TrinityModelViewer
             }
             catch (Exception ex)
             {
+                DiagnosticLog.WriteException("Manual animation load failed", ex);
                 MessageBox.Show(this, $"Failed to load animation:\n{ex.Message}", "Animation Load", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -330,16 +530,21 @@ namespace TrinityModelViewer
         private void playAnimationButton_Click(object sender, EventArgs e)
         {
             var anim = GetSelectedAnimation();
-            if (anim == null)
+            if (anim == null || !renderCtrl.RendererInitialized)
             {
                 return;
             }
 
-            renderCtrl.renderer.PlayAnimation(anim);
+            PlayAnimationWithFacialLayers(anim);
         }
 
         private void stopAnimationButton_Click(object sender, EventArgs e)
         {
+            if (!renderCtrl.RendererInitialized)
+            {
+                return;
+            }
+
             renderCtrl.renderer.StopAnimation();
         }
 
@@ -369,11 +574,14 @@ namespace TrinityModelViewer
 
             try
             {
+                DiagnosticLog.Section("Export animation");
+                DiagnosticLog.Write($"Export animation: name={anim.Name}, out={sfd.FileName}, model={mdl.Name}, bones={mdl.Armature.Bones.Count}");
                 GltfExporter.ExportAnimation(mdl.Armature, anim, sfd.FileName);
                 MessageBox.Show(this, $"Exported:\n{sfd.FileName}", "Export Animation", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
+                DiagnosticLog.WriteException("Export animation failed", ex);
                 MessageBox.Show(this, $"Export failed:\n{ex.Message}", "Export Animation", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -397,16 +605,19 @@ namespace TrinityModelViewer
 
             try
             {
+                DiagnosticLog.Section("Export model with animations");
+                DiagnosticLog.Write($"Export model with animations: model={mdl.Name}, out={sfd.FileName}, animationCount={animations.Count}");
                 var anims = animations.ToArray();
                 if (anims.Length == 0)
                 {
                     MessageBox.Show(this, "No animations are loaded; exporting the model only.", "Export Model + Animations", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 GltfExporter.ExportModel(mdl, sfd.FileName, anims);
-                MessageBox.Show(this, $"Exported:\n{sfd.FileName}", "Export Model + Animations", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, $"Exported:\n{sfd.FileName}\n\nBlender helper:\n{GltfExporter.GetBlenderMaterialScriptPath(sfd.FileName)}\n\nTexture manifest:\n{GltfExporter.GetTextureManifestPath(sfd.FileName)}", "Export Model + Animations", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
+                DiagnosticLog.WriteException("Export model with animations failed", ex);
                 MessageBox.Show(this, $"Export failed:\n{ex.Message}", "Export Model + Animations", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -443,12 +654,113 @@ namespace TrinityModelViewer
         private void animationsList_DoubleClick(object? sender, EventArgs e)
         {
             var anim = GetSelectedAnimation();
-            if (anim == null)
+            if (anim == null || !renderCtrl.RendererInitialized)
             {
                 return;
             }
 
-            renderCtrl.renderer.PlayAnimation(anim);
+            PlayAnimationWithFacialLayers(anim);
+        }
+
+        private void PlayAnimationWithFacialLayers(GFTool.Renderer.Scene.GraphicsObjects.Animation anim)
+        {
+            ApplyMeshVariantVisibilityForAnimation(anim);
+            if (anim.UsesAdditivePoseEncoding)
+            {
+                var baseAnimation = FindAdditiveBaseAnimation(anim.Name);
+                if (baseAnimation != null)
+                {
+                    renderCtrl.renderer.PlayAnimation(baseAnimation);
+                    renderCtrl.renderer.PlayAdditiveAnimation(anim);
+                    DiagnosticLog.Write(
+                        $"Animation additive stack: selected={anim.Name}, base={baseAnimation.Name}, " +
+                        $"activeTracks={anim.AnimatedBetweenPlaceholderEndpointsTrackCount}");
+                }
+                else
+                {
+                    renderCtrl.renderer.PlayAnimation(anim);
+                    DiagnosticLog.Write($"Animation additive stack: no base animation available for {anim.Name}");
+                }
+            }
+            else
+            {
+                renderCtrl.renderer.PlayAnimation(anim);
+            }
+
+            if (anim.IsFacialOverlay)
+            {
+                return;
+            }
+
+            if (anim.UsesEmbeddedMouthPoseTracks)
+            {
+                DiagnosticLog.Write($"Animation mouth baseline skipped: body={anim.Name}, reason=embedded speak tracks");
+                return;
+            }
+
+            var neutralMouth = FindNeutralMouthAnimation(anim.Name);
+            if (neutralMouth == null)
+            {
+                DiagnosticLog.Write($"Animation mouth baseline: no mouth animation available for {anim.Name}");
+                return;
+            }
+
+            bool animateMouth = anim.RequiresAnimatedMouthOverlay;
+            DiagnosticLog.Write(
+                $"Animation mouth overlay: body={anim.Name}, mouth={neutralMouth.Name}, " +
+                $"mode={(animateMouth ? "speech-loop" : "neutral-frame")}, frame={(animateMouth ? "animated" : "0")}");
+            renderCtrl.renderer.PlayAnimation(
+                neutralMouth,
+                holdFacialOverlayAtFirstFrame: !animateMouth,
+                loopFacialOverlay: animateMouth);
+        }
+
+        private GFTool.Renderer.Scene.GraphicsObjects.Animation? FindAdditiveBaseAnimation(string additiveAnimationName)
+        {
+            return animations
+                .Where(animation => !animation.IsFacialOverlay && !animation.UsesAdditivePoseEncoding)
+                .OrderByDescending(animation => ScoreAdditiveBaseAnimation(animation.Name, additiveAnimationName))
+                .ThenBy(animation => animation.Name, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault();
+        }
+
+        private static int ScoreAdditiveBaseAnimation(string name, string additiveAnimationName)
+        {
+            int score = 0;
+            var prefixMatch = Regex.Match(additiveAnimationName, @"^(?<prefix>[^_]+_[^_]+)_", RegexOptions.CultureInvariant);
+            if (prefixMatch.Success && name.StartsWith(prefixMatch.Groups["prefix"].Value + "_", StringComparison.OrdinalIgnoreCase))
+            {
+                score += 2000;
+            }
+            if (name.Contains("00001", StringComparison.OrdinalIgnoreCase)) score += 1000;
+            if (name.Contains("defaultwait01", StringComparison.OrdinalIgnoreCase)) score += 500;
+            if (name.Contains("loop", StringComparison.OrdinalIgnoreCase)) score += 50;
+            if (name.Contains("speak", StringComparison.OrdinalIgnoreCase)) score -= 200;
+            return score;
+        }
+
+        private GFTool.Renderer.Scene.GraphicsObjects.Animation? FindNeutralMouthAnimation(string bodyAnimationName)
+        {
+            return animations
+                .Where(animation => animation.AllowsMouthPoseTracks)
+                .OrderByDescending(animation => ScoreNeutralMouthAnimation(animation.Name, bodyAnimationName))
+                .ThenBy(animation => animation.Name, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault();
+        }
+
+        private static int ScoreNeutralMouthAnimation(string name, string bodyAnimationName)
+        {
+            int score = 0;
+            var prefixMatch = Regex.Match(bodyAnimationName, @"^(?<prefix>[^_]+_[^_]+)_", RegexOptions.CultureInvariant);
+            if (prefixMatch.Success && name.StartsWith(prefixMatch.Groups["prefix"].Value + "_", StringComparison.OrdinalIgnoreCase))
+            {
+                score += 2000;
+            }
+            if (name.Contains("08101", StringComparison.OrdinalIgnoreCase)) score += 1000;
+            if (name.Contains("mouth01", StringComparison.OrdinalIgnoreCase)) score += 500;
+            if (name.Contains("mouth", StringComparison.OrdinalIgnoreCase)) score += 100;
+            if (name.Contains("speak", StringComparison.OrdinalIgnoreCase)) score -= 50;
+            return score;
         }
 
         private GFTool.Renderer.Scene.GraphicsObjects.Animation? GetSelectedAnimation()
@@ -459,6 +771,40 @@ namespace TrinityModelViewer
             }
 
             return animationsList.SelectedItems[0].Tag as Animation;
+        }
+
+        private void ApplyMeshVariantVisibilityForAnimation(GFTool.Renderer.Scene.GraphicsObjects.Animation anim)
+        {
+            if (!renderCtrl.RendererInitialized)
+            {
+                return;
+            }
+
+            const char fallbackVariant = 'a';
+            DiagnosticLog.Write($"Animation mesh variant pick: animation={anim.Name}, fallbackVariant={fallbackVariant}, trackCount={anim.TrackNames.Count}");
+            renderCtrl.renderer.ApplyMeshVariantVisibility(anim, fallbackVariant, $"animation={anim.Name}");
+        }
+
+        private static char GetPreferredMeshVariantFromAnimationName(string animationName)
+        {
+            if (string.IsNullOrWhiteSpace(animationName))
+            {
+                return 'a';
+            }
+
+            var match = Regex.Match(animationName, @"(?:^|_)(?<group>[0-9])\d{4}_", RegexOptions.CultureInvariant);
+            if (!match.Success)
+            {
+                return 'a';
+            }
+
+            int group = match.Groups["group"].Value[0] - '0';
+            if (group < 0 || group >= 26)
+            {
+                return 'a';
+            }
+
+            return (char)('a' + group);
         }
 
         private void ApplyTheme()
@@ -529,8 +875,12 @@ namespace TrinityModelViewer
 
         private void ClearAll()
         {
-            renderCtrl.renderer.ClearScene();
-            renderCtrl.renderer.StopAnimation();
+            if (renderCtrl.RendererInitialized)
+            {
+                renderCtrl.renderer.StopAnimation();
+                renderCtrl.renderer.ClearScene();
+            }
+
             messageListView.Items.Clear();
             materialList.Items.Clear();
             materialList.Columns.Clear();
@@ -539,36 +889,61 @@ namespace TrinityModelViewer
             animations.Clear();
             animationsList.Items.Clear();
             loadedAnimationPaths.Clear();
+            loadedAnimationsByPath.Clear();
+            modelPackageContexts.Clear();
             currentMaterialsModel = null;
             currentMaterial = null;
             ClearMaterialDetails();
+            ClearSceneTextureDetails();
+            ClearModelDetails();
         }
 
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
             OpenFileDialog ofd = new OpenFileDialog();
-            ofd.Filter = "Trinity Model files (*.trmdl)|*.trmdl|All files (*.*)|*.*";
+            ofd.Filter = "Trinity Model files (*.trmdl;*.ccdata)|*.trmdl;*.ccdata|All files (*.*)|*.*";
             if (ofd.ShowDialog() != DialogResult.OK) return;
 
             ClearAll();
-            AddModelToScene(ofd.FileName);
+            try
+            {
+                AddModelInputToScene(ofd.FileName);
+            }
+            catch (Exception ex)
+            {
+                DiagnosticLog.WriteException($"Open model failed: {ofd.FileName}", ex);
+                MessageBox.Show(this, $"Failed to load model:\n{ex.Message}", "Model Load", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void importToolStripMenuItem_Click(object sender, EventArgs e)
         {
             OpenFileDialog ofd = new OpenFileDialog();
-            ofd.Filter = "Trinity Model files (*.trmdl)|*.trmdl|All files (*.*)|*.*";
+            ofd.Filter = "Trinity Model files (*.trmdl;*.ccdata)|*.trmdl;*.ccdata|All files (*.*)|*.*";
             ofd.Multiselect = true;
             if (ofd.ShowDialog() != DialogResult.OK) return;
 
             foreach (var file in ofd.FileNames.Where(f => !string.IsNullOrWhiteSpace(f)))
             {
-                AddModelToScene(file);
+                try
+                {
+                    AddModelInputToScene(file);
+                }
+                catch (Exception ex)
+                {
+                    DiagnosticLog.WriteException($"Import model failed: {file}", ex);
+                    MessageBox.Show(this, $"Failed to load model:\n{file}\n\n{ex.Message}", "Model Load", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
         private void wireframeToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            if (!renderCtrl.RendererInitialized)
+            {
+                return;
+            }
+
             renderCtrl.renderer.SetWireframe(wireframeToolStripMenuItem.CheckState == CheckState.Checked);
             renderCtrl.Invalidate();
         }
@@ -590,7 +965,7 @@ namespace TrinityModelViewer
 
         private void ApplyRenderSettings()
         {
-            if (renderCtrl?.renderer == null) return;
+            if (!renderCtrl.RendererInitialized) return;
             renderCtrl.renderer.SetNormalMapsEnabled(settings.EnableNormalMaps);
             renderCtrl.renderer.SetAOEnabled(settings.EnableAO);
             renderCtrl.renderer.SetVertexColorsEnabled(settings.EnableVertexColors);
@@ -700,10 +1075,12 @@ namespace TrinityModelViewer
             {
                 modelMap.TryGetValue(selected, out var mdl);
                 if (mdl == null) return;
+                if (!renderCtrl.RendererInitialized) return;
 
                 renderCtrl.renderer.RemoveSceneModel(mdl);
                 sceneTree.Nodes.Remove(selected);
                 modelMap.Remove(selected);
+                modelPackageContexts.Remove(mdl);
                 materialList.Items.Clear();
                 ClearMaterialDetails();
             }
@@ -726,11 +1103,14 @@ namespace TrinityModelViewer
 
             try
             {
+                DiagnosticLog.Section("Export model");
+                DiagnosticLog.Write($"Export model: model={mdl.Name}, out={sfd.FileName}");
                 GltfExporter.ExportModel(mdl, sfd.FileName);
-                MessageBox.Show(this, $"Exported:\n{sfd.FileName}", "Export", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, $"Exported:\n{sfd.FileName}\n\nBlender helper:\n{GltfExporter.GetBlenderMaterialScriptPath(sfd.FileName)}\n\nTexture manifest:\n{GltfExporter.GetTextureManifestPath(sfd.FileName)}", "Export", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
+                DiagnosticLog.WriteException("Export model failed", ex);
                 MessageBox.Show(this, $"Export failed:\n{ex.Message}", "Export", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -784,6 +1164,444 @@ namespace TrinityModelViewer
             if (materialList.Items.Count > 0)
             {
                 materialList.Items[0].Selected = true;
+            }
+        }
+
+        private void SetupSceneTexturesTab()
+        {
+            sceneTexturesTabPage = new TabPage("Textures");
+
+            var split = new SplitContainer
+            {
+                Dock = DockStyle.Fill,
+                Orientation = Orientation.Horizontal
+            };
+
+            sceneTexturesGrid = new DataGridView
+            {
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
+                Dock = DockStyle.Fill,
+                MultiSelect = false,
+                ReadOnly = true,
+                RowHeadersVisible = false,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect
+            };
+            sceneTexturesGrid.Columns.Add("TextureModel", "Model");
+            sceneTexturesGrid.Columns.Add("TextureMaterial", "Material");
+            sceneTexturesGrid.Columns.Add("TextureShader", "Shader");
+            sceneTexturesGrid.Columns.Add("TextureName", "Texture");
+            sceneTexturesGrid.Columns.Add("TextureSlot", "Slot");
+            sceneTexturesGrid.Columns.Add("TextureStatus", "Status");
+            sceneTexturesGrid.Columns.Add("TextureSize", "Size");
+            sceneTexturesGrid.Columns.Add("TextureFile", "File");
+            sceneTexturesGrid.SelectionChanged += sceneTexturesGrid_SelectionChanged;
+
+            sceneTexturePreviewBox = new PictureBox
+            {
+                Dock = DockStyle.Fill,
+                SizeMode = PictureBoxSizeMode.Zoom
+            };
+
+            split.Panel1.Controls.Add(sceneTexturesGrid);
+            split.Panel2.Controls.Add(sceneTexturePreviewBox);
+            sceneTexturesTabPage.Controls.Add(split);
+            leftTabs.Controls.Add(sceneTexturesTabPage);
+        }
+
+        private void ClearSceneTextureDetails()
+        {
+            sceneTexturesGrid?.Rows.Clear();
+            SetSceneTexturePreview(null);
+        }
+
+        private void SetupModelDetailsTab()
+        {
+            modelDetailsTabPage = new TabPage("Details");
+            modelDetailsGrid = new DataGridView
+            {
+                AllowUserToAddRows = false,
+                AllowUserToDeleteRows = false,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize,
+                Dock = DockStyle.Fill,
+                MultiSelect = false,
+                ReadOnly = true,
+                RowHeadersVisible = false,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect
+            };
+            modelDetailsGrid.Columns.Add("DetailName", "Name");
+            modelDetailsGrid.Columns.Add("DetailValue", "Value");
+            modelDetailsGrid.Columns[0].FillWeight = 38;
+            modelDetailsGrid.Columns[1].FillWeight = 62;
+
+            modelDetailsTabPage.Controls.Add(modelDetailsGrid);
+            modelProperties.Controls.Add(modelDetailsTabPage);
+        }
+
+        private void ClearModelDetails()
+        {
+            modelDetailsGrid?.Rows.Clear();
+        }
+
+        private void AddDetailRow(string name, object? value)
+        {
+            if (modelDetailsGrid == null)
+            {
+                return;
+            }
+
+            modelDetailsGrid.Rows.Add(name, FormatDetailValue(value));
+        }
+
+        private static string FormatDetailValue(object? value)
+        {
+            if (value == null)
+            {
+                return string.Empty;
+            }
+
+            return value switch
+            {
+                float f => f.ToString("0.#####"),
+                double d => d.ToString("0.#####"),
+                Vector2 v => $"{v.X:0.#####}, {v.Y:0.#####}",
+                Vector3 v => $"{v.X:0.#####}, {v.Y:0.#####}, {v.Z:0.#####}",
+                Vector4 v => $"{v.X:0.#####}, {v.Y:0.#####}, {v.Z:0.#####}, {v.W:0.#####}",
+                _ => value.ToString() ?? string.Empty
+            };
+        }
+
+        private void ShowDetailsForNode(TreeNode? node)
+        {
+            ClearModelDetails();
+            if (node?.Tag is not NodeTag tag)
+            {
+                return;
+            }
+
+            switch (tag.Type)
+            {
+                case NodeType.ModelRoot:
+                    PopulateModelDetails(tag.Model);
+                    break;
+                case NodeType.MeshGroup:
+                    PopulateMeshGroupDetails(tag.Model);
+                    break;
+                case NodeType.Mesh:
+                    PopulateMeshDetails(tag);
+                    break;
+                case NodeType.MaterialsGroup:
+                    PopulateMaterialsGroupDetails(tag);
+                    break;
+                case NodeType.Material:
+                    PopulateMaterialDetailsGrid(tag.Model, tag.MaterialName);
+                    break;
+                case NodeType.ArmatureGroup:
+                    PopulateArmatureDetails(tag.Model);
+                    break;
+                case NodeType.ArmatureBone:
+                    PopulateBoneDetails(tag);
+                    break;
+            }
+        }
+
+        private void PopulateModelDetails(Model mdl)
+        {
+            var export = mdl.CreateExportData();
+            var submeshCount = export.Submeshes.Count;
+            var vertexCount = export.Submeshes.Sum(s => s.Positions.Length);
+            var indexCount = export.Submeshes.Sum(s => s.Indices.Length);
+            var triangleCount = export.Submeshes.Sum(s => s.Indices.Length / 3);
+            var textureCount = export.Materials.Sum(m => m.Textures.Count);
+            var shaderCount = export.Materials.Select(m => m.ShaderName).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+            var bounds = CalculateBounds(export.Submeshes.SelectMany(s => s.Positions));
+
+            AddDetailRow("Type", "Model");
+            AddDetailRow("Name", mdl.Name);
+            AddDetailRow("Source", mdl.SourcePath);
+            AddDetailRow("Visible", mdl.IsVisible ? "Yes" : "No");
+            AddDetailRow("Submeshes", submeshCount);
+            AddDetailRow("Materials", export.Materials.Count);
+            AddDetailRow("Shaders", shaderCount);
+            AddDetailRow("Textures", textureCount);
+            AddDetailRow("Vertices", vertexCount);
+            AddDetailRow("Indices", indexCount);
+            AddDetailRow("Triangles", triangleCount);
+            AddDetailRow("Armature bones", export.Armature?.Bones.Count ?? 0);
+            AddDetailRow("Bounds min", bounds.Min);
+            AddDetailRow("Bounds max", bounds.Max);
+            AddDetailRow("Bounds size", bounds.Size);
+
+            foreach (var shader in export.Materials
+                .GroupBy(m => m.ShaderName, StringComparer.OrdinalIgnoreCase)
+                .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                AddDetailRow($"Shader: {shader.Key}", $"{shader.Count()} material(s)");
+            }
+        }
+
+        private void PopulateMeshGroupDetails(Model mdl)
+        {
+            var meshes = BuildMeshEntries(mdl);
+            AddDetailRow("Type", "Mesh group");
+            AddDetailRow("Model", mdl.Name);
+            AddDetailRow("Meshes", meshes.Count);
+            AddDetailRow("Submeshes", meshes.Sum(m => m.SubmeshIndices.Count));
+
+            foreach (var mesh in meshes)
+            {
+                AddDetailRow(mesh.Name, $"{mesh.SubmeshIndices.Count} submesh(es), {mesh.MaterialMap.Count} material(s)");
+            }
+        }
+
+        private void PopulateMeshDetails(NodeTag tag)
+        {
+            var export = tag.Model.CreateExportData();
+            var indices = tag.SubmeshIndices ?? new List<int>();
+            var submeshes = indices
+                .Where(i => i >= 0 && i < export.Submeshes.Count)
+                .Select(i => new { Index = i, Data = export.Submeshes[i] })
+                .ToList();
+            var bounds = CalculateBounds(submeshes.SelectMany(s => s.Data.Positions));
+
+            AddDetailRow("Type", "Mesh");
+            AddDetailRow("Model", tag.Model.Name);
+            AddDetailRow("Mesh", tag.MeshName);
+            AddDetailRow("Submesh indices", string.Join(", ", indices));
+            AddDetailRow("Submeshes", submeshes.Count);
+            AddDetailRow("Materials", string.Join(", ", submeshes.Select(s => s.Data.MaterialName).Distinct(StringComparer.OrdinalIgnoreCase)));
+            AddDetailRow("Vertices", submeshes.Sum(s => s.Data.Positions.Length));
+            AddDetailRow("Indices", submeshes.Sum(s => s.Data.Indices.Length));
+            AddDetailRow("Triangles", submeshes.Sum(s => s.Data.Indices.Length / 3));
+            AddDetailRow("Bounds min", bounds.Min);
+            AddDetailRow("Bounds max", bounds.Max);
+            AddDetailRow("Bounds size", bounds.Size);
+
+            foreach (var submesh in submeshes)
+            {
+                AddDetailRow($"Submesh {submesh.Index}", $"{submesh.Data.Name} | mat={submesh.Data.MaterialName} | v={submesh.Data.Positions.Length} i={submesh.Data.Indices.Length} uvSets={submesh.Data.UVSets.Count}");
+            }
+        }
+
+        private void PopulateMaterialsGroupDetails(NodeTag tag)
+        {
+            AddDetailRow("Type", "Mesh materials");
+            AddDetailRow("Model", tag.Model.Name);
+            AddDetailRow("Mesh", tag.MeshName);
+            if (tag.MaterialMap == null)
+            {
+                return;
+            }
+
+            AddDetailRow("Materials", tag.MaterialMap.Count);
+            foreach (var kvp in tag.MaterialMap.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                AddDetailRow(kvp.Key, $"submesh {string.Join(", ", kvp.Value)}");
+            }
+        }
+
+        private void PopulateMaterialDetailsGrid(Model mdl, string? materialName)
+        {
+            var mat = mdl.GetMaterials().FirstOrDefault(m => string.Equals(m.Name, materialName, StringComparison.OrdinalIgnoreCase));
+            if (mat == null)
+            {
+                AddDetailRow("Type", "Material");
+                AddDetailRow("Name", materialName);
+                AddDetailRow("Status", "Not found");
+                return;
+            }
+
+            PopulateMaterialDetailsGrid(mdl, mat);
+        }
+
+        private void PopulateMaterialDetailsGrid(Model? mdl, Material mat)
+        {
+            AddDetailRow("Type", "Material");
+            AddDetailRow("Model", mdl?.Name);
+            AddDetailRow("Name", mat.Name);
+            AddDetailRow("Shader", mat.ShaderName);
+            AddDetailRow("Transparent", mat.IsTransparent ? "Yes" : "No");
+            AddDetailRow("Textures", mat.Textures.Count);
+            AddDetailRow("Shader options", mat.ShaderParameters.Count);
+            AddDetailRow("Float params", mat.FloatParameters.Count);
+            AddDetailRow("Vec2 params", mat.Vec2Parameters.Count);
+            AddDetailRow("Vec3 params", mat.Vec3Parameters.Count);
+            AddDetailRow("Vec4 params", mat.Vec4Parameters.Count);
+            AddDetailRow("Samplers", mat.Samplers.Count);
+            AddDetailRow("Eye base sclera", mat.EnableEyeBaseSclera ? "Yes" : "No");
+            AddDetailRow("Eye point light", mat.EyePointLightIndex);
+
+            if (mdl != null)
+            {
+                var submeshes = mdl.GetSubmeshMaterials()
+                    .Select((name, index) => new { name, index })
+                    .Where(x => string.Equals(x.name, mat.Name, StringComparison.OrdinalIgnoreCase))
+                    .Select(x => x.index)
+                    .ToList();
+                AddDetailRow("Used by submeshes", submeshes.Count == 0 ? "<none>" : string.Join(", ", submeshes));
+            }
+
+            foreach (var tex in mat.Textures)
+            {
+                var resolved = tex.TryGetResolvedSourcePath(out var path) && File.Exists(path) ? path : "missing";
+                AddDetailRow($"Texture: {tex.Name}", $"slot={tex.Slot}, size={tex.Width}x{tex.Height}, file={tex.SourceFile}, resolved={resolved}");
+            }
+        }
+
+        private void PopulateArmatureDetails(Model mdl)
+        {
+            var armature = mdl.GetArmature();
+            AddDetailRow("Type", "Armature");
+            AddDetailRow("Model", mdl.Name);
+            AddDetailRow("Bones", armature?.Bones.Count ?? 0);
+            AddDetailRow("Joint info count", armature?.JointInfoCount ?? 0);
+            AddDetailRow("Bone meta count", armature?.BoneMetaCount ?? 0);
+            if (armature == null)
+            {
+                return;
+            }
+
+            AddDetailRow("Skinning bones", armature.Bones.Count(b => b.Skinning));
+            AddDetailRow("Root bones", armature.Bones.Count(b => b.ParentIndex < 0 || b.ParentIndex >= armature.Bones.Count));
+            foreach (var root in armature.Bones.Select((bone, index) => new { bone, index }).Where(x => x.bone.ParentIndex < 0 || x.bone.ParentIndex >= armature.Bones.Count))
+            {
+                AddDetailRow($"Root {root.index}", root.bone.Name);
+            }
+        }
+
+        private void PopulateBoneDetails(NodeTag tag)
+        {
+            var armature = tag.Model.GetArmature();
+            AddDetailRow("Type", "Bone");
+            AddDetailRow("Model", tag.Model.Name);
+            if (armature == null || tag.BoneIndex == null || tag.BoneIndex.Value < 0 || tag.BoneIndex.Value >= armature.Bones.Count)
+            {
+                AddDetailRow("Status", "Not found");
+                return;
+            }
+
+            int index = tag.BoneIndex.Value;
+            var bone = armature.Bones[index];
+            AddDetailRow("Index", index);
+            AddDetailRow("Name", bone.Name);
+            AddDetailRow("Parent index", bone.ParentIndex);
+            AddDetailRow("Parent", bone.ParentIndex >= 0 && bone.ParentIndex < armature.Bones.Count ? armature.Bones[bone.ParentIndex].Name : "<root>");
+            AddDetailRow("Children", bone.Children.Count);
+            AddDetailRow("Skinning", bone.Skinning ? "Yes" : "No");
+            AddDetailRow("Has joint inverse bind", bone.HasJointInverseBind ? "Yes" : "No");
+            AddDetailRow("Segment scale compensate", bone.UseSegmentScaleCompensate ? "Yes" : "No");
+            AddDetailRow("Rest position", bone.RestPosition);
+            AddDetailRow("Rest rotation euler", bone.RestEuler);
+            AddDetailRow("Rest scale", bone.RestScale);
+        }
+
+        private static (Vector3 Min, Vector3 Max, Vector3 Size) CalculateBounds(IEnumerable<Vector3> positions)
+        {
+            var min = new Vector3(float.PositiveInfinity);
+            var max = new Vector3(float.NegativeInfinity);
+            bool any = false;
+            foreach (var position in positions)
+            {
+                min = Vector3.ComponentMin(min, position);
+                max = Vector3.ComponentMax(max, position);
+                any = true;
+            }
+
+            if (!any)
+            {
+                return (Vector3.Zero, Vector3.Zero, Vector3.Zero);
+            }
+
+            return (min, max, max - min);
+        }
+
+        private void PopulateSceneTextures(Model mdl)
+        {
+            if (sceneTexturesGrid == null)
+            {
+                return;
+            }
+
+            sceneTexturesGrid.SuspendLayout();
+            try
+            {
+                foreach (var mat in mdl.GetMaterials())
+                {
+                    if (mat == null)
+                    {
+                        continue;
+                    }
+
+                    foreach (var tex in mat.Textures)
+                    {
+                        var status = DescribeSceneTexture(tex);
+                        int row = sceneTexturesGrid.Rows.Add(
+                            mdl.Name,
+                            mat.Name,
+                            mat.ShaderName,
+                            tex.Name,
+                            tex.Slot.ToString(),
+                            status.Status,
+                            status.Size,
+                            tex.SourceFile);
+                        sceneTexturesGrid.Rows[row].Tag = tex;
+                        if (status.Status != "OK")
+                        {
+                            sceneTexturesGrid.Rows[row].DefaultCellStyle.ForeColor = Color.OrangeRed;
+                        }
+                    }
+                }
+
+                if (sceneTexturesGrid.Rows.Count > 0 && sceneTexturesGrid.SelectedRows.Count == 0)
+                {
+                    sceneTexturesGrid.Rows[0].Selected = true;
+                }
+            }
+            finally
+            {
+                sceneTexturesGrid.ResumeLayout();
+            }
+        }
+
+        private static (string Status, string Size) DescribeSceneTexture(Texture tex)
+        {
+            bool hasSource = tex.TryGetResolvedSourcePath(out var sourcePath) && File.Exists(sourcePath);
+            using var bmp = tex.LoadPreviewBitmap();
+            if (bmp != null)
+            {
+                return ("OK", $"{bmp.Width}x{bmp.Height}");
+            }
+
+            return (hasSource ? "Decode failed" : "Missing", string.Empty);
+        }
+
+        private void sceneTexturesGrid_SelectionChanged(object? sender, EventArgs e)
+        {
+            if (sceneTexturesGrid == null || sceneTexturesGrid.SelectedRows.Count == 0)
+            {
+                SetSceneTexturePreview(null);
+                return;
+            }
+
+            if (sceneTexturesGrid.SelectedRows[0].Tag is Texture texture)
+            {
+                SetSceneTexturePreview(texture.LoadPreviewBitmap());
+                return;
+            }
+
+            SetSceneTexturePreview(null);
+        }
+
+        private void SetSceneTexturePreview(Image? image)
+        {
+            sceneTexturePreviewImage?.Dispose();
+            sceneTexturePreviewImage = image;
+            if (sceneTexturePreviewBox != null)
+            {
+                sceneTexturePreviewBox.Image = image;
             }
         }
 
@@ -903,14 +1721,18 @@ namespace TrinityModelViewer
 
             try
             {
+                DiagnosticLog.Section("Export texture");
+                DiagnosticLog.Write($"Export texture: name={texture.Name}, source={texture.SourceFile}, out={outPath}, ext={ext}");
                 if (ext == ".bntx")
                 {
                     if (!texture.TryGetResolvedSourcePath(out var sourcePath) || !File.Exists(sourcePath))
                     {
+                        DiagnosticLog.Write($"Export texture failed: original BNTX source missing for {texture.SourceFile}");
                         MessageBox.Show(this, "Source BNTX file was not found on disk.", "Export Texture", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
 
+                    DiagnosticLog.Write($"Export texture copy BNTX: source={sourcePath}, out={outPath}");
                     File.Copy(sourcePath, outPath, overwrite: true);
                 }
                 else
@@ -918,10 +1740,12 @@ namespace TrinityModelViewer
                     using var bmp = texture.LoadPreviewBitmap();
                     if (bmp == null)
                     {
+                        DiagnosticLog.Write($"Export texture failed: decode returned null for {texture.SourceFile}");
                         MessageBox.Show(this, "Texture could not be decoded.", "Export Texture", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
 
+                    DiagnosticLog.Write($"Export texture save PNG: size={bmp.Width}x{bmp.Height}, pixelFormat={bmp.PixelFormat}");
                     bmp.Save(outPath, System.Drawing.Imaging.ImageFormat.Png);
                 }
 
@@ -929,6 +1753,7 @@ namespace TrinityModelViewer
             }
             catch (Exception ex)
             {
+                DiagnosticLog.WriteException("Export texture failed", ex);
                 MessageBox.Show(this, $"Export failed:\n{ex.Message}", "Export Texture", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -951,6 +1776,8 @@ namespace TrinityModelViewer
 
             currentMaterial = mat;
             PopulateMaterialDetails(mat);
+            ClearModelDetails();
+            PopulateMaterialDetailsGrid(currentMaterialsModel, mat);
         }
 
         private void ClearMaterialDetails()
@@ -1246,9 +2073,137 @@ namespace TrinityModelViewer
             return name.Contains("UV", StringComparison.OrdinalIgnoreCase);
         }
 
-        private void AddModelToScene(string filePath)
+        private void AddModelInputToScene(string filePath)
         {
+            if (string.Equals(Path.GetExtension(filePath), ".ccdata", StringComparison.OrdinalIgnoreCase))
+            {
+                var references = ParseCcDataReferences(filePath);
+                if (string.IsNullOrWhiteSpace(references.ModelPath))
+                {
+                    throw new InvalidDataException("This CCData file does not reference a .trmdl model.");
+                }
+
+                DiagnosticLog.Section("Load CCData");
+                DiagnosticLog.Write($"CCData path: {filePath}");
+                foreach (var resource in references.ResourcePaths)
+                {
+                    DiagnosticLog.Write($"CCData resource: {resource} ({DescribeLocalFile(resource)})");
+                }
+
+                AddModelToScene(references.ModelPath, filePath, references.AnimationDirectories, references.ResourcePaths);
+                return;
+            }
+
+            AddModelToScene(filePath, filePath);
+        }
+
+        private static bool IsSupportedModelInput(string path)
+        {
+            var ext = Path.GetExtension(path);
+            return string.Equals(ext, ".trmdl", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(ext, ".ccdata", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static CcDataReferences ParseCcDataReferences(string ccdataPath)
+        {
+            var result = new CcDataReferences();
+            var dir = Path.GetDirectoryName(Path.GetFullPath(ccdataPath)) ?? Directory.GetCurrentDirectory();
+            var text = Encoding.UTF8.GetString(File.ReadAllBytes(ccdataPath));
+            foreach (Match match in Regex.Matches(
+                text,
+                @"(?:[A-Za-z0-9_.\-]+[/\\])*[A-Za-z0-9_.\-]+\.(?:trmdl|tracn|tracs|tracl|tracr|tracp|tracm|tranm|traef|trmtr|trmsh|trmbf|trskl|tralk|trbik|trslp|trmmt|trmdd|trmdt|trspn|trslt|trssp|trmae|trpokecfg|bntx|ptcl|hkx|bin)",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+            {
+                var raw = match.Value;
+                var full = ResolveCcDataPath(dir, raw);
+                if (!result.ResourcePaths.Any(path => string.Equals(path, full, StringComparison.OrdinalIgnoreCase)))
+                {
+                    result.ResourcePaths.Add(full);
+                }
+
+                if (string.Equals(Path.GetExtension(full), ".trmdl", StringComparison.OrdinalIgnoreCase) &&
+                    string.IsNullOrWhiteSpace(result.ModelPath))
+                {
+                    result.ModelPath = full;
+                }
+
+                if (IsAnimationResource(full))
+                {
+                    var animDir = Path.GetDirectoryName(full);
+                    if (!string.IsNullOrWhiteSpace(animDir) &&
+                        !result.AnimationDirectories.Any(path => string.Equals(path, animDir, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        result.AnimationDirectories.Add(animDir);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private static bool IsAnimationResource(string path)
+        {
+            var ext = Path.GetExtension(path);
+            return string.Equals(ext, ".tracn", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(ext, ".tracs", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(ext, ".tracl", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(ext, ".tracr", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(ext, ".tracp", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(ext, ".tracm", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(ext, ".tranm", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(ext, ".gfbanm", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string ResolveCcDataPath(string ccdataDir, string rawPath)
+        {
+            var normalized = rawPath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+            try
+            {
+                return Path.GetFullPath(Path.Combine(ccdataDir, normalized));
+            }
+            catch
+            {
+                return Path.Combine(ccdataDir, normalized);
+            }
+        }
+
+        private static string DescribeLocalFile(string path)
+        {
+            try
+            {
+                var info = new FileInfo(path);
+                return info.Exists ? $"exists bytes={info.Length}" : "missing";
+            }
+            catch (Exception ex)
+            {
+                return $"unavailable {ex.Message}";
+            }
+        }
+
+        private void AddModelToScene(
+            string filePath,
+            string? originalInputPath = null,
+            IReadOnlyList<string>? animationDirectories = null,
+            IReadOnlyList<string>? indexedResources = null)
+        {
+            if (!renderCtrl.RendererInitialized)
+            {
+                throw new InvalidOperationException("Renderer is not initialized. Check the startup error message before loading a model.");
+            }
+
+            DiagnosticLog.Section("Add model to scene");
+            DiagnosticLog.Write($"Model load requested: {filePath}");
             var mdl = renderCtrl.renderer.AddSceneModel(filePath, settings.LoadAllLods);
+            modelPackageContexts[mdl] = new ModelPackageContext
+            {
+                OriginalInputPath = string.IsNullOrWhiteSpace(originalInputPath) ? null : Path.GetFullPath(originalInputPath),
+                IndexedResources = (indexedResources ?? Array.Empty<string>())
+                    .Where(path => !string.IsNullOrWhiteSpace(path))
+                    .Select(Path.GetFullPath)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray()
+            };
+            DiagnosticLog.Write($"Model load completed: name={mdl.Name}, materials={mdl.GetMaterials().Count}, submeshes={mdl.GetSubmeshNames().Count}, armatureBones={mdl.GetArmature()?.Bones.Count ?? 0}");
             var node = new TreeNode(mdl.Name)
             {
                 Tag = new NodeTag
@@ -1261,41 +2216,64 @@ namespace TrinityModelViewer
             sceneTree.Nodes.Add(node);
             PopulateSubmeshes(node, mdl);
             PopulateMaterials(mdl);
-            TryAutoLoadAnimations(filePath);
+            PopulateSceneTextures(mdl);
+            TryAutoLoadAnimations(filePath, animationDirectories);
 
             // Default to "solo" display for the most recently added model.
             ShowOnlyModel(mdl);
             sceneTree.SelectedNode = node;
             node.EnsureVisible();
 
-            settings.LastModelPath = filePath;
+            settings.LastModelPath = originalInputPath ?? filePath;
             settings.Save();
             UpdateLastModelMenu();
         }
 
-        private void TryAutoLoadAnimations(string trmdlPath)
+        private void TryAutoLoadAnimations(string trmdlPath, IReadOnlyList<string>? animationDirectories = null)
         {
-            if (!settings.AutoLoadAnimations)
+            string? animDir = GuessAnimationDirectory(trmdlPath);
+            var explicitAnimationDirs = (animationDirectories ?? Array.Empty<string>())
+                .Where(dir => !string.IsNullOrWhiteSpace(dir) && Directory.Exists(dir))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (explicitAnimationDirs.Count > 0)
             {
+                foreach (var explicitAnimationDir in explicitAnimationDirs)
+                {
+                    DiagnosticLog.Write($"CCData animation directory: {explicitAnimationDir}");
+                    LoadAnimationsFromDirectory(explicitAnimationDir);
+                }
+
+                TryAutoPlayDefaultPoseAnimation(explicitAnimationDirs[0]);
                 return;
             }
 
-            string? animDir = GuessAnimationDirectory(trmdlPath);
-            if (string.IsNullOrWhiteSpace(animDir) || !Directory.Exists(animDir))
+            if (!settings.AutoLoadAnimations)
             {
+                DiagnosticLog.Write("Auto animation load: disabled");
+            }
+            else if (string.IsNullOrWhiteSpace(animDir) || !Directory.Exists(animDir))
+            {
+                DiagnosticLog.Write($"Auto animation load: no directory found for {trmdlPath}, guessed={animDir ?? "<none>"}");
                 if (MessageHandler.Instance.DebugLogsEnabled)
                 {
                     MessageHandler.Instance.AddMessage(MessageType.LOG, $"[Anim] AutoLoad: no animation directory found for '{trmdlPath}'");
                 }
-                return;
+            }
+            else
+            {
+                LoadAnimationsFromDirectory(animDir);
             }
 
-            LoadAnimationsFromDirectory(animDir);
+            TryAutoPlayDefaultPoseAnimation(animDir);
         }
 
         private void LoadAnimationsFromDirectory(string animDir)
         {
             const int maxToLoad = 500;
+            DiagnosticLog.Section("Auto animation load");
+            DiagnosticLog.Write($"Animation directory: {animDir}");
 
             IEnumerable<string> tranm = Enumerable.Empty<string>();
             IEnumerable<string> gfbanm = Enumerable.Empty<string>();
@@ -1307,6 +2285,7 @@ namespace TrinityModelViewer
             }
             catch (Exception ex)
             {
+                DiagnosticLog.WriteException($"Auto animation enumeration failed: {animDir}", ex);
                 if (MessageHandler.Instance.DebugLogsEnabled)
                 {
                     MessageHandler.Instance.AddMessage(MessageType.WARNING, $"[Anim] AutoLoad: failed to enumerate '{animDir}': {ex.Message}");
@@ -1323,22 +2302,17 @@ namespace TrinityModelViewer
             int loaded = 0;
             foreach (var file in files)
             {
-                if (!loadedAnimationPaths.Add(file))
-                {
-                    continue;
-                }
-
                 try
                 {
-                    var animFile = FlatBufferConverter.DeserializeFrom<GfAnim.Animation>(file);
-                    var anim = new GFTool.Renderer.Scene.GraphicsObjects.Animation(animFile, Path.GetFileNameWithoutExtension(file));
-                    animations.Add(anim);
-                    var item = new ListViewItem(anim.Name) { Tag = anim };
-                    animationsList.Items.Add(item);
-                    loaded++;
+                    _ = LoadAnimationFile(file, "Auto", out var loadedNew);
+                    if (loadedNew)
+                    {
+                        loaded++;
+                    }
                 }
                 catch (Exception ex)
                 {
+                    DiagnosticLog.WriteException($"Auto animation load failed: {file}", ex);
                     if (MessageHandler.Instance.DebugLogsEnabled)
                     {
                         MessageHandler.Instance.AddMessage(MessageType.WARNING, $"[Anim] AutoLoad: failed '{file}': {ex.Message}");
@@ -1347,9 +2321,174 @@ namespace TrinityModelViewer
             }
 
             animationsList.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
+            DiagnosticLog.Write($"Auto animation load complete: loaded={loaded}, scanned={files.Count}");
             if (MessageHandler.Instance.DebugLogsEnabled)
             {
                 MessageHandler.Instance.AddMessage(MessageType.LOG, $"[Anim] AutoLoad: loaded {loaded} animations from '{animDir}'");
+            }
+        }
+
+        private void TryAutoPlayDefaultPoseAnimation(string? animDir)
+        {
+            if (string.IsNullOrWhiteSpace(animDir) || !Directory.Exists(animDir))
+            {
+                DiagnosticLog.Write($"Auto default pose: no animation directory, guessed={animDir ?? "<none>"}");
+                return;
+            }
+
+            string? file = FindDefaultPoseAnimation(animDir);
+            if (string.IsNullOrWhiteSpace(file))
+            {
+                DiagnosticLog.Write($"Auto default pose: no default wait animation found in {animDir}");
+                return;
+            }
+
+            try
+            {
+                var anim = LoadAnimationFile(file, "Auto default pose", out var loadedNew);
+                if (anim == null)
+                {
+                    return;
+                }
+
+                if (loadedNew)
+                {
+                    animationsList.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
+                }
+
+                SelectAnimation(anim);
+                if (renderCtrl.RendererInitialized)
+                {
+                    DiagnosticLog.Write($"Auto default pose play: {file}");
+                    PlayAnimationWithFacialLayers(anim);
+                }
+            }
+            catch (Exception ex)
+            {
+                DiagnosticLog.WriteException($"Auto default pose failed: {file}", ex);
+                if (MessageHandler.Instance.DebugLogsEnabled)
+                {
+                    MessageHandler.Instance.AddMessage(MessageType.WARNING, $"[Anim] Auto default pose failed '{file}': {ex.Message}");
+                }
+            }
+        }
+
+        private static string? FindDefaultPoseAnimation(string animDir)
+        {
+            try
+            {
+                var files = Directory.EnumerateFiles(animDir, "*.tranm", SearchOption.TopDirectoryOnly).ToList();
+                var controllerPreferred = TryFindControllerPreferredDefaultPose(animDir, files);
+                if (!string.IsNullOrWhiteSpace(controllerPreferred))
+                {
+                    return controllerPreferred;
+                }
+
+                return files
+                    .Select(file => new { File = file, Score = ScoreDefaultPoseAnimation(file) })
+                    .Where(x => x.Score > 0)
+                    .OrderByDescending(x => x.Score)
+                    .ThenBy(x => Path.GetFileName(x.File), StringComparer.OrdinalIgnoreCase)
+                    .Select(x => x.File)
+                    .FirstOrDefault();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static string? TryFindControllerPreferredDefaultPose(string animDir, IReadOnlyList<string> animationFiles)
+        {
+            if (animationFiles.Count == 0)
+            {
+                return null;
+            }
+
+            var candidates = animationFiles
+                .Select(file => new
+                {
+                    File = file,
+                    Name = Path.GetFileNameWithoutExtension(file)
+                })
+                .ToList();
+
+            var stateClips = new List<(string State, string Clip, string Controller)>();
+            foreach (var controller in Directory.EnumerateFiles(animDir, "*.tracs", SearchOption.TopDirectoryOnly))
+            {
+                try
+                {
+                    string text = Encoding.ASCII.GetString(File.ReadAllBytes(controller));
+                    foreach (Match match in Regex.Matches(
+                        text,
+                        @"Top/poke_default/(?<state>ground_state|water_state|sky_state)/move/move_base/(?<clip>[0-9]{5}_[A-Za-z0-9_]*defaultwait[A-Za-z0-9_]*)",
+                        RegexOptions.CultureInvariant))
+                    {
+                        string state = match.Groups["state"].Value;
+                        string clip = match.Groups["clip"].Value;
+                        if (!string.IsNullOrWhiteSpace(state) && !string.IsNullOrWhiteSpace(clip) &&
+                            !stateClips.Any(x => string.Equals(x.State, state, StringComparison.OrdinalIgnoreCase) &&
+                                                 string.Equals(x.Clip, clip, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            stateClips.Add((state, clip, Path.GetFileName(controller)));
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    DiagnosticLog.WriteException($"Auto default pose controller read failed: {controller}", ex);
+                }
+            }
+
+            if (stateClips.Count == 0)
+            {
+                return null;
+            }
+
+            // For Switch Pokemon action controllers, non-ground locomotion states often carry the in-game presentation pose.
+            // Fall back to ground if the controller only exposes the ordinary 00000 set.
+            string[] statePreference = { "water_state", "sky_state", "ground_state" };
+            foreach (string state in statePreference)
+            {
+                foreach (var entry in stateClips.Where(x => string.Equals(x.State, state, StringComparison.OrdinalIgnoreCase)))
+                {
+                    var match = candidates.FirstOrDefault(x =>
+                        string.Equals(x.Name, entry.Clip, StringComparison.OrdinalIgnoreCase) ||
+                        x.Name.EndsWith("_" + entry.Clip, StringComparison.OrdinalIgnoreCase));
+                    if (match != null)
+                    {
+                        DiagnosticLog.Write($"Auto default pose controller pick: state={entry.State}, clip={entry.Clip}, controller={entry.Controller}, file={match.File}");
+                        return match.File;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private static int ScoreDefaultPoseAnimation(string file)
+        {
+            string name = Path.GetFileNameWithoutExtension(file).ToLowerInvariant();
+            int score = 0;
+            if (name.Contains("defaultwait")) score += 1000;
+            if (name.Contains("battlewait")) score += 800;
+            if (name.Contains("wait")) score += 400;
+            if (name.Contains("loop")) score += 100;
+            if (name.Contains("_00000_")) score += 40;
+            if (name.Contains("_00001_")) score += 20;
+            if (name.EndsWith("_loop", StringComparison.Ordinal)) score += 10;
+            return score;
+        }
+
+        private void SelectAnimation(GFTool.Renderer.Scene.GraphicsObjects.Animation anim)
+        {
+            foreach (ListViewItem item in animationsList.Items)
+            {
+                item.Selected = ReferenceEquals(item.Tag, anim);
+                if (item.Selected)
+                {
+                    item.EnsureVisible();
+                }
             }
         }
 
@@ -1365,6 +2504,12 @@ namespace TrinityModelViewer
             if (string.IsNullOrWhiteSpace(dir))
             {
                 return null;
+            }
+
+            if (Directory.EnumerateFiles(dir, "*.tranm", SearchOption.TopDirectoryOnly).Any() ||
+                Directory.EnumerateFiles(dir, "*.gfbanm", SearchOption.TopDirectoryOnly).Any())
+            {
+                return dir;
             }
 
             char[] seps = new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar };
@@ -1391,6 +2536,7 @@ namespace TrinityModelViewer
         private void sceneTree_AfterSelect(object? sender, TreeViewEventArgs e)
         {
             ClearSubmeshSelections();
+            ShowDetailsForNode(e.Node);
             renderCtrl.Invalidate();
             if (e.Node == null)
             {
@@ -1730,7 +2876,7 @@ namespace TrinityModelViewer
             }
 
             var modelFiles = files
-                .Where(path => string.Equals(Path.GetExtension(path), ".trmdl", StringComparison.OrdinalIgnoreCase))
+                .Where(IsSupportedModelInput)
                 .ToList();
 
             if (modelFiles.Count == 0)
@@ -1741,7 +2887,7 @@ namespace TrinityModelViewer
             ClearAll();
             foreach (var modelFile in modelFiles)
             {
-                AddModelToScene(modelFile);
+                AddModelInputToScene(modelFile);
             }
         }
     }

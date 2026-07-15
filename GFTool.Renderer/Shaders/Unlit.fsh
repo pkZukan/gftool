@@ -15,6 +15,12 @@ uniform bool EnableAOMap;
 uniform bool NumMaterialLayer;
 uniform bool EnableSSSMaskMap;
 uniform bool EnableVertexColor;
+uniform vec4 BaseColor;
+uniform vec4 BaseColorLayer1;
+uniform vec4 BaseColorLayer2;
+uniform vec4 BaseColorLayer3;
+uniform vec4 BaseColorLayer4;
+uniform vec4 UVScaleOffset;
 
 layout (location = 0) out vec3 gAlbedo;
 layout (location = 1) out vec3 gNormal;
@@ -28,7 +34,10 @@ in vec4 Color;
 
 void main()
 {
-    vec2 uv = vec2(TexCoord.x, 1.0f - TexCoord.y);
+    vec2 uvScale = dot(abs(UVScaleOffset.xy), vec2(1.0)) < 0.0001
+        ? vec2(1.0)
+        : UVScaleOffset.xy;
+    vec2 uv = vec2(TexCoord.x, 1.0f - TexCoord.y) * uvScale + UVScaleOffset.zw;
 
     bool useLayerMask = EnableLayerMaskMap && NumMaterialLayer;
     vec4 layerMask = vec4(0.0);
@@ -37,19 +46,18 @@ void main()
         layerMask = texture(LayerMaskMap, uv);
     }
 
-    float layerWeight = 1.0;
+    vec3 baseColor = (EnableBaseColorMap ? texture(BaseColorMap, uv).rgb : vec3(1.0)) * BaseColor.rgb;
     if (useLayerMask)
     {
-        layerWeight = clamp(1.0 - dot(vec4(1.0), layerMask), 0.0, 1.0);
-        layerWeight = mix(layerWeight, 1.0, layerMask.r);
+        baseColor = mix(baseColor, BaseColorLayer1.rgb, layerMask.r);
+        baseColor = mix(baseColor, BaseColorLayer2.rgb, layerMask.g);
+        baseColor = mix(baseColor, BaseColorLayer3.rgb, layerMask.b);
+        baseColor = mix(baseColor, BaseColorLayer4.rgb, layerMask.a);
     }
-
-    vec3 baseColor = EnableBaseColorMap ? texture(BaseColorMap, uv).rgb : vec3(1.0);
     vec3 vertexColor = EnableVertexColor ? Color.rgb : vec3(1.0);
     vec3 albedo = EnableVertexColor
         ? mix(vertexColor, baseColor, EnableBaseColorMap ? 0.5 : 0.0)
         : baseColor;
-    albedo *= layerWeight;
     float ao = EnableAOMap ? texture(AOMap, uv).r : 1.0;
 
     gAlbedo = albedo;

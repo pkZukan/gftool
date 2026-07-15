@@ -27,7 +27,15 @@ namespace GFTool.Renderer
         private int ssaoBlurTexture;
         private bool ssaoAvailable;
         private Animation? activeAnimation;
+        private Animation? activeAdditiveOverlay;
+        private Animation? activeMouthOverlay;
+        private Animation? activeUpperFaceOverlay;
         private double animationTimeSeconds;
+        private double additiveOverlayTimeSeconds;
+        private double mouthOverlayTimeSeconds;
+        private double upperFaceOverlayTimeSeconds;
+        private bool holdMouthOverlayAtFirstFrame;
+        private bool loopMouthOverlay;
         private long lastAnimationTicks;
 
         public bool AllowUserInput = true;
@@ -52,6 +60,9 @@ namespace GFTool.Renderer
             GL.Enable(EnableCap.DepthTest);
             GL.ClearDepth(1.0f);
             GL.DepthFunc(DepthFunction.Lequal);
+            GL.Enable(EnableCap.CullFace);
+            GL.FrontFace(FrontFaceDirection.Ccw);
+            GL.CullFace(CullFaceMode.Back);
             GL.ClearColor(Color.Gray);
 
             //Set viewport size
@@ -65,9 +76,6 @@ namespace GFTool.Renderer
 
             //Update VP mat
             camera.Update();
-
-            //Bind viewport
-            viewport.MakeCurrent();
 
             UpdateAnimation();
 
@@ -120,13 +128,58 @@ namespace GFTool.Renderer
             double deltaSeconds = (now - lastAnimationTicks) / (double)Stopwatch.Frequency;
             lastAnimationTicks = now;
             animationTimeSeconds += deltaSeconds;
+            if (activeAdditiveOverlay != null)
+            {
+                additiveOverlayTimeSeconds += deltaSeconds;
+            }
+            if (activeMouthOverlay != null && !holdMouthOverlayAtFirstFrame)
+            {
+                mouthOverlayTimeSeconds += deltaSeconds;
+                if (!loopMouthOverlay && HasAnimationFinished(activeMouthOverlay, mouthOverlayTimeSeconds))
+                {
+                    mouthOverlayTimeSeconds = GetAnimationEndTime(activeMouthOverlay);
+                    DiagnosticLog.Write($"Mouth animation overlay completed and held: name={activeMouthOverlay.Name}");
+                }
+            }
+
+            if (activeUpperFaceOverlay != null)
+            {
+                upperFaceOverlayTimeSeconds += deltaSeconds;
+                if (HasAnimationFinished(activeUpperFaceOverlay, upperFaceOverlayTimeSeconds))
+                {
+                    DiagnosticLog.Write($"Upper-face animation overlay completed: name={activeUpperFaceOverlay.Name}");
+                    activeUpperFaceOverlay = null;
+                    upperFaceOverlayTimeSeconds = 0;
+                }
+            }
+
+            ApplyAnimationFrame();
+        }
+
+        private void ApplyAnimationFrame()
+        {
+            if (activeAnimation == null)
+            {
+                return;
+            }
 
             float frame = activeAnimation.GetFrame((float)animationTimeSeconds);
+            float additiveOverlayFrame = activeAdditiveOverlay?.GetFrame((float)additiveOverlayTimeSeconds) ?? 0f;
+            float mouthOverlayFrame = activeMouthOverlay?.GetFrame((float)mouthOverlayTimeSeconds, loopMouthOverlay) ?? 0f;
+            float upperFaceOverlayFrame = activeUpperFaceOverlay?.GetFrame((float)upperFaceOverlayTimeSeconds) ?? 0f;
             foreach (var c in SceneGraph.Instance.GetRoot().children)
             {
                 if (c is Model model)
                 {
-                    model.ApplyAnimation(activeAnimation, frame);
+                    model.ApplyAnimation(
+                        activeAnimation,
+                        frame,
+                        activeAdditiveOverlay,
+                        additiveOverlayFrame,
+                        activeMouthOverlay,
+                        mouthOverlayFrame,
+                        activeUpperFaceOverlay,
+                        upperFaceOverlayFrame);
                 }
             }
 
@@ -290,46 +343,332 @@ namespace GFTool.Renderer
         {
             var root = SceneGraph.Instance.GetRoot();
             if (root.children.Contains(mdl))
+            {
                 root.children.Remove(mdl);
+                mdl.Dispose();
+            }
         }
 
         public void ClearScene()
         {
+            activeAnimation = null;
+            activeAdditiveOverlay = null;
+            activeMouthOverlay = null;
+            activeUpperFaceOverlay = null;
+            animationTimeSeconds = 0;
+            additiveOverlayTimeSeconds = 0;
+            mouthOverlayTimeSeconds = 0;
+            upperFaceOverlayTimeSeconds = 0;
+            holdMouthOverlayAtFirstFrame = false;
+            loopMouthOverlay = false;
+            lastAnimationTicks = 0;
             var root = SceneGraph.Instance.GetRoot();
-            root.children.RemoveAll(child => child is Model);
+            var models = root.children.OfType<Model>().ToArray();
+            foreach (var model in models)
+            {
+                root.children.Remove(model);
+                model.Dispose();
+            }
+
+            Texture.ClearCache();
+            ResetModelGraphicsState();
+            DiagnosticLog.Write($"Scene cleared: disposedModels={models.Length}, remainingChildren={root.children.Count}, textureCacheEntries={Texture.CacheEntryCount}");
         }
 
-        public void PlayAnimation(Animation animation)
+        private static void ResetModelGraphicsState()
         {
-            activeAnimation = animation;
-            animationTimeSeconds = 0;
+            GL.GetInteger(GetPName.MaxCombinedTextureImageUnits, out int textureUnitCount);
+            textureUnitCount = Math.Clamp(textureUnitCount, 1, 32);
+            for (int unit = 0; unit < textureUnitCount; unit++)
+            {
+                GL.ActiveTexture(TextureUnit.Texture0 + unit);
+                GL.BindTexture(TextureTarget.Texture2D, 0);
+                GL.BindTexture(TextureTarget.TextureCubeMap, 0);
+            }
+
+            GL.ActiveTexture(TextureUnit.Texture0);
+            GL.BindVertexArray(0);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0);
+            GL.UseProgram(0);
+            DiagnosticLog.Write($"OpenGL model state reset: textureUnits={textureUnitCount}");
+        }
+
+        public void PlayAnimation(
+            Animation animation,
+            bool holdFacialOverlayAtFirstFrame = false,
+            bool loopFacialOverlay = false)
+        {
+            bool playAsFacialOverlay = animation.IsFacialOverlay &&
+                                       activeAnimation != null &&
+                                       !activeAnimation.IsFacialOverlay;
+            if (playAsFacialOverlay)
+            {
+                if (animation.AllowsMouthPoseTracks)
+                {
+                    activeMouthOverlay = animation;
+                    mouthOverlayTimeSeconds = 0;
+                    holdMouthOverlayAtFirstFrame = holdFacialOverlayAtFirstFrame;
+                    loopMouthOverlay = loopFacialOverlay;
+                }
+
+                if (animation.AllowsUpperFacePoseTracks)
+                {
+                    activeUpperFaceOverlay = animation;
+                    upperFaceOverlayTimeSeconds = 0;
+                }
+            }
+            else
+            {
+                activeAnimation = null;
+                activeAdditiveOverlay = null;
+                activeMouthOverlay = null;
+                activeUpperFaceOverlay = null;
+                animationTimeSeconds = 0;
+                additiveOverlayTimeSeconds = 0;
+                mouthOverlayTimeSeconds = 0;
+                upperFaceOverlayTimeSeconds = 0;
+                holdMouthOverlayAtFirstFrame = false;
+                loopMouthOverlay = false;
+                lastAnimationTicks = 0;
+                ResetAnimatedModels();
+
+                activeAnimation = animation;
+            }
             lastAnimationTicks = 0;
+            ApplyAnimationFrame();
+            DiagnosticLog.Write(
+                $"Animation {(playAsFacialOverlay ? "overlay" : "play")}: name={animation.Name}, " +
+                $"frames={animation.FrameCount}, fps={animation.FrameRate}, tracks={animation.TrackCount}, " +
+                $"mouthTracks={animation.MouthPoseTrackCount}, activeMouthTracks={animation.ActiveMouthPoseTrackCount}, " +
+                $"embeddedMouth={animation.UsesEmbeddedMouthPoseTracks}, " +
+                $"zeroEndpointTracks={animation.ZeroEndpointPlaceholderTrackCount}, " +
+                $"animatedMiddleTracks={animation.AnimatedBetweenPlaceholderEndpointsTrackCount}, " +
+                $"zeroEndpointEncoding={animation.UsesZeroEndpointPlaceholderEncoding}, additive={animation.UsesAdditivePoseEncoding}, " +
+                $"mouthLayer={animation.AllowsMouthPoseTracks}, upperFaceLayer={animation.AllowsUpperFacePoseTracks}, " +
+                $"holdFirstFrame={holdFacialOverlayAtFirstFrame}, loopFacialOverlay={loopFacialOverlay}");
             if (MessageHandler.Instance.DebugLogsEnabled)
             {
                 MessageHandler.Instance.AddMessage(MessageType.LOG, $"[Anim] Play '{animation.Name}' frames={animation.FrameCount} fps={animation.FrameRate} tracks={animation.TrackCount}");
+            }
 
-                foreach (var c in SceneGraph.Instance.GetRoot().children)
+            foreach (var c in SceneGraph.Instance.GetRoot().children)
+            {
+                if (c is Model model)
                 {
-                    if (c is Model model)
+                    var armature = model.Armature;
+                    if (armature == null)
                     {
-                        var armature = model.Armature;
-                        if (armature == null)
+                        DiagnosticLog.Write($"Animation play match: animation={animation.Name}, model={model.Name}, no armature");
+                        if (MessageHandler.Instance.DebugLogsEnabled)
                         {
                             MessageHandler.Instance.AddMessage(MessageType.LOG, $"[Anim] Model '{model.Name}': no armature");
-                            continue;
                         }
+                        continue;
+                    }
 
-                        int matches = 0;
-                        foreach (var bone in armature.Bones)
+                    int matches = 0;
+                    foreach (var bone in armature.Bones)
+                    {
+                        if (animation.HasTrack(bone.Name))
                         {
-                            if (animation.HasTrack(bone.Name))
-                            {
-                                matches++;
-                            }
+                            matches++;
                         }
+                    }
 
+                    DiagnosticLog.Write($"Animation play match: animation={animation.Name}, model={model.Name}, bones={armature.Bones.Count}, trackMatches={matches}");
+                    LogSuppressedFacialPoseTracks(animation, armature);
+                    LogFacialTrackSamples(animation, armature);
+                    LogAttachmentTrackSamples(animation, armature);
+                    if (MessageHandler.Instance.DebugLogsEnabled)
+                    {
                         MessageHandler.Instance.AddMessage(MessageType.LOG, $"[Anim] Model '{model.Name}': bones={armature.Bones.Count} trackMatches={matches}");
                     }
+                }
+            }
+        }
+
+        public void PlayAdditiveAnimation(Animation animation)
+        {
+            if (activeAnimation == null || animation?.UsesAdditivePoseEncoding != true)
+            {
+                DiagnosticLog.Write(
+                    $"Additive animation rejected: name={animation?.Name ?? "<null>"}, " +
+                    $"hasBase={activeAnimation != null}, additiveEncoding={animation?.UsesAdditivePoseEncoding == true}");
+                return;
+            }
+
+            activeAdditiveOverlay = animation;
+            additiveOverlayTimeSeconds = 0;
+            lastAnimationTicks = 0;
+            ApplyAnimationFrame();
+            DiagnosticLog.Write(
+                $"Additive animation overlay: base={activeAnimation.Name}, additive={animation.Name}, " +
+                $"frames={animation.FrameCount}, fps={animation.FrameRate}, tracks={animation.TrackCount}, " +
+                $"activeTracks={animation.AnimatedBetweenPlaceholderEndpointsTrackCount}, " +
+                $"activeMouthTracks={animation.ActiveMouthPoseTrackCount}");
+        }
+
+        private static void LogSuppressedFacialPoseTracks(Animation animation, Armature armature)
+        {
+            if (!RenderOptions.SuppressLayeredFacialPoseTracks)
+            {
+                return;
+            }
+
+            var suppressed = armature.Bones
+                .Where(bone => Animation.IsLayeredFacialPoseBoneName(bone.Name) &&
+                               animation.HasTrack(bone.Name) &&
+                               !animation.ShouldApplyPoseTrack(bone.Name))
+                .Select(bone => bone.Name)
+                .Take(24)
+                .ToArray();
+            if (suppressed.Length == 0)
+            {
+                return;
+            }
+
+            DiagnosticLog.Write(
+                $"Layered facial pose tracks suppressed: animation={animation.Name}, count={suppressed.Length}, bones={string.Join(", ", suppressed)}");
+        }
+
+        private static void LogFacialTrackSamples(Animation animation, Armature armature)
+        {
+            if (animation == null || armature == null)
+            {
+                return;
+            }
+
+            var diagnosticBones = armature.Bones
+                .Where(bone => IsFacialDiagnosticBone(bone.Name) && animation.HasTrack(bone.Name))
+                .Take(24)
+                .ToArray();
+            if (diagnosticBones.Length == 0 &&
+                !ContainsToken(animation.Name, "face") &&
+                !ContainsToken(animation.Name, "mouth"))
+            {
+                return;
+            }
+
+            float endFrame = Math.Max(0f, animation.FrameCount > 0 ? animation.FrameCount - 1 : 0f);
+            float middleFrame = endFrame * 0.5f;
+            int logged = 0;
+            foreach (var bone in diagnosticBones)
+            {
+                LogFacialTrackSample(animation, bone, 0f);
+                if (middleFrame > 0f && middleFrame < endFrame)
+                {
+                    LogFacialTrackSample(animation, bone, middleFrame);
+                }
+                if (endFrame > 0f)
+                {
+                    LogFacialTrackSample(animation, bone, endFrame);
+                }
+
+                logged++;
+            }
+
+            DiagnosticLog.Write(
+                $"Facial animation diagnostics: animation={animation.Name}, sampledBones={logged}, " +
+                $"frameMiddle={middleFrame}, frameEnd={endFrame}");
+        }
+
+        private static void LogFacialTrackSample(Animation animation, Armature.Bone bone, float frame)
+        {
+            animation.TryGetPose(bone.Name, frame, out var scale, out var rotation, out var translation);
+            DiagnosticLog.Write(
+                $"  facial track sample: animation={animation.Name}, bone={bone.Name}, frame={frame}, " +
+                $"restT={FormatVector3(bone.RestPosition)}, animT={FormatNullableVector3(translation)}, " +
+                $"restS={FormatVector3(bone.RestScale)}, animS={FormatNullableVector3(scale)}, " +
+                $"restR={FormatQuaternion(bone.RestRotation)}, animR={FormatNullableQuaternion(rotation)}");
+        }
+
+        private static void LogAttachmentTrackSamples(Animation animation, Armature armature)
+        {
+            var bones = armature.Bones
+                .Where(bone => IsAttachmentDiagnosticBone(bone.Name) && animation.HasTrack(bone.Name))
+                .Take(40)
+                .ToArray();
+            foreach (var bone in bones)
+            {
+                animation.TryGetPose(bone.Name, 0f, out var scale, out var rotation, out var translation);
+                DiagnosticLog.Write(
+                    $"  attachment track sample: animation={animation.Name}, bone={bone.Name}, " +
+                    $"restT={FormatVector3(bone.RestPosition)}, animT={FormatNullableVector3(translation)}, " +
+                    $"restS={FormatVector3(bone.RestScale)}, animS={FormatNullableVector3(scale)}, " +
+                    $"restR={FormatQuaternion(bone.RestRotation)}, animR={FormatNullableQuaternion(rotation)}");
+            }
+
+            if (bones.Length > 0)
+            {
+                DiagnosticLog.Write($"Attachment animation diagnostics: animation={animation.Name}, sampledBones={bones.Length}");
+            }
+        }
+
+        private static bool IsAttachmentDiagnosticBone(string name)
+        {
+            return ContainsToken(name, "hair") ||
+                   ContainsToken(name, "hat") ||
+                   ContainsToken(name, "cloth") ||
+                   ContainsToken(name, "skirt") ||
+                   ContainsToken(name, "attach") ||
+                   ContainsToken(name, "obj");
+        }
+
+        private static bool IsFacialDiagnosticBone(string name)
+        {
+            return Animation.IsLayeredFacialPoseBoneName(name);
+        }
+
+        private static bool ContainsToken(string text, string token)
+        {
+            return !string.IsNullOrWhiteSpace(text) &&
+                   text.Contains(token, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string FormatNullableVector3(OpenTK.Mathematics.Vector3? value)
+        {
+            return value.HasValue ? FormatVector3(value.Value) : "<none>";
+        }
+
+        private static string FormatVector3(OpenTK.Mathematics.Vector3 value)
+        {
+            return $"({value.X:0.#####}, {value.Y:0.#####}, {value.Z:0.#####})";
+        }
+
+        private static string FormatNullableQuaternion(OpenTK.Mathematics.Quaternion? value)
+        {
+            if (!value.HasValue)
+            {
+                return "<none>";
+            }
+
+            return FormatQuaternion(value.Value);
+        }
+
+        private static string FormatQuaternion(OpenTK.Mathematics.Quaternion value)
+        {
+            return $"({value.X:0.#####}, {value.Y:0.#####}, {value.Z:0.#####}, {value.W:0.#####})";
+        }
+
+        public void ApplyMeshVariantVisibility(char preferredVariant, string reason)
+        {
+            foreach (var c in SceneGraph.Instance.GetRoot().children)
+            {
+                if (c is Model model)
+                {
+                    model.ApplyMeshVariantVisibility(preferredVariant, reason);
+                }
+            }
+        }
+
+        public void ApplyMeshVariantVisibility(Animation animation, char fallbackVariant, string reason)
+        {
+            foreach (var c in SceneGraph.Instance.GetRoot().children)
+            {
+                if (c is Model model)
+                {
+                    model.ApplyMeshVariantVisibility(animation.TrackNames, fallbackVariant, reason);
                 }
             }
         }
@@ -337,8 +676,38 @@ namespace GFTool.Renderer
         public void StopAnimation()
         {
             activeAnimation = null;
+            activeAdditiveOverlay = null;
+            activeMouthOverlay = null;
+            activeUpperFaceOverlay = null;
             animationTimeSeconds = 0;
+            additiveOverlayTimeSeconds = 0;
+            mouthOverlayTimeSeconds = 0;
+            upperFaceOverlayTimeSeconds = 0;
+            holdMouthOverlayAtFirstFrame = false;
+            loopMouthOverlay = false;
             lastAnimationTicks = 0;
+            ResetAnimatedModels();
+        }
+
+        private static bool HasAnimationFinished(Animation animation, double timeSeconds)
+        {
+            if (animation.LoopType == Animation.PlayType.Looped || animation.FrameCount <= 1)
+            {
+                return false;
+            }
+
+            double frameRate = animation.FrameRate > 0 ? animation.FrameRate : 30.0;
+            return timeSeconds * frameRate >= animation.FrameCount - 1;
+        }
+
+        private static double GetAnimationEndTime(Animation animation)
+        {
+            double frameRate = animation.FrameRate > 0 ? animation.FrameRate : 30.0;
+            return animation.FrameCount > 1 ? (animation.FrameCount - 1) / frameRate : 0;
+        }
+
+        private static void ResetAnimatedModels()
+        {
             foreach (var c in SceneGraph.Instance.GetRoot().children)
             {
                 if (c is Model model)
@@ -411,6 +780,8 @@ namespace GFTool.Renderer
 
         public void Dispose()
         {
+            StopAnimation();
+            ClearScene();
             gbuffer.Dispose();
             DeleteSsaoTargets();
         }
