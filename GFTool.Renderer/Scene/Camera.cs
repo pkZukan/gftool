@@ -18,7 +18,6 @@ namespace GFTool.Renderer.Scene
         private bool rotationInitialized = false;
         private float yaw;
         private float pitch;
-        private Vector3 target = Vector3.Zero;
         private float distance = 5.0f;
 
         //Constants
@@ -40,9 +39,8 @@ namespace GFTool.Renderer.Scene
             Width = width;
             Height = height;
             Transform.Position = new Vector3(0, 1, 1);
-            target = Vector3.Zero;
-            distance = (Transform.Position - target).Length;
-            var front = Vector3.Normalize(target - Transform.Position);
+            distance = Transform.Position.Length;
+            var front = Vector3.Normalize(-Transform.Position);
             pitch = MathF.Asin(front.Y);
             yaw = MathF.Atan2(front.Z, front.X);
             rotationInitialized = true;
@@ -86,16 +84,16 @@ namespace GFTool.Renderer.Scene
 
         public void FrameBounds(Vector3 min, Vector3 max)
         {
-            target = (min + max) * 0.5f;
+            var center = (min + max) * 0.5f;
             var radius = Math.Max(0.5f, (max - min).Length * 0.5f);
-            // Fit the limiting vertical/horizontal field of view with room to orbit.
+            // Fit the limiting vertical/horizontal field of view with a margin.
             float halfFov = MathHelper.DegreesToRadians(22.5f);
             float horizontal = MathF.Atan(MathF.Tan(halfFov) * Width / Math.Max(1f, Height));
             distance = radius / MathF.Sin(Math.Min(halfFov, horizontal)) * 1.15f;
             NearPlane = Math.Max(0.01f, distance / 10000f);
             FarPlane = Math.Max(100f, distance + radius * 4f);
             UpdateProjMatrix();
-            UpdateOrbitPosition();
+            Transform.Position = center - CalculateCameraFront() * distance;
         }
 
 
@@ -150,9 +148,6 @@ namespace GFTool.Renderer.Scene
             Transform.Position += right * z * move;
             Transform.Position += up * y * move;
             Transform.Position += forward * x * move;
-            target += right * z * move;
-            target += up * y * move;
-            target += forward * x * move;
         }
 
         public void ApplyPan(float deltaX, float deltaY)
@@ -165,39 +160,24 @@ namespace GFTool.Renderer.Scene
             float scale = PAN_SPEED * distance;
             Vector3 pan = right * deltaX * scale + up * deltaY * scale;
             Transform.Position += pan;
-            target += pan;
         }
 
         public void ApplyDolly(float delta)
         {
             if (!CanMove) return;
+            float previousDistance = distance;
             distance = Math.Max(0.1f, distance - (delta * DOLLY_SPEED));
-            UpdateOrbitPosition();
+            Transform.Position += CalculateCameraFront() * (previousDistance - distance);
         }
 
         public void Update()
         {
-            UpdateOrbitPosition();
             Vector3 front = CalculateCameraFront();
             viewMat = Matrix4.LookAt(
                 Transform.Position,         // Camera position
-                target, // Target position
+                Transform.Position + front, // Look in the camera's current direction
                 new Vector3(0, 1, 0)        // Up vector (y-axis up)
             );
-        }
-
-        private void UpdateOrbitPosition()
-        {
-            if (!rotationInitialized)
-            {
-                var euler = Transform.Rotation.ToEulerAngles();
-                pitch = euler.X;
-                yaw = euler.Y;
-                rotationInitialized = true;
-            }
-
-            Vector3 front = FrontFromAngles(yaw, pitch);
-            Transform.Position = target - (front * distance);
         }
 
         private static Vector3 FrontFromAngles(float yawRad, float pitchRad)
