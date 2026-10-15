@@ -95,7 +95,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
         public Armature(TRSKL skel, string? sourcePath = null)
         {
-            skinningPaletteOffset = skel.SkinningPaletteOffset;
+            skinningPaletteOffset = checked((int)skel.SkinningPaletteOffset);
 
             foreach (var transNode in skel.TransformNodes)
             {

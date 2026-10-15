@@ -1,3 +1,4 @@
+using GFTool.RenderControl_WinForms;
 using GFTool.Renderer.Core;
 using GFTool.Renderer.Scene.GraphicsObjects;
 using OpenTK.Mathematics;
@@ -529,7 +530,7 @@ namespace TrinityModelViewer
 
         private void ClearAll()
         {
-            renderCtrl.renderer.ClearScene();
+            renderCtrl.renderer.ClearModels();
             renderCtrl.renderer.StopAnimation();
             messageListView.Items.Clear();
             materialList.Items.Clear();
@@ -701,7 +702,7 @@ namespace TrinityModelViewer
                 modelMap.TryGetValue(selected, out var mdl);
                 if (mdl == null) return;
 
-                renderCtrl.renderer.RemoveSceneModel(mdl);
+                renderCtrl.renderer.RemoveModel(mdl);
                 sceneTree.Nodes.Remove(selected);
                 modelMap.Remove(selected);
                 materialList.Items.Clear();
@@ -1248,7 +1249,7 @@ namespace TrinityModelViewer
 
         private void AddModelToScene(string filePath)
         {
-            var mdl = renderCtrl.renderer.AddSceneModel(filePath, settings.LoadAllLods);
+            var mdl = renderCtrl.renderer.AddModel(filePath, settings.LoadAllLods);
             var node = new TreeNode(mdl.Name)
             {
                 Tag = new NodeTag

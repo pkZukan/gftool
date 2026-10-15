@@ -11,7 +11,7 @@ using System;
 
 namespace GFTool.Renderer.Scene.GraphicsObjects
 {
-    public class Model : RefObject
+    public class Model : RefObject, IDisposable
     {
         private enum BlendIndexRemapMode
         {
@@ -100,6 +100,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             public string SubmeshName { get; }
         }
         private PathString modelPath;
+        private readonly string? assetRoot;
         private string? baseSkeletonCategoryHint;
 
         public string Name { get; private set; }
@@ -138,19 +139,44 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         private static readonly float[] unitBoneVerts = BuildUnitBoneVerts();
 
         private Matrix4 modelMat;
+        private Matrix4[] worldTransforms = new[] { Matrix4.Identity };
+        private Vector3 localBoundsMin;
+        private Vector3 localBoundsMax;
+        private bool hasLocalBounds;
+        private bool disposed;
+        private Model? resourceOwner;
+        private int resourceReferences = 1;
+        private bool resourcesReleased;
+        private (Vector3 Min, Vector3 Max)? worldBounds;
+        internal string? SharedResourceKey { get; set; }
+        internal bool ResourcesReleased => (resourceOwner ?? this).resourcesReleased;
+        public IReadOnlyList<Matrix4> WorldTransforms => worldTransforms;
         private int selectedSubmeshIndex = -1;
         private BlendIndexStats blendIndexStats;
         private int[] blendIndexOffsets;
         private int[] blendIndexByteSizes;
         public bool IsVisible { get; private set; } = true;
+        public bool HasTransparentMaterials => materials?.Any(m => m.IsTransparent) == true;
 
-        public Model(string model, bool loadAllLods)
+
+        public Model(string model, bool loadAllLods, string? assetRoot = null)
         {
             Name = Path.GetFileNameWithoutExtension(model);
             modelMat = Matrix4.Identity;
-            modelPath = new PathString(model);
+            modelPath = new PathString(model, assetRoot);
+            this.assetRoot = assetRoot;
 
+            try
+            {
+                LoadModel(model, loadAllLods);
+            }
+            catch { Dispose(); throw; }
+        }
+
+        private void LoadModel(string model, bool loadAllLods)
+        {
             var mdl = FlatBufferConverter.DeserializeFrom<TRMDL>(model);
+            if (mdl.Meshes == null || mdl.Meshes.Length == 0) throw new InvalidDataException("Model contains no mesh references.");
 
             //Meshes
             if (loadAllLods)
@@ -169,14 +195,91 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             baseSkeletonCategoryHint = GuessBaseSkeletonCategoryFromMesh(mdl.Meshes != null && mdl.Meshes.Length > 0 ? mdl.Meshes[0].PathName : null);
 
             //Materials
-            foreach (var mat in mdl.Materials)
+            foreach (var mat in mdl.Materials ?? Array.Empty<string>())
             {
                 ParseMaterial(modelPath.Combine(mat));
             }
 
             //Skeleton
-            if (mdl.Skeleton != null)
+            if (!string.IsNullOrWhiteSpace(mdl.Skeleton?.PathName))
                 ParseArmature(modelPath.Combine(mdl.Skeleton.PathName));
+
+            foreach (var position in Positions.SelectMany(p => p))
+            {
+                if (!float.IsFinite(position.X) || !float.IsFinite(position.Y) || !float.IsFinite(position.Z)) continue;
+                localBoundsMin = hasLocalBounds ? Vector3.ComponentMin(localBoundsMin, position) : position;
+                localBoundsMax = hasLocalBounds ? Vector3.ComponentMax(localBoundsMax, position) : position;
+                hasLocalBounds = true;
+            }
+            if (!hasLocalBounds || !Indices.Any(indices => indices.Length >= 3))
+                throw new InvalidDataException("Model contains no supported renderable triangle geometry.");
+        }
+
+        public void SetWorldTransforms(IEnumerable<Matrix4> transforms)
+        {
+            worldTransforms = transforms.ToArray();
+            worldBounds = null;
+        }
+
+        /// <summary>Creates an independent placement sharing this model's parsed data and GPU buffers.</summary>
+        public Model CreateInstance()
+        {
+            var owner = resourceOwner ?? this;
+            if (owner.resourcesReleased) throw new ObjectDisposedException(nameof(Model));
+            // Model geometry is immutable after setup. A shallow copy shares those
+            // arrays/materials while placement, visibility, selection and ID stay independent.
+            var instance = (Model)owner.MemberwiseClone();
+            instance.resourceOwner = owner;
+            instance.disposed = false;
+            instance.worldBounds = null;
+            instance.worldTransforms = new[] { Matrix4.Identity };
+            instance.modelMat = Matrix4.Identity;
+            instance.selectedSubmeshIndex = -1;
+            instance.IsVisible = true;
+            instance.Transform = new Transform();
+            instance.children = new List<RefObject>();
+            instance.AssignNewId();
+            owner.resourceReferences++;
+            return instance;
+        }
+
+        public bool TryGetWorldBounds(out Vector3 min, out Vector3 max)
+        {
+            min = new Vector3(float.PositiveInfinity);
+            max = new Vector3(float.NegativeInfinity);
+            if (!hasLocalBounds || worldTransforms.Length == 0) return false;
+            if (worldBounds is { } cached) { min = cached.Min; max = cached.Max; return true; }
+            foreach (var matrix in worldTransforms)
+                for (int corner = 0; corner < 8; corner++)
+                {
+                    var point = new Vector3((corner & 1) == 0 ? localBoundsMin.X : localBoundsMax.X,
+                        (corner & 2) == 0 ? localBoundsMin.Y : localBoundsMax.Y,
+                        (corner & 4) == 0 ? localBoundsMin.Z : localBoundsMax.Z);
+                    point = Vector3.TransformPosition(point, matrix);
+                    min = Vector3.ComponentMin(min, point);
+                    max = Vector3.ComponentMax(max, point);
+                }
+            worldBounds = (min, max);
+            return true;
+        }
+
+        public void Dispose()
+        {
+            if (disposed) return;
+            disposed = true;
+            var owner = resourceOwner ?? this;
+            if (--owner.resourceReferences > 0) return;
+            owner.ReleaseResources();
+        }
+
+        private void ReleaseResources()
+        {
+            resourcesReleased = true;
+            foreach (var vao in VAOs ?? Array.Empty<int>()) if (vao != 0) GL.DeleteVertexArray(vao);
+            foreach (var vbo in VBOs ?? Array.Empty<int>()) if (vbo != 0) GL.DeleteBuffer(vbo);
+            foreach (var ebo in EBOs ?? Array.Empty<int>()) if (ebo != 0) GL.DeleteBuffer(ebo);
+            foreach (var material in materials ?? Array.Empty<Material>()) material.Dispose();
+            VAOs = VBOs = EBOs = Array.Empty<int>();
         }
 
         private static string? GuessBaseSkeletonCategoryFromMesh(string? meshPathName)
@@ -221,7 +324,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 return;
             }
 
-            var posBuffer = GetVertexBuffer(vertexBuffers, posElement.vertexElementLayer);
+            var posBuffer = GetVertexBuffer(vertexBuffers, checked((int)posElement.vertexElementLayer));
             if (posBuffer == null)
             {
                 return;
@@ -267,7 +370,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             for (int i = 0; i < vertDesc.vertexElements.Length; i++)
             {
                 var att = vertDesc.vertexElements[i];
-                var buffer = GetVertexBuffer(vertexBuffers, att.vertexElementLayer);
+                var buffer = GetVertexBuffer(vertexBuffers, checked((int)att.vertexElementLayer));
                 if (buffer == null)
                 {
                     continue;
@@ -296,7 +399,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
                 for (int v = 0; v < vertexCount; v++)
                 {
-                    int offset = (v * stride) + att.vertexElementOffset;
+                    int offset = checked((v * stride) + (int)att.vertexElementOffset);
                     if (!HasBytes(buffer.Bytes, offset, att.vertexFormat))
                     {
                         continue;
@@ -443,7 +546,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         private void ParseMesh(string file)
         {
             var msh = FlatBufferConverter.DeserializeFrom<TRMSH>(file);
-            var buffers = FlatBufferConverter.DeserializeFrom<TRMBF>(modelPath.Combine(msh.bufferFilePath)).TRMeshBuffers;
+            var buffers = FlatBufferConverter.DeserializeFrom<TRMBF>(new PathString(file, assetRoot).Combine(msh.bufferFilePath)).TRMeshBuffers;
             var shapeCnt = msh.Meshes.Count();
             for (int i = 0; i < shapeCnt; i++)
             {
@@ -489,7 +592,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             int index = (int)MathF.Round(value);
             if (index >= 0 && index < boneWeights.Length)
             {
-                int rigIndex = boneWeights[index].RigIndex;
+                int rigIndex = checked((int)boneWeights[index].RigIndex);
                 return rigIndex >= 0 ? rigIndex : value;
             }
             return value;
@@ -506,11 +609,14 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
         private static int GetStride(TRVertexDeclaration vertDesc, int sizeIndex)
         {
+            // The schema's omitted accessor index is -1. poke-dot uses the
+            // declaration's first stride for this default rather than dropping it.
+            if (sizeIndex == -1) sizeIndex = 0;
             if (vertDesc.vertexElementSizes == null || sizeIndex < 0 || sizeIndex >= vertDesc.vertexElementSizes.Length)
             {
                 return 0;
             }
-            return vertDesc.vertexElementSizes[sizeIndex].elementSize;
+            return checked((int)vertDesc.vertexElementSizes[sizeIndex].elementSize);
         }
 
         private static bool HasBytes(byte[] buffer, int offset, TRVertexFormat format)
@@ -819,8 +925,8 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
         private void ParseMaterial(string file)
         {
-            List<Material> matlist = new List<Material>();
-            var materialPath = new PathString(file);
+            List<Material> matlist = new List<Material>(materials ?? Array.Empty<Material>());
+            var materialPath = new PathString(file, assetRoot);
 
             TRMTR? trmtrFallback = null;
             try
@@ -1178,7 +1284,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 TransformNodes = mergedNodes.ToArray(),
                 JointInfos = mergedJoints.ToArray(),
                 HelperBones = baseSkel.HelperBones?.Length > 0 ? baseSkel.HelperBones : (localSkel.HelperBones ?? Array.Empty<TRHelperBoneInfo>()),
-                SkinningPaletteOffset = baseJointCount,
+                SkinningPaletteOffset = checked((uint)baseJointCount),
                 IsInteriorMap = baseSkel.IsInteriorMap || localSkel.IsInteriorMap
             };
         }
@@ -1462,7 +1568,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                     {
                         return index;
                     }
-                    return boneWeights[index].RigIndex;
+                    return checked((int)boneWeights[index].RigIndex);
                 case BlendIndexRemapMode.JointInfo:
                     if (index >= armature.JointInfoCount)
                     {
@@ -1522,6 +1628,14 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
         public override void Setup()
         {
+            if (materials == null || materials.Length == 0)
+            {
+                materials = new[] { new Material(modelPath, new TRMaterial
+                {
+                    Name = "Default", Shader = Array.Empty<TRMaterialShader>(), Textures = Array.Empty<TRTexture>()
+                }) };
+                BuildMaterialMap();
+            }
             var submeshCnt = Positions.Count;
             VAOs = new int[submeshCnt];
 
@@ -1622,6 +1736,19 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
         public override void Draw(Matrix4 view, Matrix4 proj)
         {
+            if (disposed || !IsVisible) return;
+            var center = (localBoundsMin + localBoundsMax) * 0.5f;
+            IEnumerable<Matrix4> placements = RenderOptions.TransparentPass && worldTransforms.Length > 1
+                ? worldTransforms.OrderBy(matrix => Vector3.TransformPosition(center, matrix * view).Z) : worldTransforms;
+            foreach (var matrix in placements)
+            {
+                modelMat = matrix;
+                DrawInstance(view, proj);
+            }
+        }
+
+        private void DrawInstance(Matrix4 view, Matrix4 proj)
+        {
             if (!IsVisible)
             {
                 return;
@@ -1661,6 +1788,7 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                     }
                     continue;
                 }
+                bool depthOnly = false;
                 //Bind appropriate mat
                 if (materials != null && materials.Length > 0)
                 {
@@ -1668,35 +1796,33 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                     {
                         mat = materials[0];
                     }
-                    bool drawOpaque = !RenderOptions.TransparentPass && !mat.IsTransparent;
-                    bool drawTransparent = RenderOptions.TransparentPass && mat.IsTransparent;
-                    if (drawOpaque || drawTransparent)
-                    {
-                        mat.Use(view, modelMat, proj, HasVertexColors[i], HasTangents[i], HasBinormals[i]);
-                        mat.ApplySkinning(canSkin && HasSkinning[i], boneCount, skinMatrices);
-                    }
-                    else if (!RenderOptions.TransparentPass)
-                    {
-                        continue;
-                    }
+                    if (RenderOptions.TransparentPass != mat.IsTransparent) continue;
+                    mat.Use(view, modelMat, proj, HasVertexColors[i], HasTangents[i], HasBinormals[i]);
+                    mat.ApplySkinning(canSkin && HasSkinning[i], boneCount, skinMatrices);
+                    depthOnly = mat.ShaderName == "DepthPrepass";
                 }
 
                 // Draw the geometry
                 GL.BindVertexArray(VAOs[i]);
-                if (!RenderOptions.TransparentPass)
-                {
-                    GL.DrawElements(PrimitiveType.Triangles, Indices[i].Length, DrawElementsType.UnsignedInt, 0);
-                }
-                else if (materials != null && materials.Length > 0 && materialMap.TryGetValue(MaterialNames[i], out var mat) && mat.IsTransparent)
-                {
-                    GL.DrawElements(PrimitiveType.Triangles, Indices[i].Length, DrawElementsType.UnsignedInt, 0);
-                }
+                if (depthOnly) GL.ColorMask(false, false, false, false);
+                try { GL.DrawElements(PrimitiveType.Triangles, Indices[i].Length, DrawElementsType.UnsignedInt, 0); }
+                finally { if (depthOnly) GL.ColorMask(true, true, true, true); }
 
                 GL.BindVertexArray(0);
             }
         }
 
         public void DrawSkeleton(Matrix4 view, Matrix4 proj)
+        {
+            if (disposed || !IsVisible) return;
+            foreach (var matrix in worldTransforms)
+            {
+                modelMat = matrix;
+                DrawSkeletonInstance(view, proj);
+            }
+        }
+
+        private void DrawSkeletonInstance(Matrix4 view, Matrix4 proj)
         {
             if (!IsVisible)
             {

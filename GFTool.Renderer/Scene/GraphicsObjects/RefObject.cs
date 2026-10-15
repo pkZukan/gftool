@@ -43,6 +43,8 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             return ID;
         }
 
+        protected void AssignNewId() => ID = nextID++;
+
         public void AddChild(RefObject child)
         { 
             children.Add(child);

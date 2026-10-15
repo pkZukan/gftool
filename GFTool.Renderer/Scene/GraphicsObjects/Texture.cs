@@ -2,8 +2,6 @@ using BnTxx;
 using GFTool.Core.Utils;
 using GFTool.Renderer.Core;
 using OpenTK.Graphics.OpenGL4;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using Trinity.Core.Flatbuffers.TR.Model;
 
@@ -23,7 +21,6 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
         public string Name { get; private set; }
         public string SourceFile { get; private set; }
         public uint Slot { get; private set; }
-        public Bitmap tex { get; private set; }
         public int textureId { get; private set; }
 
         private readonly string cacheKey;
@@ -77,35 +74,27 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
                 return;
             }
 
+            TexturePixels? pixels = null;
             try
             {
-                if (!File.Exists(texturePath) && File.Exists(altTexturePath))
-                {
-                    tex = BNTX.LoadFromFile(altTexturePath, preferredName);
-                }
-
-                if (tex == null && File.Exists(texturePath))
-                {
-                    tex = BNTX.LoadFromFile(texturePath, preferredName);
-                }
+                if (TryGetResolvedSourcePath(out var source)) pixels = BNTX.LoadFromFile(source, preferredName);
             }
-            catch
+            catch (Exception ex)
             {
-                tex = null;
+                MessageHandler.Instance.AddMessage(MessageType.WARNING, $"Failed to decode texture {SourceFile}: {ex.Message}");
             }
-
-            if (tex == null)
+            if (pixels == null)
             {
-                tex = new Bitmap(32, 32);
-                MessageHandler.Instance.AddMessage(MessageType.WARNING, string.Format("Failed to load texture: {0}", SourceFile));
+                pixels = new TexturePixels(32, 32, new byte[32 * 32 * 4]);
+                MessageHandler.Instance.AddMessage(MessageType.WARNING, $"Failed to load texture: {SourceFile}");
             }
+            if (pixels.Width <= 0 || pixels.Height <= 0 || pixels.Bgra.LongLength != (long)pixels.Width * pixels.Height * 4)
+                throw new InvalidDataException($"Invalid decoded pixels for {SourceFile}");
 
             int id = GL.GenTexture();
             GL.BindTexture(TextureTarget.Texture2D, id);
-
-            BitmapData bitmapData = tex.LockBits(new Rectangle(0, 0, tex.Width, tex.Height), ImageLockMode.ReadOnly, tex.PixelFormat);
-            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, bitmapData.Width, bitmapData.Height, 0, OpenTK.Graphics.OpenGL4.PixelFormat.Bgra, PixelType.UnsignedByte, bitmapData.Scan0);
-            tex.UnlockBits(bitmapData);
+            GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba, pixels.Width, pixels.Height,
+                0, PixelFormat.Bgra, PixelType.UnsignedByte, pixels.Bgra);
 
             // Set texture parameters
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
@@ -113,8 +102,6 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
             GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
 
-            tex.Dispose();
-            tex = null;
 
             lock (cacheLock)
             {
@@ -122,28 +109,6 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             }
 
             textureId = id;
-        }
-
-        public Bitmap? LoadPreviewBitmap()
-        {
-            try
-            {
-                if (File.Exists(texturePath))
-                {
-                    return BNTX.LoadFromFile(texturePath, preferredName);
-                }
-
-                if (File.Exists(altTexturePath))
-                {
-                    return BNTX.LoadFromFile(altTexturePath, preferredName);
-                }
-            }
-            catch
-            {
-                return null;
-            }
-
-            return null;
         }
 
         public bool TryGetResolvedSourcePath(out string path)
@@ -166,8 +131,6 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
 
         public void Dispose()
         {
-            tex?.Dispose();
-            tex = null;
             if (textureId <= 0)
             {
                 return;

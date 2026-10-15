@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace GFTool.Renderer.Scene.GraphicsObjects
 {
-    public class Grid : RefObject
+    public class Grid : RefObject, IDisposable
     {
         private const int GridSize = 20;
         private const float GridSpacing = 1.0f;
@@ -59,6 +59,13 @@ namespace GFTool.Renderer.Scene.GraphicsObjects
             GL.BindVertexArray(vao);
             GL.DrawArrays(PrimitiveType.Lines, 0, vertexCount);
             GL.BindVertexArray(0);
+        }
+
+        public void Dispose()
+        {
+            if (vao != 0) GL.DeleteVertexArray(vao);
+            if (vbo != 0) GL.DeleteBuffer(vbo);
+            vao = vbo = 0;
         }
 
         private static Vector3[] BuildGridVertices()

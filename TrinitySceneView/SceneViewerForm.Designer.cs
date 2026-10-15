@@ -236,6 +236,8 @@
             renderCtrl.Load += glCtxt_Load;
             renderCtrl.Click += renderCtrl_Click;
             renderCtrl.Paint += glCtxt_Paint;
+            renderCtrl.KeyDown += glCtxt_KeyDown;
+            renderCtrl.KeyUp += glCtxt_KeyUp;
             // 
             // tableLayoutPanel1
             // 
