@@ -1,5 +1,6 @@
 ﻿using FlatSharp.Attributes;
 using Trinity.Core.Flatbuffers.Utils;
+using Trinity.Core.Flatbuffers.TR.Model;
 
 namespace GFTool.Core.Flatbuffers.TR.Scene.Components
 {
@@ -23,7 +24,7 @@ namespace GFTool.Core.Flatbuffers.TR.Scene.Components
         public string Name { get; set; }
 
         [FlatBufferItem(1)]
-        public Transform Srt { get; set; }
+        public SRT Srt { get; set; }
 
         [FlatBufferItem(2)]
         public bool KeepWorldSrt { get; set; }
@@ -38,7 +39,7 @@ namespace GFTool.Core.Flatbuffers.TR.Scene.Components
         public bool Scriptable { get; set; }
 
         [FlatBufferItem(6)]
-        public byte Priority { get; set; }
+        public sbyte Priority { get; set; }
 
         [FlatBufferItem(7)]
         public ObjectLayer[] Layers { get; set; }

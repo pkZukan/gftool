@@ -22,10 +22,10 @@ namespace Trinity.Core.Flatbuffers.Utils
     [FlatBufferStruct]
     public class Vector4f
     {
-        [FlatBufferItem(0)] public float W { get; set; } = 0.0f;
-        [FlatBufferItem(1)] public float X { get; set; } = 0.0f;
-        [FlatBufferItem(2)] public float Y { get; set; } = 0.0f;
-        [FlatBufferItem(3)] public float Z { get; set; } = 0.0f;
+        [FlatBufferItem(0)] public float X { get; set; } = 0.0f;
+        [FlatBufferItem(1)] public float Y { get; set; } = 0.0f;
+        [FlatBufferItem(2)] public float Z { get; set; } = 0.0f;
+        [FlatBufferItem(3)] public float W { get; set; } = 0.0f;
     }
 
     [FlatBufferStruct]

@@ -28,10 +28,10 @@ namespace GFTool.Core.Flatbuffers.TR.Scene
         public string TimerName { get; set; }
 
         [FlatBufferItem(2)]
-        public string ScriptPath { get; set; }
+        public uint Reserved2 { get; set; }
 
         [FlatBufferItem(3)]
-        public string ScriptPackage { get; set; }
+        public uint Reserved3 { get; set; }
 
         [FlatBufferItem(4)]
         public SceneChunk[] Chunks { get; set; }
@@ -40,7 +40,7 @@ namespace GFTool.Core.Flatbuffers.TR.Scene
         public string[] SubScenes { get; set; }
 
         [FlatBufferItem(6)]
-        public bool unk_5 { get; set; }
+        public byte unk_5 { get; set; }
 
         [FlatBufferItem(7)]
         public bool unk_6 { get; set; }

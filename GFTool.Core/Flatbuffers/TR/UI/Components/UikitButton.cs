@@ -21,5 +21,10 @@ namespace GFTool.Core.Flatbuffers.TR.UI.Components
 
         [FlatBufferItem(3)]
         public string ActionName { get; set; }
+        [FlatBufferItem(4)] public int ShortcutKey { get; set; }
+        [FlatBufferItem(5)] public bool Repeat { get; set; }
+        [FlatBufferItem(6)] public string DecideSfx { get; set; }
+        [FlatBufferItem(7)] public string ShortcutSfx { get; set; }
+        [FlatBufferItem(8)] public string ReleaseSfx { get; set; }
     }
 }

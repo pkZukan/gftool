@@ -24,5 +24,6 @@ namespace GFTool.Core.Flatbuffers.TR.UI.Components
 
         [FlatBufferItem(4)]
         public string Sfx { get; set; }
+        [FlatBufferItem(5)] public bool ApplySfx { get; set; }
     }
 }

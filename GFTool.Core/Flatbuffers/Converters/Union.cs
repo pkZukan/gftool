@@ -1,4 +1,4 @@
-﻿using FlatSharp;
+using FlatSharp;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -20,9 +20,9 @@ namespace Trinity.Core.Flatbuffers.Converters
         }
     }
 
-    public class VectorTrackUnionConverter : JsonConverter<FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>>
+    public class VectorTrackUnionConverter : JsonConverter<FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>?>
     {
-        public override FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             Dictionary<string, JsonElement> dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(ref reader, options);
             byte discriminator = dict["Discriminator"].Deserialize<byte>();
@@ -37,15 +37,16 @@ namespace Trinity.Core.Flatbuffers.Converters
                 case 4:
                     return new FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>(dict["Values"].Deserialize<Keyed8VectorTrack>());
                 default:
-                    return new FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>();
+                    return null;
             }
         }
 
-        public override void Write(Utf8JsonWriter writer, FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack> value, JsonSerializerOptions options)
+        public override void Write(Utf8JsonWriter writer, FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>? value, JsonSerializerOptions options)
         {
             Dictionary<string, Object> dict = new Dictionary<string, Object>();
-            dict["Discriminator"] = value.Discriminator;
-            value.Switch(
+            if (!value.HasValue) { writer.WriteNullValue(); return; }
+            dict["Discriminator"] = value.Value.Discriminator;
+            value.Value.Switch(
                 defaultCase: () => { },
                 case1: (FixedVectorTrack v) => { dict["Values"] = v; },
                 case2: (FramedVectorTrack v) => { dict["Values"] = v; },
@@ -57,9 +58,9 @@ namespace Trinity.Core.Flatbuffers.Converters
         }
     }
 
-    public class RotationTrackUnionConverter : JsonConverter<FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>>
+    public class RotationTrackUnionConverter : JsonConverter<FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>?>
     {
-        public override FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             Dictionary<string, JsonElement> dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(ref reader, options);
             byte discriminator = dict["Discriminator"].Deserialize<byte>();
@@ -74,15 +75,16 @@ namespace Trinity.Core.Flatbuffers.Converters
                 case 4:
                     return new FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>(dict["Values"].Deserialize<Keyed8RotationTrack>());
                 default:
-                    return new FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>();
+                    return null;
             }
         }
 
-        public override void Write(Utf8JsonWriter writer, FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack> value, JsonSerializerOptions options)
+        public override void Write(Utf8JsonWriter writer, FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>? value, JsonSerializerOptions options)
         {
             Dictionary<string, Object> dict = new Dictionary<string, Object>();
-            dict["Discriminator"] = value.Discriminator;
-            value.Switch(
+            if (!value.HasValue) { writer.WriteNullValue(); return; }
+            dict["Discriminator"] = value.Value.Discriminator;
+            value.Value.Switch(
                 defaultCase: () => { },
                 case1: (FixedRotationTrack v) => { dict["Values"] = v; },
                 case2: (FramedRotationTrack v) => { dict["Values"] = v; },

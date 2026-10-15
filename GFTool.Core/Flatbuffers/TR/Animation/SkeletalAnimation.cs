@@ -1,4 +1,4 @@
-﻿using FlatSharp;
+using FlatSharp;
 using FlatSharp.Attributes;
 using Trinity.Core.Flatbuffers.Converters;
 using Trinity.Core.Flatbuffers.Utils;
@@ -6,8 +6,8 @@ using System.Text.Json.Serialization;
 
 namespace Trinity.Core.Flatbuffers.TR.Animation
 {
-    [FlatBufferEnum(typeof(int))]
-    public enum PlayType
+    [FlatBufferEnum(typeof(uint))]
+    public enum PlayType : uint
     {
         Once = 0,
         Looped
@@ -84,15 +84,15 @@ namespace Trinity.Core.Flatbuffers.TR.Animation
 
         [JsonConverter(typeof(VectorTrackUnionConverter))]
         [FlatBufferItem(1)]
-        public FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack> ScaleChannel { get; set; }
+        public FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>? ScaleChannel { get; set; }
 
         [JsonConverter(typeof(RotationTrackUnionConverter))]
         [FlatBufferItem(3)]
-        public FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack> RotationChannel { get; set; }
+        public FlatBufferUnion<FixedRotationTrack, FramedRotationTrack, Keyed16RotationTrack, Keyed8RotationTrack>? RotationChannel { get; set; }
 
         [JsonConverter(typeof(VectorTrackUnionConverter))]
         [FlatBufferItem(5)]
-        public FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack> TranslateChannel { get; set; }
+        public FlatBufferUnion<FixedVectorTrack, FramedVectorTrack, Keyed16VectorTrack, Keyed8VectorTrack>? TranslateChannel { get; set; }
 
     }
 

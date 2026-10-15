@@ -26,7 +26,7 @@ namespace Trinity.Core.Flatbuffers.TR.Model
     [FlatBufferTable]
     public class TRMBF
     {
-        [FlatBufferItem(0)] public int Field_00 { get; set; }
+        [FlatBufferItem(0)] public uint Field_00 { get; set; }
         [FlatBufferItem(1)] public TRModelBuffer[] TRMeshBuffers { get; set; }
     }
 }

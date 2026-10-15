@@ -12,6 +12,6 @@ namespace Trinity.Core.Flatbuffers.TR.Animation
     [FlatBufferTable]
     public class AnimationTable
     {
-        [FlatBufferItem(0)] List<AnimationEntry> Entries { get; set; } = new List<AnimationEntry>();
+        [FlatBufferItem(0)] public IList<AnimationEntry> Entries { get; set; } = new List<AnimationEntry>();
     }
 }
