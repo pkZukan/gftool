@@ -44,7 +44,7 @@ namespace GFTool.RenderControl_WinForms
             base.OnLoad(e);
 
             if (!IsDesignMode())
-                renderer = new RenderContext(Context, Width, Height);
+                renderer = new RenderContext(new RenderSurface(MakeCurrent, SwapBuffers), Width, Height);
 
             if (!IsDesignMode())
             {
@@ -167,7 +167,7 @@ namespace GFTool.RenderControl_WinForms
             if (!IsDesignMode())
             {
                 float deltaSeconds = GetDeltaSeconds();
-                renderer?.UpdateMovementControls(deltaSeconds * GetSpeedMultiplier());
+                UpdateMovementControls(deltaSeconds * GetSpeedMultiplier());
                 Invalidate();
             }
         }
@@ -179,11 +179,19 @@ namespace GFTool.RenderControl_WinForms
             while (IsApplicationIdle())
             {
                 float deltaSeconds = GetDeltaSeconds();
-                renderer.UpdateMovementControls(deltaSeconds * GetSpeedMultiplier());
+                UpdateMovementControls(deltaSeconds * GetSpeedMultiplier());
 
                 ApplyPendingCameraInput();
                 renderer.Update();
             }
+        }
+
+        private void UpdateMovementControls(float deltaSeconds)
+        {
+            float forward = KeyboardControls.Forward ? 1 : KeyboardControls.Backward ? -1 : 0;
+            float up = KeyboardControls.Up ? 1 : KeyboardControls.Down ? -1 : 0;
+            float right = KeyboardControls.Right ? 1 : KeyboardControls.Left ? -1 : 0;
+            renderer?.MoveCamera(forward, up, right, deltaSeconds);
         }
 
         private void ApplyPendingCameraInput()

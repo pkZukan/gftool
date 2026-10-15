@@ -84,6 +84,20 @@ namespace GFTool.Renderer.Scene
             UpdateProjMatrix();
         }
 
+        public void FrameBounds(Vector3 min, Vector3 max)
+        {
+            target = (min + max) * 0.5f;
+            var radius = Math.Max(0.5f, (max - min).Length * 0.5f);
+            // Fit the limiting vertical/horizontal field of view with room to orbit.
+            float halfFov = MathHelper.DegreesToRadians(22.5f);
+            float horizontal = MathF.Atan(MathF.Tan(halfFov) * Width / Math.Max(1f, Height));
+            distance = radius / MathF.Sin(Math.Min(halfFov, horizontal)) * 1.15f;
+            NearPlane = Math.Max(0.01f, distance / 10000f);
+            FarPlane = Math.Max(100f, distance + radius * 4f);
+            UpdateProjMatrix();
+            UpdateOrbitPosition();
+        }
+
 
         private Vector3 CalculateCameraFront()
         {

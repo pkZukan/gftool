@@ -1,5 +1,4 @@
 
-using System.Xml.Linq;
 
 namespace GFTool.Renderer.Core.Graphics
 {
@@ -11,22 +10,26 @@ namespace GFTool.Renderer.Core.Graphics
         private Dictionary<string, Shader> shaders = new Dictionary<string, Shader>();
 
         private string shaderPath;
+        private readonly HashSet<string> failedShaders = new(StringComparer.OrdinalIgnoreCase);
 
         private ShaderPool()
         {
-            shaderPath = "Shaders/";
+            shaderPath = ShaderSource.DirectoryPath + Path.DirectorySeparatorChar;
         }
 
         private bool AddShader(string name)
         {
-            var vsh = shaderPath + name + ".vsh";
-            var fsh = shaderPath + name + ".fsh";
-            if (!File.Exists(vsh) || !File.Exists(fsh))
+            if (!File.Exists(shaderPath + name + ".glsl"))
             {
                 MessageHandler.Instance.AddMessage(MessageType.ERROR, string.Format("Shader \"{0}\" not supported.", name));
                 return false;
             }
-            shaders[name] = new Shader(name, vsh, fsh);
+            try
+            {
+                var source = ShaderSource.GetProgram(name);
+                shaders[name] = new Shader(name, source.Vertex, source.Fragment, sourceText: true);
+            }
+            catch { return false; }
             MessageHandler.Instance.AddMessage(MessageType.LOG, string.Format("Shader \"{0}\" loaded into pool.", name));
 
             return true;
@@ -34,10 +37,15 @@ namespace GFTool.Renderer.Core.Graphics
 
         public Shader GetShader(string name)
         {
+
+            if (failedShaders.Contains(name)) return null;
             if (!shaders.ContainsKey(name))
             {
                 if (!AddShader(name))
+                {
+                    failedShaders.Add(name);
                     return null;
+                }
             }
 
             return shaders[name];

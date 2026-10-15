@@ -1,8 +1,6 @@
 using GFTool.Renderer.Core;
-using OpenTK.Compute.OpenCL;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
-using System.Drawing;
 
 namespace GFTool.Renderer.Core.Graphics
 {
@@ -102,7 +100,7 @@ namespace GFTool.Renderer.Core.Graphics
         public void BindFBO()
         {
             GL.BindFramebuffer(FramebufferTarget.Framebuffer, fbo);
-            GL.ClearColor(Color.Gray);
+            GL.ClearColor(0.5f, 0.5f, 0.5f, 1f);
         }
 
         public void BindDefaultFB()

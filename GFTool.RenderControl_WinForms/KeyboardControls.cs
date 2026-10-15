@@ -1,4 +1,4 @@
-﻿namespace GFTool.Renderer.Core
+﻿namespace GFTool.RenderControl_WinForms
 {
     public static class KeyboardControls
     {

@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\GFTool.Renderer\GFTool.Renderer.csproj" />
+    <ProjectReference Include="..\NxMiddleware\BnTxx\BnTxx.csproj" />
   </ItemGroup>
 
 </Project>

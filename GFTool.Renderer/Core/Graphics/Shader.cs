@@ -9,24 +9,31 @@ namespace GFTool.Renderer.Core.Graphics
     {
         public readonly int Handle;
         private readonly string Name;
+        public string ProgramName => Name;
 
         private readonly Dictionary<string, int> uniformLocations = null;
         private readonly HashSet<string> missingUniforms = new HashSet<string>();
+        private readonly Dictionary<string, ActiveUniformType> uniformTypes = new();
+        private readonly Dictionary<string, (ActiveUniformType Type, float[] Values, int Integer)> defaults = new();
+        private readonly Dictionary<string, int> samplerBindings = new();
+        public IReadOnlyDictionary<string, int> SamplerBindings => samplerBindings;
+        public object? MaterialOwner { get; set; }
 
-        public Shader(string name, string vertPath, string fragPath)
+        public Shader(string name, string vertPath, string fragPath, bool sourceText = false)
         {
             Name = name;
+            int vertexShader = 0, fragmentShader = 0;
             try
             {
                 //Create shader
-                var shaderSource = File.ReadAllText(vertPath);
-                var vertexShader = GL.CreateShader(ShaderType.VertexShader);
+                var shaderSource = sourceText ? vertPath : ShaderSource.Expand(vertPath);
+                vertexShader = GL.CreateShader(ShaderType.VertexShader);
 
                 GL.ShaderSource(vertexShader, shaderSource);
                 CompileShader(vertexShader);
 
-                shaderSource = File.ReadAllText(fragPath);
-                var fragmentShader = GL.CreateShader(ShaderType.FragmentShader);
+                shaderSource = sourceText ? fragPath : ShaderSource.Expand(fragPath);
+                fragmentShader = GL.CreateShader(ShaderType.FragmentShader);
                 GL.ShaderSource(fragmentShader, shaderSource);
                 CompileShader(fragmentShader);
 
@@ -41,6 +48,7 @@ namespace GFTool.Renderer.Core.Graphics
                 GL.DetachShader(Handle, fragmentShader);
                 GL.DeleteShader(fragmentShader);
                 GL.DeleteShader(vertexShader);
+                fragmentShader = vertexShader = 0;
 
                 GL.GetProgram(Handle, GetProgramParameterName.ActiveUniforms, out var numberOfUniforms);
 
@@ -48,14 +56,31 @@ namespace GFTool.Renderer.Core.Graphics
 
                 for (var i = 0; i < numberOfUniforms; i++)
                 {
-                    var key = GL.GetActiveUniform(Handle, i, out _, out _);
+                    var key = GL.GetActiveUniform(Handle, i, out _, out var type);
                     var location = GL.GetUniformLocation(Handle, key);
                     uniformLocations.Add(key, location);
+                    uniformTypes[key] = type;
+                    if (type is ActiveUniformType.Float or ActiveUniformType.FloatVec2 or ActiveUniformType.FloatVec3 or ActiveUniformType.FloatVec4)
+                    {
+                        var values = new float[4];
+                        GL.GetUniform(Handle, location, values);
+                        defaults[key] = (type, values, 0);
+                    }
+                    else if (type is ActiveUniformType.Int or ActiveUniformType.Bool or ActiveUniformType.Sampler2D)
+                    {
+                        GL.GetUniform(Handle, location, out int value);
+                        defaults[key] = (type, Array.Empty<float>(), value);
+                        if (type == ActiveUniformType.Sampler2D) samplerBindings.Add(key, value);
+                    }
                 }
             }
             catch (Exception ex)
             {
                 MessageHandler.Instance.AddMessage(MessageType.ERROR, $"Shader \"{name}\" failed to compile: {ex.Message}");
+                if (Handle != 0) GL.DeleteProgram(Handle);
+                if (vertexShader != 0) GL.DeleteShader(vertexShader);
+                if (fragmentShader != 0) GL.DeleteShader(fragmentShader);
+                throw;
             }
         }
 
@@ -104,7 +129,35 @@ namespace GFTool.Renderer.Core.Graphics
                 return false;
             }
 
-            return uniformLocations.TryGetValue(name, out location);
+            if (!uniformLocations.TryGetValue(name, out location))
+            {
+                location = GL.GetUniformLocation(Handle, name);
+                uniformLocations[name] = location;
+            }
+            return location >= 0;
+        }
+
+        public void ResetMaterialUniforms()
+        {
+            foreach (var (name, value) in defaults)
+            {
+                int location = uniformLocations[name];
+                switch (value.Type)
+                {
+                    case ActiveUniformType.Float: GL.Uniform1(location, value.Values[0]); break;
+                    case ActiveUniformType.FloatVec2: GL.Uniform2(location, value.Values[0], value.Values[1]); break;
+                    case ActiveUniformType.FloatVec3: GL.Uniform3(location, value.Values[0], value.Values[1], value.Values[2]); break;
+                    case ActiveUniformType.FloatVec4: GL.Uniform4(location, value.Values[0], value.Values[1], value.Values[2], value.Values[3]); break;
+                    default: GL.Uniform1(location, value.Integer); break;
+                }
+            }
+        }
+
+        public void SetOption(string name, string value)
+        {
+            if (!uniformTypes.TryGetValue(name, out var type)) return;
+            if (type == ActiveUniformType.Float && float.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var number)) SetFloatIfExists(name, number);
+            else if (MaterialShaderCatalog.OptionValue(name, value) is { } option) SetIntIfExists(name, option);
         }
 
         public void Bind()
@@ -138,7 +191,10 @@ namespace GFTool.Renderer.Core.Graphics
         public void SetIntIfExists(string name, int data)
         {
             if (TryGetUniformLocation(name, out int location))
-                GL.Uniform1(location, data);
+            {
+                if (uniformTypes.GetValueOrDefault(name) == ActiveUniformType.Float) GL.Uniform1(location, (float)data);
+                else GL.Uniform1(location, data);
+            }
         }
 
         public void SetFloat(string name, float data)
@@ -210,7 +266,10 @@ namespace GFTool.Renderer.Core.Graphics
         public void SetVector4IfExists(string name, Vector4 data)
         {
             if (TryGetUniformLocation(name, out int location))
-                GL.Uniform4(location, data);
+            {
+                if (uniformTypes.GetValueOrDefault(name) == ActiveUniformType.FloatVec3) GL.Uniform3(location, data.X, data.Y, data.Z);
+                else GL.Uniform4(location, data);
+            }
         }
     }
 }

@@ -2,20 +2,18 @@ using GFTool.Renderer.Core;
 using GFTool.Renderer.Core.Graphics;
 using GFTool.Renderer.Scene;
 using GFTool.Renderer.Scene.GraphicsObjects;
-using OpenTK;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
-using OpenTK.Windowing.Common;
-using OpenTK.Windowing.Desktop;
-using OpenTK.Windowing.GraphicsLibraryFramework;
-using System.Drawing;
 using System.Diagnostics;
 
 namespace GFTool.Renderer
 {
     public class RenderContext : IDisposable
     {
-        private IGraphicsContext viewport = null;
+        private readonly RenderSurface viewport;
+        private readonly List<Model> models = new();
+        private readonly Grid grid = new();
+        public IReadOnlyList<Model> Models => models.AsReadOnly();
         private int Width, Height;
 
         GBuffer gbuffer;
@@ -29,14 +27,16 @@ namespace GFTool.Renderer
         private Animation? activeAnimation;
         private double animationTimeSeconds;
         private long lastAnimationTicks;
+        private readonly Dictionary<string, Model> sharedModels = new(StringComparer.OrdinalIgnoreCase);
+        public int SharedModelResourceCount => sharedModels.Count;
 
-        public bool AllowUserInput = true;
 
-        public RenderContext(IGLFWGraphicsContext ctxt, int width, int height)
+        public RenderContext(RenderSurface surface, int width, int height)
         {
             Width = width;
             Height = height;
-            viewport = ctxt;
+            viewport = surface;
+            viewport.MakeCurrent();
 
             RenderOptions.EnableNormalMaps = true;
             RenderOptions.EnableAO = true;
@@ -44,15 +44,14 @@ namespace GFTool.Renderer
             RenderOptions.FlipNormalY = false;
             RenderOptions.ReconstructNormalZ = false;
 
-            //Create camera and add to root scene
+            // Create viewport resources.
             camera = new Camera(Width, Height);
-            SceneGraph.Instance.GetRoot().AddChild(camera);
-            SceneGraph.Instance.GetRoot().AddChild(new Grid());
+            grid.Setup();
 
             GL.Enable(EnableCap.DepthTest);
             GL.ClearDepth(1.0f);
             GL.DepthFunc(DepthFunction.Lequal);
-            GL.ClearColor(Color.Gray);
+            GL.ClearColor(0.5f, 0.5f, 0.5f, 1f);
 
             //Set viewport size
             Resize(Width, Height);
@@ -74,7 +73,7 @@ namespace GFTool.Renderer
             if (wireframeEnabled)
             {
                 GL.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-                GL.ClearColor(Color.Gray);
+                GL.ClearColor(0.5f, 0.5f, 0.5f, 1f);
                 GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
                 GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
                 GL.Disable(EnableCap.CullFace);
@@ -122,7 +121,7 @@ namespace GFTool.Renderer
             animationTimeSeconds += deltaSeconds;
 
             float frame = activeAnimation.GetFrame((float)animationTimeSeconds);
-            foreach (var c in SceneGraph.Instance.GetRoot().children)
+            foreach (var c in models)
             {
                 if (c is Model model)
                 {
@@ -135,8 +134,7 @@ namespace GFTool.Renderer
         private void GeometryPass()
         {
             RenderOptions.TransparentPass = false;
-            //TODO: Traverse scene and only draw geometry (eventually)
-            foreach (var c in SceneGraph.Instance.GetRoot().children)
+            foreach (var c in models)
             {
                 if (c is Model model)
                 {
@@ -162,12 +160,13 @@ namespace GFTool.Renderer
             GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
             GL.DepthMask(false);
 
-            foreach (var c in SceneGraph.Instance.GetRoot().children)
+            var transparentModels = models
+                .Where(model => model.IsVisible && model.HasTransparentMaterials)
+                .OrderByDescending(model => model.TryGetWorldBounds(out var min, out var max)
+                    ? (((min + max) * 0.5f) - camera.Transform.Position).LengthSquared : 0);
+            foreach (var model in transparentModels)
             {
-                if (c is Model model)
-                {
-                    model.Draw(camera.viewMat, camera.projMat);
-                }
+                model.Draw(camera.viewMat, camera.projMat);
             }
 
             GL.DepthMask(true);
@@ -185,7 +184,7 @@ namespace GFTool.Renderer
             GL.Disable(EnableCap.DepthTest);
             GL.Disable(EnableCap.CullFace);
 
-            foreach (var c in SceneGraph.Instance.GetRoot().children)
+            foreach (var c in models)
             {
                 if (c is Model model)
                 {
@@ -203,13 +202,7 @@ namespace GFTool.Renderer
             GL.Enable(EnableCap.DepthTest);
             GL.DepthMask(true);
 
-            foreach (var c in SceneGraph.Instance.GetRoot().children)
-            {
-                if (c is Grid grid)
-                {
-                    grid.Draw(camera.viewMat, camera.projMat);
-                }
-            }
+            grid.Draw(camera.viewMat, camera.projMat);
         }
 
         private void OutlinePass()
@@ -220,7 +213,7 @@ namespace GFTool.Renderer
             GL.Enable(EnableCap.DepthTest);
             GL.DepthFunc(DepthFunction.Lequal);
 
-            foreach (var c in SceneGraph.Instance.GetRoot().children)
+            foreach (var c in models)
             {
                 if (c is Model model)
                 {
@@ -233,70 +226,79 @@ namespace GFTool.Renderer
             RenderOptions.OutlinePass = false;
         }
 
-        public void UpdateMovementControls(float deltaSeconds)
+        public void MoveCamera(float forward, float up, float right, float deltaSeconds)
         {
-            if (!AllowUserInput) return;
-            if (deltaSeconds <= 0f) return;
-
-            float x = 0;
-            float y = 0;
-            float z = 0;
-
-            if (KeyboardControls.Forward)
-                x = 1.0f;
-            else if (KeyboardControls.Backward)
-                x = -1.0f;
-            if (KeyboardControls.Right)
-                z = 1.0f;
-            else if (KeyboardControls.Left)
-                z = -1.0f;
-            if (KeyboardControls.Up)
-                y = 1.0f;
-            else if (KeyboardControls.Down)
-                y = -1.0f;
-
-            camera.ApplyMovement(x, y, z, deltaSeconds);
+            if (deltaSeconds > 0f) camera.ApplyMovement(forward, up, right, deltaSeconds);
         }
 
         public void RotateCamera(float dx, float dy)
         {
-            if (!AllowUserInput) return;
             camera.ApplyRotationalDelta(dx, dy);
         }
 
         public void PanCamera(float dx, float dy)
         {
-            if (!AllowUserInput) return;
             camera.ApplyPan(dx, dy);
         }
 
         public void DollyCamera(float delta)
         {
-            if (!AllowUserInput) return;
             camera.ApplyDolly(delta);
         }
 
-        public Model AddSceneModel(string file, bool loadAllLods = false)
+        public Model AddModel(string file, bool loadAllLods = false, string? assetRoot = null, bool reuseResources = false)
         {
-            //TODO: Probably figure out how we're adding shit to child nodes (assuming necessary at this level)
-
-            var mdl = new Model(file, loadAllLods);
-            SceneGraph.Instance.GetRoot().AddChild(mdl);
-
-            return mdl;
+            viewport.MakeCurrent();
+            string? key = reuseResources ? $"{Path.GetFullPath(file)}\0{loadAllLods}\0{assetRoot}" : null;
+            if (key != null && sharedModels.TryGetValue(key, out var cached) && !cached.ResourcesReleased)
+            {
+                var instance = cached.CreateInstance();
+                models.Add(instance);
+                return instance;
+            }
+            var mdl = new Model(file, loadAllLods, assetRoot);
+            try
+            {
+                // Set up GPU resources before exposing the model to render passes.
+                mdl.Setup();
+                models.Add(mdl);
+                if (key != null) { mdl.SharedResourceKey = key; sharedModels[key] = mdl; }
+                return mdl;
+            }
+            catch { mdl.Dispose(); throw; }
         }
 
-        public void RemoveSceneModel(Model mdl)
+        public void RemoveModel(Model mdl)
         {
-            var root = SceneGraph.Instance.GetRoot();
-            if (root.children.Contains(mdl))
-                root.children.Remove(mdl);
+            if (models.Contains(mdl))
+            {
+                viewport.MakeCurrent();
+                models.Remove(mdl);
+                mdl.Dispose();
+                if (mdl.SharedResourceKey != null && mdl.ResourcesReleased) sharedModels.Remove(mdl.SharedResourceKey);
+            }
         }
 
-        public void ClearScene()
+        public void ClearModels()
         {
-            var root = SceneGraph.Instance.GetRoot();
-            root.children.RemoveAll(child => child is Model);
+            StopAnimation();
+            foreach (var model in models.OfType<Model>().ToArray()) RemoveModel(model);
+        }
+
+        public bool FrameModels(IEnumerable<Model> models)
+        {
+            var min = new Vector3(float.PositiveInfinity);
+            var max = new Vector3(float.NegativeInfinity);
+            bool found = false;
+            foreach (var model in models)
+            {
+                if (!model.TryGetWorldBounds(out var modelMin, out var modelMax)) continue;
+                min = Vector3.ComponentMin(min, modelMin);
+                max = Vector3.ComponentMax(max, modelMax);
+                found = true;
+            }
+            if (found) camera.FrameBounds(min, max);
+            return found;
         }
 
         public void PlayAnimation(Animation animation)
@@ -308,7 +310,7 @@ namespace GFTool.Renderer
             {
                 MessageHandler.Instance.AddMessage(MessageType.LOG, $"[Anim] Play '{animation.Name}' frames={animation.FrameCount} fps={animation.FrameRate} tracks={animation.TrackCount}");
 
-                foreach (var c in SceneGraph.Instance.GetRoot().children)
+                foreach (var c in models)
                 {
                     if (c is Model model)
                     {
@@ -339,7 +341,7 @@ namespace GFTool.Renderer
             activeAnimation = null;
             animationTimeSeconds = 0;
             lastAnimationTicks = 0;
-            foreach (var c in SceneGraph.Instance.GetRoot().children)
+            foreach (var c in models)
             {
                 if (c is Model model)
                 {
@@ -401,6 +403,8 @@ namespace GFTool.Renderer
 
         public void Resize(int width, int height)
         {
+            viewport.MakeCurrent();
+            gbuffer?.Dispose();
             //Create GBuffer
             gbuffer = new GBuffer(width, height);
             CreateSsaoTargets(width, height);
@@ -411,6 +415,9 @@ namespace GFTool.Renderer
 
         public void Dispose()
         {
+            viewport.MakeCurrent();
+            ClearModels();
+            grid.Dispose();
             gbuffer.Dispose();
             DeleteSsaoTargets();
         }
